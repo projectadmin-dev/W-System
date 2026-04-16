@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
 import {
   Avatar,
   AvatarFallback,
@@ -38,6 +39,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { resolvedTheme, setTheme } = useTheme()
+  const router = useRouter()
   const [themeLabel, setThemeLabel] = React.useState("System")
 
   React.useEffect(() => {
@@ -127,7 +129,7 @@ export function NavUser({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/")}>
               <LogOutIcon
               />
               Log out
