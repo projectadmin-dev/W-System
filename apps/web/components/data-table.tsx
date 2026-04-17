@@ -500,7 +500,7 @@ export function DataTable({
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8 bg-white">
+              <TableBody className="**:data-[slot=table-cell]:first:w-8 dark:bg-zinc-950">
                 {table.getRowModel().rows?.length ? (
                   <SortableContext
                     items={dataIds}
