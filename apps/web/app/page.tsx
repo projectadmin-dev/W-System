@@ -1,6 +1,7 @@
 "use client"
 
 import { LoginForm } from "@/components/login-form"
+import SupabaseTest from "@/components/supabase-test"
 import { GalleryVerticalEndIcon } from "lucide-react"
 
 export default function LoginPage() {
@@ -14,6 +15,7 @@ export default function LoginPage() {
                     Acme Inc.
                 </a>
                 <LoginForm />
+                <SupabaseTest />
             </div>
         </div>
     )
