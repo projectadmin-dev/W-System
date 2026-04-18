@@ -2,9 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
-  "installCommand": "cd apps/web && npm install --legacy-peer-deps && cd ../.. && npm install",
+  "installCommand": "npm install",
   "devCommand": "npm run dev",
   "regions": ["sin1"],
+  "rootDirectory": ".",
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://kcbtehpcdltvdijgsrsb.supabase.co",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_1eUIEcgJ4RYae6bdYN7Y7Q_8GBzwwxr",
