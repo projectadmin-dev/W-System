@@ -7,6 +7,7 @@
   "regions": ["sin1"],
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://kcbtehpcdltvdijgsrsb.supabase.co",
-    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_1eUIEcgJ4RYae6bdYN7Y7Q_8GBzwwxr"
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_1eUIEcgJ4RYae6bdYN7Y7Q_8GBzwwxr",
+    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjYnRlaHBjZGx0dmRpamdzcnNiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjIzMzI0MywiZXhwIjoyMDkxODA5MjQzfQ.JSbs3j8wkQhUVTLl8J_JMd_6Zat-NZRlVQr57ST-WD4"
   }
 }
