@@ -2,11 +2,11 @@ module.exports = {
   apps: [
     {
       name: 'wsystem-1',
-      cwd: '/home/ubuntu/apps/wsystem-1',
+      cwd: '/home/ubuntu/apps/wsystem-1/apps/web',
       script: 'npm',
-      args: 'run dev',
+      args: 'run start',
       env: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'production',
         PORT: '3001',
         NEXT_PUBLIC_PORT: '3001',
       },
