@@ -4,10 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const { id } = params
+    const { id } = await params
     
     const { data, error } = await supabase
       .from('leads')
@@ -54,10 +54,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     
     // Check if lead exists
@@ -141,10 +141,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const { id } = params
+    const { id } = await params
     
     // Soft delete
     const { error } = await supabase
