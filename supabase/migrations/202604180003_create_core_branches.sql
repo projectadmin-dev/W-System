@@ -45,7 +45,7 @@ CREATE POLICY "Users can view tenant branches"
   USING (
     EXISTS (
       SELECT 1 FROM public.user_profiles up
-      WHERE up.tenant_id = branches.tenant_id AND up.user_id = auth.uid()
+      WHERE up.tenant_id = branches.tenant_id AND up.id = auth.uid()
     )
   );
 
@@ -58,7 +58,7 @@ CREATE POLICY "HR admin can manage branches"
       SELECT 1 FROM public.user_profiles up
       JOIN public.roles r ON up.role_id = r.id
       WHERE up.tenant_id = branches.tenant_id
-      AND up.user_id = auth.uid()
+      AND up.id = auth.uid()
       AND r.name IN ('hr_admin', 'super_admin')
     )
   );

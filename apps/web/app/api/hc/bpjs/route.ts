@@ -1,0 +1,133 @@
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  getBpjsConfig,
+  getBpjsConfigById,
+  getActiveBpjsConfig,
+  createBpjsConfig,
+  updateBpjsConfig,
+  deleteBpjsConfig,
+} from '@/lib/repositories/hr-bpjs'
+import { createServerClient } from '@/lib/supabase-server'
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const id = searchParams.get('id')
+    const active = searchParams.get('active')
+    const date = searchParams.get('date')
+    const entityId = searchParams.get('entityId') || undefined
+    const branchId = searchParams.get('branchId') || undefined
+
+    if (id) {
+      const config = await getBpjsConfigById(id)
+      return NextResponse.json(config)
+    }
+
+    if (active === 'true') {
+      const config = await getActiveBpjsConfig(date || undefined)
+      return NextResponse.json(config)
+    }
+
+    const config = await getBpjsConfig(entityId, branchId)
+    return NextResponse.json(config)
+  } catch (error) {
+    console.error('Failed to fetch BPJS config:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch BPJS config' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    
+    // Get tenant context from user session
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get tenant_id from user profile
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!profile) {
+      return NextResponse.json(
+        { error: 'User profile not found' },
+        { status: 404 }
+      )
+    }
+
+    const body = await request.json()
+    
+    const config = await createBpjsConfig({
+      ...body,
+      tenant_id: profile.tenant_id,
+    })
+
+    return NextResponse.json(config)
+  } catch (error) {
+    console.error('Failed to create BPJS config:', error)
+    return NextResponse.json(
+      { error: 'Failed to create BPJS config' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'BPJS config ID required' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json()
+    const config = await updateBpjsConfig(id, body)
+
+    return NextResponse.json(config)
+  } catch (error) {
+    console.error('Failed to update BPJS config:', error)
+    return NextResponse.json(
+      { error: 'Failed to update BPJS config' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'BPJS config ID required' },
+        { status: 400 }
+      )
+    }
+
+    await deleteBpjsConfig(id)
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Failed to delete BPJS config:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete BPJS config' },
+      { status: 500 }
+    )
+  }
+}

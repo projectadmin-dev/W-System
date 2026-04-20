@@ -195,5 +195,6 @@ async function triggerHotLeadNotification(lead: any) {
     })
   } catch (error) {
     console.error('Error triggering notification:', error)
+    // Don't fail the request if notification fails
   }
 }

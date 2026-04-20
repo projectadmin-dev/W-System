@@ -103,7 +103,7 @@ export function LoginForm({
       />
 
       {/* Title */}
-      <h2 className="text-2xl font-bold text-slate-800 text-center mb-2">WIT. System</h2>
+      <h2 className="text-2xl font-bold text-slate-800 text-center mb-2">Welcome Back</h2>
       <p className="text-slate-500 text-center text-sm mb-6">
         Sign in to your account to continue
       </p>
@@ -123,7 +123,7 @@ export function LoginForm({
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="h-11 border-slate-200 bg-white/50 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
+              className="h-11 border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
             />
           </Field>
 
@@ -148,7 +148,7 @@ export function LoginForm({
               onChange={(e) => setPassword(e.target.value)}
               required 
               disabled={loading}
-              className="h-11 border-slate-200 bg-white/50 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
+              className="h-11 border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
             />
           </Field>
 

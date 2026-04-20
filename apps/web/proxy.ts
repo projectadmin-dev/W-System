@@ -39,7 +39,7 @@ export async function proxy(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   // Protected routes - redirect to login if no session
-  const protectedPaths = ["/dashboard", "/profile", "/settings"];
+  const protectedPaths = ["/dashboard", "/profile", "/settings", "/users", "/leads", "/project-briefs"];
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   );

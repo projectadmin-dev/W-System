@@ -242,5 +242,5 @@ function getApproverInfo(approvalTier: string): { role: string; sla: number; emo
     }
   }
   
-  return approvers[approvalTier] || approvers['pm']
+  return approvers[approvalTier] || approvers['pm']!
 }
