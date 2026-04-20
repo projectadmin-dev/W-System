@@ -151,46 +151,9 @@ CREATE TRIGGER hr_overtime_rules_updated_at
 -- =====================================================
 -- Seed Data: Default Overtime Rules (Indonesian Labor Law)
 -- =====================================================
-
--- Weekday overtime (after normal working hours)
-INSERT INTO public.hr_overtime_rules (entity_id, code, name, day_type, start_hour, first_hour_multiplier, subsequent_hour_multiplier, max_hours_per_day, max_hours_per_month)
-SELECT 
-  '20000000-0000-0000-0000-000000000001' as entity_id,
-  'OT-WEEKDAY',
-  'Weekday Overtime (After 5 PM)',
-  'weekday',
-  17, -- Starts at 5 PM
-  1.50, -- First hour: 1.5x hourly rate
-  2.00, -- Subsequent hours: 2x hourly rate
-  4.00, -- Max 4 hours per day
-  60.00 -- Max 60 hours per month
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- Weekend overtime (Saturday/Sunday)
-INSERT INTO public.hr_overtime_rules (entity_id, code, name, day_type, first_hour_multiplier, subsequent_hour_multiplier, max_hours_per_day, max_hours_per_month)
-SELECT 
-  '20000000-0000-0000-0000-000000000001' as entity_id,
-  'OT-WEEKEND',
-  'Weekend Overtime',
-  'weekend',
-  2.00, -- First hour: 2x
-  3.00, -- Subsequent hours: 3x
-  8.00, -- Max 8 hours per day
-  60.00
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- Public holiday overtime
-INSERT INTO public.hr_overtime_rules (entity_id, code, name, day_type, first_hour_multiplier, subsequent_hour_multiplier, max_hours_per_day, max_hours_per_month)
-SELECT 
-  '20000000-0000-0000-0000-000000000001' as entity_id,
-  'OT-HOLIDAY',
-  'Public Holiday Overtime',
-  'public_holiday',
-  2.00, -- First hour: 2x
-  3.00, -- Subsequent hours: 3x
-  8.00,
-  60.00
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
+-- NOTE: Seed data moved to 0018_seed_hc_data.sql to avoid tenant_id null constraint
+-- Run seed data after tenant creation.
+-- =====================================================
 
 -- =====================================================
 -- SETUP COMPLETE!

@@ -145,43 +145,9 @@ CREATE TRIGGER hr_positions_updated_at
 -- =====================================================
 -- Seed Data: Sample Departments & Positions
 -- =====================================================
-
--- Departments (under demo entity)
-INSERT INTO public.hr_departments (entity_id, code, name, cost_center_code)
-SELECT 
-  '30000000-0000-0000-0000-000000000001' as entity_id, -- Human Capital Division
-  dept_code,
-  dept_name,
-  cost_code
-FROM (VALUES
-  ('HR', 'Human Resources', 'CC-HR-001'),
-  ('GA', 'General Affairs', 'CC-GA-001'),
-  ('FIN', 'Finance & Accounting', 'CC-FIN-001'),
-  ('IT', 'Information Technology', 'CC-IT-001'),
-  ('OPS', 'Operations', 'CC-OPS-001')
-) AS depts(dept_code, dept_name, cost_code)
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- Positions (sample)
-INSERT INTO public.hr_positions (entity_id, department_id, code, name, grade_id, headcount_planned, is_critical)
-SELECT 
-  '20000000-0000-0000-0000-000000000001' as entity_id, -- PT W-System Indonesia
-  (SELECT id FROM hr_departments WHERE code = 'HR' LIMIT 1) as department_id,
-  pos_code,
-  pos_name,
-  (SELECT id FROM hr_job_grades WHERE code = pos_grade LIMIT 1) as grade_id,
-  hc_planned,
-  is_crit
-FROM (VALUES
-  ('HR-MGR', 'HR Manager', 'M1', 1, true),
-  ('HR-SPV', 'HR Supervisor', 'S1', 1, false),
-  ('HR-STF', 'HR Staff', 'S2', 2, false),
-  ('GA-MGR', 'GA Manager', 'M1', 1, false),
-  ('GA-STF', 'GA Staff', 'S2', 2, false)
-) AS positions(pos_code, pos_name, pos_grade, hc_planned, is_crit)
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- Note: Above inserts require tenant_id. Run after creating tenant.
+-- NOTE: Seed data moved to 0018_seed_hc_data.sql to avoid tenant_id null constraint
+-- Run seed data after tenant creation.
+-- =====================================================
 
 -- =====================================================
 -- SETUP COMPLETE!

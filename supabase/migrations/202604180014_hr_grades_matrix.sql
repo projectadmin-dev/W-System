@@ -117,21 +117,13 @@ CREATE POLICY "HR admin can manage salary matrix"
 -- =====================================================
 -- Seed Data: Default Job Grades (sample structure)
 -- =====================================================
-
-INSERT INTO public.hr_job_grades (code, name, level, salary_min, salary_mid, salary_max, leave_quota, is_overtime_eligible)
-VALUES 
-  -- Management track
-  ('D1', 'Director', 1, 25000000.00, 35000000.00, 50000000.00, 15, false),
-  ('M1', 'Manager', 2, 15000000.00, 20000000.00, 30000000.00, 14, false),
-  ('M2', 'Senior Manager', 3, 12000000.00, 15000000.00, 20000000.00, 14, false),
-  
-  -- Professional track
-  ('S1', 'Senior Staff', 4, 8000000.00, 10000000.00, 14000000.00, 12, true),
-  ('S2', 'Staff', 5, 5500000.00, 7000000.00, 9000000.00, 12, true),
-  ('S3', 'Junior Staff', 6, 4500000.00, 5000000.00, 6000000.00, 12, true)
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- Note: Above insert requires tenant_id. Run after creating tenant.
+-- NOTE: Seed data moved to 0018_seed_hc_data.sql to avoid tenant_id null constraint
+-- Run seed data after tenant creation.
+--
+-- To seed manually after tenant exists:
+-- INSERT INTO public.hr_job_grades (tenant_id, entity_id, code, name, level, salary_min, salary_mid, salary_max, leave_quota, is_overtime_eligible)
+-- SELECT t.id, NULL, 'D1', 'Director', 1, 25000000.00, 35000000.00, 50000000.00, 15, false FROM public.tenants t LIMIT 1;
+-- =====================================================
 
 -- =====================================================
 -- SETUP COMPLETE!
