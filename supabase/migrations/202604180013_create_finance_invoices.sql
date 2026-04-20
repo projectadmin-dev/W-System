@@ -116,16 +116,11 @@ CREATE TABLE IF NOT EXISTS public.invoices (
   
   -- Payment tracking
   amount_paid numeric(20,4) DEFAULT 0,
-  amount_due numeric(20,4) GENERATED ALWAYS AS (total_amount - amount_paid) STORED,
+  amount_due numeric(20,4) NOT NULL DEFAULT 0, -- Computed: total_amount - amount_paid
   last_payment_at timestamptz,
   
-  -- Aging (for credit check)
-  aging_days integer GENERATED ALWAYS AS (
-    CASE 
-      WHEN due_date < CURRENT_DATE THEN CURRENT_DATE - due_date
-      ELSE 0
-    END
-  ) STORED,
+  -- Aging (for credit check) - computed in application layer
+  aging_days integer DEFAULT 0, -- Computed: CASE WHEN due_date < CURRENT_DATE THEN CURRENT_DATE - due_date ELSE 0 END
   
   -- Notes
   notes text,

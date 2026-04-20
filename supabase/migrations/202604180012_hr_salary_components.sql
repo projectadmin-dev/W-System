@@ -97,36 +97,9 @@ CREATE TRIGGER hr_salary_components_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
--- Seed Data: Default Salary Components (12 components)
--- =====================================================
-
--- EARNINGS
-INSERT INTO public.hr_salary_components (name, code, component_type, category, is_taxable, is_bpjs_base, is_fixed, display_order)
-VALUES 
-  ('Gaji Pokok', 'GAPOK', 'earning', 'basic', true, true, true, 1),
-  ('Tunjangan Jabatan', 'TUNJAB', 'earning', 'allowance', true, true, true, 2),
-  ('Tunjangan Transport', 'TUNTRANS', 'earning', 'allowance', true, false, true, 3),
-  ('Tunjangan Makan', 'TUNMAKAN', 'earning', 'allowance', true, false, true, 4),
-  ('Tunjangan Komunikasi', 'TUNKOMUNIK', 'earning', 'allowance', true, false, true, 5),
-  ('Lembur', 'LEMBUR', 'earning', 'overtime', true, false, false, 6),
-  ('Bonus', 'BONUS', 'earning', 'bonus', true, false, false, 7),
-  ('THR', 'THR', 'earning', 'thr', true, false, true, 8)
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- DEDUCTIONS
-INSERT INTO public.hr_salary_components (name, code, component_type, category, is_taxable, is_bpjs_base, is_fixed, display_order)
-VALUES 
-  ('BPJS Ketenagakerjaan', 'BPJSTKE', 'deduction', 'bpjs_tk', false, false, true, 10),
-  ('BPJS Kesehatan', 'BPJSKESE', 'deduction', 'bpjs_kes', false, false, true, 11),
-  ('PPh21', 'PPH21', 'deduction', 'pph21', false, false, false, 12),
-  ('Kasbon', 'KASBON', 'deduction', 'loan', false, false, false, 13)
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
-
--- Note: Above inserts require tenant_id. Run after creating tenant.
-
--- =====================================================
 -- SETUP COMPLETE!
 -- =====================================================
--- hr_salary_components ready with 12 default components
--- SOFT DELETE ONLY - never hard delete!
+-- hr_salary_components ready for salary component configuration
+-- Soft delete only - never hard delete!
+-- Seed data will be inserted by 0018_seed_hc_data.sql
 -- =====================================================

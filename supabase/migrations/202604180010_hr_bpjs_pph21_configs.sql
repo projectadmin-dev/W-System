@@ -166,21 +166,10 @@ CREATE TRIGGER hr_pph21_configs_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
--- Seed Data: Default PPh21 Config 2025
--- =====================================================
-
-INSERT INTO public.hr_pph21_configs (tax_year, ptkp_tk0, ptkp_tk1, ptkp_tk2, ptkp_tk3, ptkp_k0, ptkp_k1, ptkp_k2, ptkp_k3)
-VALUES (2025, 54000000.00, 58500000.00, 63000000.00, 67500000.00, 58500000.00, 63000000.00, 67500000.00, 72000000.00)
-ON CONFLICT (tenant_id, tax_year) DO NOTHING;
-
--- Note: Above insert requires tenant_id. Run after creating tenant:
--- INSERT INTO public.hr_pph21_configs (tenant_id, tax_year, ...)
--- VALUES ('00000000-0000-0000-0000-000000000001', 2025, ...);
-
--- =====================================================
 -- SETUP COMPLETE!
 -- =====================================================
 -- Tables created:
 -- - hr_bpjs_configs (BPJS TK & Kesehatan rates)
 -- - hr_pph21_configs (PPh21 TER brackets + PTKP)
+-- Seed data will be inserted by 0018_seed_hc_data.sql
 -- =====================================================
