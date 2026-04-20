@@ -11,24 +11,27 @@
 -- =====================================================
 
 -- Work shifts (assuming tenant_id and entity_id from demo data)
-INSERT INTO public.hr_work_shifts (entity_id, code, name, shift_type, start_time, end_time, is_overnight, break_duration_minutes)
+-- Note: hr_work_shifts uses start_time/end_time directly, no shift_type or is_overnight column
+-- UNIQUE constraint is (tenant_id, entity_id, branch_id, code) - using NULL for branch_id
+INSERT INTO public.hr_work_shifts (tenant_id, entity_id, branch_id, code, name, start_time, end_time, break_duration_minutes)
 SELECT 
+  t.id as tenant_id,
   '20000000-0000-0000-0000-000000000001' as entity_id,
+  NULL as branch_id,
   shift_code,
   shift_name,
-  s_type,
-  s_start,
-  s_end,
-  overnight,
+  s_start::time,
+  s_end::time,
   break_min
 FROM (VALUES
-  ('REG', 'Regular Shift', 'regular', '09:00', '18:00', false, 60),
-  ('MOR', 'Morning Shift', 'regular', '07:00', '16:00', false, 60),
-  ('AFT', 'Afternoon Shift', 'regular', '14:00', '23:00', false, 60),
-  ('NGT', 'Night Shift', 'regular', '23:00', '08:00', true, 60),
-  ('FLX', 'Flexible', 'flexible', NULL, NULL, false, NULL)
-) AS shifts(shift_code, shift_name, s_type, s_start, s_end, overnight, break_min)
-ON CONFLICT (tenant_id, entity_id, code) DO NOTHING;
+  ('REG', 'Regular Shift', '09:00', '18:00', 60),
+  ('MOR', 'Morning Shift', '07:00', '16:00', 60),
+  ('AFT', 'Afternoon Shift', '14:00', '23:00', 60),
+  ('NGT', 'Night Shift', '23:00', '08:00', 60),
+  ('FLX', 'Flexible', NULL, NULL, NULL)
+) AS shifts(shift_code, shift_name, s_start, s_end, break_min)
+CROSS JOIN (SELECT id FROM public.tenants LIMIT 1) t
+ON CONFLICT (tenant_id, entity_id, branch_id, code) DO NOTHING;
 
 -- Work calendars
 INSERT INTO public.hr_work_calendars (entity_id, name, calendar_type, start_date, end_date, is_default)
