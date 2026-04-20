@@ -1,7 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { NavUser } from "@/components/nav-user"
+import { UserForm } from "@/components/user-form"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,6 +21,7 @@ import {
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import Link from "next/link"
+import { toast } from "sonner"
 
 const profile = {
   user: {
@@ -29,6 +32,52 @@ const profile = {
 }
 
 export default function NewUserPage() {
+  const [roles, setRoles] = useState<{ id: string; name: string; description: string }[]>([])
+  const [tenants, setTenants] = useState<{ id: string; name: string; slug: string }[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [rolesRes, tenantsRes] = await Promise.all([
+          fetch("/api/users/roles"),
+          fetch("/api/users/tenants"),
+        ])
+
+        if (!rolesRes.ok) throw new Error("Failed to fetch roles")
+        if (!tenantsRes.ok) throw new Error("Failed to fetch tenants")
+
+        const [rolesData, tenantsData] = await Promise.all([
+          rolesRes.json(),
+          tenantsRes.json(),
+        ])
+
+        setRoles(rolesData.data || [])
+        setTenants(tenantsData.data || [])
+      } catch (error) {
+        console.error("Error fetching form data:", error)
+        toast.error("Failed to load form data")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    )
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -83,13 +132,12 @@ export default function NewUserPage() {
               </div>
             </div>
 
-            {/* Content Placeholder */}
-            <div className="flex items-center justify-center h-96 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-              <div className="text-center text-muted-foreground">
-                <p className="text-lg font-medium">Create User Form</p>
-                <p className="text-sm">Coming soon</p>
-              </div>
-            </div>
+            {/* User Form */}
+            <UserForm 
+              roles={roles}
+              tenants={tenants}
+              mode="create"
+            />
 
           </div>
         </div>

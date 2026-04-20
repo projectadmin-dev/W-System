@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect, use, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AppSidebar } from "@/components/app-sidebar"
 import { NavUser } from "@/components/nav-user"
@@ -76,7 +76,8 @@ const profile = {
   },
 }
 
-export default function NewProjectBriefPage() {
+// Inner component that uses useSearchParams
+function NewProjectBriefContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const leadId = searchParams.get('leadId')
@@ -472,5 +473,13 @@ export default function NewProjectBriefPage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+export default function NewProjectBriefPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewProjectBriefContent />
+    </Suspense>
   )
 }

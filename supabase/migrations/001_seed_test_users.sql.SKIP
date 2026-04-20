@@ -1,0 +1,74 @@
+-- Seed 25 test users with auth accounts
+-- Note: Using auth.users directly requires service role privileges
+
+-- Ensure pgcrypto extension is available for password hashing
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- First, let's create a simpler approach - insert users one by one
+-- We'll use a basic password for all test users: "Test1234!"
+
+DO $$
+DECLARE
+    v_tenant_id uuid := '00000000-0000-0000-0000-000000000001';
+    v_role_id uuid;
+    v_user_id uuid;
+BEGIN
+    -- User 1: Admin
+    SELECT id INTO v_role_id FROM public.roles WHERE name = 'admin';
+    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), 'admin@wit.id', crypt('Test1234!', gen_salt('bf', 8)), now(), now(), now())
+    RETURNING id INTO v_user_id;
+    INSERT INTO public.user_profiles (id, tenant_id, full_name, email, role_id, department, timezone, language, is_active)
+    VALUES (v_user_id, v_tenant_id, 'Admin WIT', 'admin@wit.id', v_role_id, 'Technology', 'Asia/Jakarta', 'id', true);
+
+    -- User 2: Arie (CFO)
+    SELECT id INTO v_role_id FROM public.roles WHERE name = 'cfo';
+    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), 'arie@wit.id', crypt('Test1234!', gen_salt('bf', 8)), now(), now(), now())
+    RETURNING id INTO v_user_id;
+    INSERT INTO public.user_profiles (id, tenant_id, full_name, email, role_id, department, timezone, language, is_active)
+    VALUES (v_user_id, v_tenant_id, 'Arie Anggono', 'arie@wit.id', v_role_id, 'Finance', 'Asia/Jakarta', 'id', true);
+
+    -- User 3: Ganjar (HC)
+    SELECT id INTO v_role_id FROM public.roles WHERE name = 'hr';
+    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), 'ganjar@wit.id', crypt('Test1234!', gen_salt('bf', 8)), now(), now(), now())
+    RETURNING id INTO v_user_id;
+    INSERT INTO public.user_profiles (id, tenant_id, full_name, email, role_id, department, timezone, language, is_active)
+    VALUES (v_user_id, v_tenant_id, 'Ganjar HC', 'ganjar@wit.id', v_role_id, 'Human Resources', 'Asia/Jakarta', 'id', true);
+
+    -- User 4: Banu (Developer)
+    SELECT id INTO v_role_id FROM public.roles WHERE name = 'developer';
+    INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+    VALUES (gen_random_uuid(), 'banu@wit.id', crypt('Test1234!', gen_salt('bf', 8)), now(), now(), now())
+    RETURNING id INTO v_user_id;
+    INSERT INTO public.user_profiles (id, tenant_id, full_name, email, role_id, department, timezone, language, is_active)
+    VALUES (v_user_id, v_tenant_id, 'Banu Developer', 'banu@wit.id', v_role_id, 'Technology', 'Asia/Jakarta', 'id', true);
+
+    -- User 5-25: Additional test users
+    FOR i IN 5..25 LOOP
+        SELECT id INTO v_role_id FROM public.roles WHERE name = 
+            CASE (i % 7)
+                WHEN 0 THEN 'admin'
+                WHEN 1 THEN 'developer'
+                WHEN 2 THEN 'pm'
+                WHEN 3 THEN 'finance'
+                WHEN 4 THEN 'hr'
+                WHEN 5 THEN 'marketing'
+                ELSE 'developer'
+            END;
+        
+        INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+        VALUES (gen_random_uuid(), 'user' || i || '@wit.id', crypt('Test1234!', gen_salt('bf', 8)), now(), now(), now())
+        RETURNING id INTO v_user_id;
+        
+        INSERT INTO public.user_profiles (id, tenant_id, full_name, email, role_id, department, timezone, language, is_active)
+        VALUES (v_user_id, v_tenant_id, 'Test User ' || i, 'user' || i || '@wit.id', v_role_id, 
+            CASE (i % 3)
+                WHEN 0 THEN 'Technology'
+                WHEN 1 THEN 'Finance'
+                ELSE 'General'
+            END,
+            'Asia/Jakarta', 'id', true);
+    END LOOP;
+END $$;

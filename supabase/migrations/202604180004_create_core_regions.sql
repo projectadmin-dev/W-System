@@ -40,7 +40,7 @@ CREATE POLICY "Super admin can manage regions"
     EXISTS (
       SELECT 1 FROM public.user_profiles up
       JOIN public.roles r ON up.role_id = r.id
-      WHERE up.user_id = auth.uid() AND r.name = 'super_admin'
+      WHERE up.id = auth.uid() AND r.name = 'super_admin'
     )
   );
 
