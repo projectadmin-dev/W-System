@@ -94,175 +94,51 @@ const data = {
       ],
     },
     {
-      title: "Client Management",
+      title: "Leads Management",
       url: "#",
       icon: <BotIcon />,
       items: [
         {
-          title: "Client",
-          url: "#",
-        },
-        {
-          title: "Company",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Leads Management",
-      url: "#",
-      icon: <BookOpenIcon />,
-      items: [
-        {
-          title: "Pipeline",
-          url: "#",
-        },
-        {
-          title: "Stage",
-          url: "#",
-        },
-        {
           title: "Leads",
-          url: "#",
+          url: "/leads",
         },
         {
-          title: "Product & Service",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Project Management",
-      url: "#",
-      icon: <Settings2Icon />,
-      items: [
-        {
-          title: "Project",
-          url: "#",
-        },
-        {
-          title: "Board Task",
-          url: "#",
-        },
-        {
-          title: "Timeline",
-          url: "#",
+          title: "New Lead",
+          url: "/leads/new",
         },
       ],
     },
     {
-      title: "Transaction",
+      title: "Project Briefs",
       url: "#",
-      icon: <BookOpenIcon />,
+      icon: <FrameIcon />,
       items: [
         {
-          title: "Quotation",
-          url: "#",
-        },
-        {
-          title: "Order",
-          url: "#",
-        },
-        {
-          title: "Invoice",
-          url: "#",
-        },
-        {
-          title: "Receipt",
-          url: "#",
+          title: "New Project Brief",
+          url: "/project-briefs/new",
         },
       ],
     },
     {
       title: "Finance & Accounting",
       url: "#",
-      icon: <BookOpenIcon />,
+      icon: <PieChartIcon />,
       items: [
         {
+          title: "Finance Dashboard",
+          url: "/finance",
+        },
+        {
           title: "Chart of Account",
-          url: "#",
+          url: "/finance/coa",
         },
         {
           title: "Journal History",
-          url: "#",
+          url: "/finance/journal",
         },
         {
-          title: "General Ledger",
-          url: "#",
-        },
-        {
-          title: "Profit & Loss",
-          url: "#",
-        },
-        {
-          title: "Income Statement",
-          url: "#",
-        },
-        {
-          title: "Balance Sheet",
-          url: "#",
-        },
-        {
-          title: "Cash Flow",
-          url: "#",
-        },
-        {
-          title: "Forecast Cash Out",
-          url: "#",
-        },
-        {
-          title: "Forecast Cash In",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Report",
-      url: "#",
-      icon: <BookOpenIcon />,
-      items: [
-        {
-          title: "Summary",
-          url: "#",
-        },
-        {
-          title: "Leads Monitoring",
-          url: "#",
-        },
-        {
-          title: "Transaction Monitoring",
-          url: "#",
-        },
-        {
-          title: "Project Monitoring",
-          url: "#",
-        },
-        {
-          title: "Finance Monitoring",
-          url: "#",
-        },
-        {
-          title: "Dynamic Report",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Configuration",
-      url: "#",
-      icon: <Settings2Icon />,
-      items: [
-        {
-          title: "Sidebar Menu",
-          url: "#",
-        },
-        {
-          title: "Access Management",
-          url: "#",
-        },
-        {
-          title: "Role",
-          url: "#",
+          title: "Periods",
+          url: "/finance/periods",
         },
       ],
     },

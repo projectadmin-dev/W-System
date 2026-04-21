@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/users - Create new user
- * Body: { tenant_id, full_name, email, role_id, department?, phone?, ... }
+ * Body: { tenant_id, full_name, email, role_id, department?, phone?, ... HR fields }
  */
 export async function POST(request: NextRequest) {
   try {
@@ -74,6 +74,27 @@ export async function POST(request: NextRequest) {
       timezone: body.timezone,
       language: body.language,
       preferences: body.preferences,
+      // HR Employee Fields
+      nik: body.nik,
+      employee_number: body.employee_number,
+      employment_status: body.employment_status,
+      join_date: body.join_date,
+      position_id: body.position_id,
+      department_id: body.department_id,
+      grade_id: body.grade_id,
+      base_salary: body.base_salary,
+      bank_account: body.bank_account,
+      bank_name: body.bank_name,
+      npwp: body.npwp,
+      bpjs_kesehatan: body.bpjs_kesehatan,
+      bpjs_ketenagakerjaan: body.bpjs_ketenagakerjaan,
+      emergency_contact_name: body.emergency_contact_name,
+      emergency_contact_phone: body.emergency_contact_phone,
+      emergency_contact_relation: body.emergency_contact_relation,
+      address: body.address,
+      city: body.city,
+      province: body.province,
+      postal_code: body.postal_code,
     })
 
     return NextResponse.json({

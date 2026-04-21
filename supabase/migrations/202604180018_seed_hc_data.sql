@@ -7,6 +7,20 @@
 -- =====================================================
 
 -- =====================================================
+-- 0. Create Default Entity (if not exists)
+-- =====================================================
+-- This ensures entity_id exists before inserting HC data
+INSERT INTO public.entities (tenant_id, id, name, code, type)
+SELECT 
+  t.id as tenant_id,
+  '20000000-0000-0000-0000-000000000001' as id,
+  'WIT.ID Holding' as name,
+  'HOLDING' as code,
+  'holding' as type
+FROM (SELECT id FROM public.tenants LIMIT 1) t
+ON CONFLICT (id) DO NOTHING;
+
+-- =====================================================
 -- 1. Work Shifts & Calendars
 -- =====================================================
 
@@ -27,26 +41,43 @@ FROM (VALUES
   ('REG', 'Regular Shift', '09:00', '18:00', 60),
   ('MOR', 'Morning Shift', '07:00', '16:00', 60),
   ('AFT', 'Afternoon Shift', '14:00', '23:00', 60),
-  ('NGT', 'Night Shift', '23:00', '08:00', 60),
-  ('FLX', 'Flexible', NULL, NULL, NULL)
+  ('NGT', 'Night Shift', '23:00', '08:00', 60)
 ) AS shifts(shift_code, shift_name, s_start, s_end, break_min)
 CROSS JOIN (SELECT id FROM public.tenants LIMIT 1) t
 ON CONFLICT (tenant_id, entity_id, branch_id, code) DO NOTHING;
 
 -- Work calendars
-INSERT INTO public.hr_work_calendars (entity_id, name, calendar_type, start_date, end_date, is_default)
+INSERT INTO public.hr_work_calendars (entity_id, year, date, name, type, is_default)
 SELECT 
   '20000000-0000-0000-0000-000000000001' as entity_id,
+  cal_year,
+  cal_date::date,
   cal_name,
   cal_type,
-  cal_start,
-  cal_end,
-  is_def
+  false as is_default
 FROM (VALUES
-  ('Standard 2026', 'standard', '2026-01-01', '2026-12-31', true),
-  ('Production 2026', 'production', '2026-01-01', '2026-12-31', false),
-  ('Retail 2026', 'retail', '2026-01-01', '2026-12-31', false)
-) AS calendars(cal_name, cal_type, cal_start, cal_end, is_def)
+  (2026, '2026-01-01', 'Tahun Baru 2026', 'national_holiday'),
+  (2026, '2026-01-29', 'Tahun Baru Imlek', 'national_holiday'),
+  (2026, '2026-03-30', 'Hari Raya Nyepi', 'national_holiday'),
+  (2026, '2026-04-18', 'Wafat Isa Almasih', 'national_holiday'),
+  (2026, '2026-05-01', 'Hari Buruh', 'national_holiday'),
+  (2026, '2026-05-08', 'Kenaikan Isa Almasih', 'national_holiday'),
+  (2026, '2026-05-25', 'Hari Raya Waisak', 'national_holiday'),
+  (2026, '2026-06-01', 'Hari Lahir Pancasila', 'national_holiday'),
+  (2026, '2026-06-06', 'Idul Fitri (1 Syawal 1447 H)', 'national_holiday'),
+  (2026, '2026-06-07', 'Idul Fitri (2 Syawal 1447 H)', 'national_holiday'),
+  (2026, '2026-08-17', 'Hari Kemerdekaan RI', 'national_holiday'),
+  (2026, '2026-08-23', 'Idul Adha (10 Dzulhijjah 1447 H)', 'national_holiday'),
+  (2026, '2026-09-12', 'Tahun Baru Islam (1 Muharram 1448 H)', 'national_holiday'),
+  (2026, '2026-11-11', 'Maulid Nabi Muhammad SAW', 'national_holiday'),
+  (2026, '2026-12-25', 'Hari Raya Natal', 'national_holiday'),
+  (2026, '2026-03-31', 'Cuti Bersama Idul Fitri', 'cuti_bersama'),
+  (2026, '2026-06-05', 'Cuti Bersama Idul Fitri', 'cuti_bersama'),
+  (2026, '2026-06-08', 'Cuti Bersama Idul Fitri', 'cuti_bersama'),
+  (2026, '2026-12-24', 'Cuti Bersama Natal', 'cuti_bersama'),
+  (2026, '2026-12-26', 'Cuti Bersama Natal', 'cuti_bersama')
+) AS holidays(cal_year, cal_date, cal_name, cal_type)
+ON CONFLICT DO NOTHING;
 ON CONFLICT (tenant_id, entity_id, name) DO NOTHING;
 
 -- =====================================================

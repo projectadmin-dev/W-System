@@ -74,6 +74,18 @@ export default function UsersPage() {
     fetchUsers()
   }, [fetchUsers])
 
+  const handlePaginationChange = useCallback((newPagination: { pageIndex: number; pageSize: number }) => {
+    setPagination(newPagination)
+  }, [])
+
+  const handleFilterChange = useCallback((newFilters: { search: string; role_id: string; is_active?: boolean }) => {
+    setFilters(prev => ({
+      search: newFilters.search,
+      role_id: newFilters.role_id,
+      is_active: newFilters.is_active,
+    }))
+  }, [])
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -124,6 +136,8 @@ export default function UsersPage() {
                 total={total}
                 isLoading={isLoading}
                 onRefresh={fetchUsers}
+                onPaginationChange={handlePaginationChange}
+                onFilterChange={handleFilterChange}
               />
 
             </div>

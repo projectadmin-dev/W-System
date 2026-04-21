@@ -87,9 +87,11 @@ interface UserTableProps {
   total: number
   isLoading?: boolean
   onRefresh?: () => void
+  onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
+  onFilterChange?: (filters: { search: string; role_id: string; is_active?: boolean }) => void
 }
 
-export function UserTable({ users, total, isLoading = false, onRefresh }: UserTableProps) {
+export function UserTable({ users, total, isLoading = false, onRefresh, onPaginationChange, onFilterChange }: UserTableProps) {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -105,7 +107,39 @@ export function UserTable({ users, total, isLoading = false, onRefresh }: UserTa
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
+  // Notify parent when pagination changes
+  React.useEffect(() => {
+    if (onPaginationChange) {
+      onPaginationChange(pagination)
+    }
+  }, [pagination, onPaginationChange])
+
+  // Notify parent when filters change
+  React.useEffect(() => {
+    if (onFilterChange) {
+      onFilterChange({
+        search: globalFilter,
+        role_id: roleFilter,
+        is_active: statusFilter === "" ? undefined : statusFilter === "true",
+      })
+    }
+  }, [globalFilter, roleFilter, statusFilter, onFilterChange])
+
   const columns: ColumnDef<User>[] = [
+    {
+      id: "rowNumber",
+      header: "No",
+      cell: ({ row, table }) => {
+        const pageIndex = table.getState().pagination.pageIndex
+        const pageSize = table.getState().pagination.pageSize
+        const index = pageIndex * pageSize + row.index + 1
+        return (
+          <span className="text-sm font-medium">{index}</span>
+        )
+      },
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "full_name",
       header: ({ column }) => (
@@ -398,11 +432,11 @@ export function UserTable({ users, total, isLoading = false, onRefresh }: UserTa
         {/* Table */}
         <div className="rounded-md border">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
+                <TableRow key={headerGroup.id} className="bg-muted border-b">
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="text-muted-foreground font-semibold">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -428,7 +462,7 @@ export function UserTable({ users, total, isLoading = false, onRefresh }: UserTa
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow
-                    key={row.id}
+                    key={row.id || row.original.id}
                     data-state={row.getIsSelected() && "selected"}
                   >
                     {row.getVisibleCells().map((cell) => (

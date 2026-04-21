@@ -1,5 +1,6 @@
 import { createServerClient as createSSRClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 
 export async function createServerClient() {
   const cookieStore = await cookies();
@@ -30,18 +31,15 @@ export async function createServerClient() {
 
 export async function createAdminClient() {
   // Server-side only - uses Service Role Key to bypass RLS
-  return createSSRClient(
+  // Using native Supabase client for full RLS bypass
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return [];
-        },
-        setAll() {
-          // Service Role Key doesn't need cookies
-        },
-      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   );
 }
