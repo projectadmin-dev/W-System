@@ -114,6 +114,10 @@ const data = {
       icon: <FrameIcon />,
       items: [
         {
+          title: "Kanban Board",
+          url: "/projects/kanban",
+        },
+        {
           title: "New Project Brief",
           url: "/project-briefs/new",
         },
