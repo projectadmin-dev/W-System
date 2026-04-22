@@ -41,6 +41,7 @@ export default function UsersPage() {
     role_id: "",
     is_active: undefined as boolean | undefined,
   })
+  const [roles, setRoles] = useState<{ id: string; name: string; description?: string }[]>([])
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true)
@@ -84,6 +85,24 @@ export default function UsersPage() {
       role_id: newFilters.role_id,
       is_active: newFilters.is_active,
     }))
+    setPagination(prev => ({
+      ...prev,
+      pageIndex: 0,
+    }))
+  }, [])
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const res = await fetch('/api/users/roles')
+        if (!res.ok) throw new Error('Failed to fetch roles')
+        const result = await res.json()
+        setRoles(result.data || [])
+      } catch (err) {
+        console.error('Error fetching roles:', err)
+      }
+    }
+    fetchRoles()
   }, [])
 
   return (
@@ -134,6 +153,7 @@ export default function UsersPage() {
               <UserTable 
                 users={users}
                 total={total}
+                roles={roles}
                 isLoading={isLoading}
                 onRefresh={fetchUsers}
                 onPaginationChange={handlePaginationChange}
