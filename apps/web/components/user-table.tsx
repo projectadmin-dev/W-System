@@ -85,13 +85,14 @@ export interface User {
 interface UserTableProps {
   users: User[]
   total: number
+  roles?: { id: string; name: string; description?: string }[]
   isLoading?: boolean
   onRefresh?: () => void
   onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
   onFilterChange?: (filters: { search: string; role_id: string; is_active?: boolean }) => void
 }
 
-export function UserTable({ users, total, isLoading = false, onRefresh, onPaginationChange, onFilterChange }: UserTableProps) {
+export function UserTable({ users, total, roles = [], isLoading = false, onRefresh, onPaginationChange, onFilterChange }: UserTableProps) {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -361,14 +362,11 @@ export function UserTable({ users, total, isLoading = false, onRefresh, onPagina
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="super_admin">Super Admin</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-                <SelectItem value="commercial">Commercial</SelectItem>
-                <SelectItem value="pm">Project Manager</SelectItem>
-                <SelectItem value="developer">Developer</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
-                <SelectItem value="hr">HR</SelectItem>
+                {roles.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {role.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

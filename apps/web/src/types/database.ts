@@ -2456,6 +2456,490 @@ export type Database = {
           },
         ]
       }
+      vendors: {
+        Row: {
+          id: string
+          vendor_code: string
+          vendor_name: string
+          vendor_type: string
+          email: string
+          phone: string
+          address?: string | null
+          tax_id?: string | null
+          payment_terms_days: number
+          credit_limit?: number | null
+          coa_id?: string | null
+          entity_id?: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          vendor_code: string
+          vendor_name: string
+          vendor_type: string
+          email: string
+          phone: string
+          address?: string | null
+          tax_id?: string | null
+          payment_terms_days?: number
+          credit_limit?: number | null
+          coa_id?: string | null
+          entity_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          vendor_code?: string
+          vendor_name?: string
+          vendor_type?: string
+          email?: string
+          phone?: string
+          address?: string | null
+          tax_id?: string | null
+          payment_terms_days?: number
+          credit_limit?: number | null
+          coa_id?: string | null
+          entity_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          id: string
+          customer_code: string
+          customer_name: string
+          customer_type: string
+          email: string
+          phone: string
+          address?: string | null
+          tax_id?: string | null
+          payment_terms_days: number
+          credit_limit?: number | null
+          coa_id?: string | null
+          entity_id?: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          customer_code: string
+          customer_name: string
+          customer_type: string
+          email: string
+          phone: string
+          address?: string | null
+          tax_id?: string | null
+          payment_terms_days?: number
+          credit_limit?: number | null
+          coa_id?: string | null
+          entity_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          customer_code?: string
+          customer_name?: string
+          customer_type?: string
+          email?: string
+          phone?: string
+          address?: string | null
+          tax_id?: string | null
+          payment_terms_days?: number
+          credit_limit?: number | null
+          coa_id?: string | null
+          entity_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_bills: {
+        Row: {
+          id: string
+          bill_number: string
+          vendor_id: string
+          bill_date: string
+          due_date: string
+          amount: number
+          tax_amount: number
+          total_amount: number
+          status: string
+          description?: string | null
+          coa_id?: string | null
+          entity_id?: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          bill_number: string
+          vendor_id: string
+          bill_date: string
+          due_date: string
+          amount: number
+          tax_amount?: number
+          total_amount: number
+          status?: string
+          description?: string | null
+          coa_id?: string | null
+          entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          bill_number?: string
+          vendor_id?: string
+          bill_date?: string
+          due_date?: string
+          amount?: number
+          tax_amount?: number
+          total_amount?: number
+          status?: string
+          description?: string | null
+          coa_id?: string | null
+          entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_bills_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_bills_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_bill_lines: {
+        Row: {
+          id: string
+          bill_id: string
+          description: string
+          amount: number
+          tax_rate?: number | null
+          tax_amount?: number | null
+          total_amount: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          bill_id: string
+          description: string
+          amount: number
+          tax_rate?: number | null
+          tax_amount?: number | null
+          total_amount: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          bill_id?: string
+          description?: string
+          amount?: number
+          tax_rate?: number | null
+          tax_amount?: number | null
+          total_amount?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_bill_lines_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_invoices: {
+        Row: {
+          id: string
+          invoice_number: string
+          customer_id: string
+          invoice_date: string
+          due_date: string
+          amount: number
+          tax_amount: number
+          total_amount: number
+          status: string
+          description?: string | null
+          coa_id?: string | null
+          entity_id?: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          invoice_number: string
+          customer_id: string
+          invoice_date: string
+          due_date: string
+          amount: number
+          tax_amount?: number
+          total_amount: number
+          status?: string
+          description?: string | null
+          coa_id?: string | null
+          entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          invoice_number?: string
+          customer_id?: string
+          invoice_date?: string
+          due_date?: string
+          amount?: number
+          tax_amount?: number
+          total_amount?: number
+          status?: string
+          description?: string | null
+          coa_id?: string | null
+          entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_invoices_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_invoice_lines: {
+        Row: {
+          id: string
+          invoice_id: string
+          description: string
+          amount: number
+          tax_rate?: number | null
+          tax_amount?: number | null
+          total_amount: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          invoice_id: string
+          description: string
+          amount: number
+          tax_rate?: number | null
+          tax_amount?: number | null
+          total_amount: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          invoice_id?: string
+          description?: string
+          amount?: number
+          tax_rate?: number | null
+          tax_amount?: number | null
+          total_amount?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "customer_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipts: {
+        Row: {
+          id: string
+          receipt_number: string
+          customer_id: string
+          receipt_date: string
+          amount: number
+          payment_method: string
+          status: string
+          invoice_number?: string | null
+          notes?: string | null
+          entity_id?: string | null
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          receipt_number: string
+          customer_id: string
+          receipt_date: string
+          amount: number
+          payment_method: string
+          status?: string
+          invoice_number?: string | null
+          notes?: string | null
+          entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          receipt_number?: string
+          customer_id?: string
+          receipt_date?: string
+          amount?: number
+          payment_method?: string
+          status?: string
+          invoice_number?: string | null
+          notes?: string | null
+          entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_allocations: {
+        Row: {
+          id: string
+          payment_id: string
+          bill_id: string
+          amount: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          payment_id: string
+          bill_id: string
+          amount: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          payment_id?: string
+          bill_id?: string
+          amount?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_bill_id_fkey"
+            columns: ["bill_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_bills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receipt_allocations: {
+        Row: {
+          id: string
+          receipt_id: string
+          invoice_id: string
+          amount: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          receipt_id: string
+          invoice_id: string
+          amount: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          receipt_id?: string
+          invoice_id?: string
+          amount?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_allocations_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "customer_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       priority_rules: {
         Row: {
           category: string

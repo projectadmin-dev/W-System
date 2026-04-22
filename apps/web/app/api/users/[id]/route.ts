@@ -74,7 +74,15 @@ export async function PATCH(
     const allowedFields = [
       'full_name', 'email', 'role_id', 'department', 
       'phone', 'avatar_url', 'timezone', 'language', 
-      'preferences', 'is_active'
+      'preferences', 'is_active',
+      // HR fields
+      'nik', 'employee_number', 'employment_status', 
+      'join_date', 'position_id', 'department_id', 'grade_id',
+      'base_salary', 'bank_account', 'bank_name', 'npwp',
+      'bpjs_kesehatan', 'bpjs_ketenagakerjaan',
+      'emergency_contact_name', 'emergency_contact_phone', 
+      'emergency_contact_relation',
+      'address', 'city', 'province', 'postal_code'
     ]
     
     for (const field of allowedFields) {

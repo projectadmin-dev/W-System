@@ -1,7 +1,5 @@
 import { createServerClient, createAdminClient } from '@/lib/supabase-server'
-// Temporarily use any for Database type until journal_entries migration is fixed
-// type Database = import('@/src/types/database').Database
-type Database = any
+import type { Database } from '@/src/types/database'
 
 type JournalEntry = Database['public']['Tables']['journal_entries']['Row']
 type JournalEntryInsert = Database['public']['Tables']['journal_entries']['Insert']
@@ -123,7 +121,7 @@ export async function getJournalEntryByNumber(entryNumber: string) {
  * PSAK: Validates debit = credit before posting
  */
 export async function createJournalEntry(entry: JournalEntryInsert, lines: JournalLineInsert[]) {
-  const supabase = await createServerClient()
+  const supabase = await createAdminClient()
   
   // Validate double-entry balance
   const totalDebit = lines.reduce((sum, line) => sum + Number(line.debit_amount || 0), 0)
@@ -256,7 +254,7 @@ export async function createReversalEntry(originalEntryId: string, reason: strin
   }))
   
   const reversalEntry: JournalEntryInsert = {
-    entry_number: `JE-REV-${Date.now()}`, // Will be formatted properly
+    entry_number: `JE-REV-${Date.now()}`,
     transaction_date: new Date().toISOString(),
     posting_date: new Date().toISOString(),
     source_type: 'adjustment',
@@ -270,7 +268,9 @@ export async function createReversalEntry(originalEntryId: string, reason: strin
     is_reversal: true,
     reversal_of_id: originalEntryId,
     reversal_reason: reason,
-    prepared_by: preparedBy
+    prepared_by: preparedBy,
+    created_by: preparedBy,
+    tenant_id: original.tenant_id
   }
   
   return createJournalEntry(reversalEntry, reversalLines)

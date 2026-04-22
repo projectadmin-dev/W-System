@@ -3,8 +3,8 @@ module.exports = {
     {
       name: 'wsystem-1',
       cwd: '/home/ubuntu/apps/wsystem-1/apps/web',
-      script: 'npm',
-      args: 'run start',
+      script: 'npx',
+      args: 'next start --port 3001',
       env: {
         NODE_ENV: 'production',
         PORT: '3001',
@@ -14,8 +14,7 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
-      error_file: '/dev/null',
-      out_file: '/dev/null',
+      env_file: '/home/ubuntu/apps/wsystem-1/.env.local',
       log_file: '/home/ubuntu/apps/wsystem-1/pm2.log',
       time: true,
     },

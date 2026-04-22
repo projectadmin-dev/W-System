@@ -265,3 +265,56 @@ export type HrOvertimeRule = {
 
 export type HrOvertimeRuleInsert = Omit<HrOvertimeRule, 'id' | 'created_at' | 'updated_at'>
 export type HrOvertimeRuleUpdate = Partial<Omit<HrOvertimeRule, 'id' | 'created_at' | 'updated_at'>>
+
+// ============================================================
+// Employee Contracts (Kontrak Karyawan)
+// ============================================================
+export type HrEmployeeContract = {
+  id: string
+  tenant_id: string
+  employee_id: string
+  contract_no: string
+  contract_type: 'pkwt' | 'pkwtt' | 'freelance' | 'pt' | 'magang'
+  start_date: string
+  end_date: string | null
+  probation_end_date: string | null
+  position_id: string | null
+  department_id: string | null
+  grade_id: string | null
+  base_salary: number | null
+  work_shift_id: string | null
+  work_area_id: string | null
+  is_active: boolean
+  termination_reason: string | null
+  termination_date: string | null
+  document_url: string | null
+  signed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type HrEmployeeContractInsert = Omit<HrEmployeeContract, 'id' | 'created_at' | 'updated_at'>
+export type HrEmployeeContractUpdate = Partial<Omit<HrEmployeeContract, 'id' | 'created_at' | 'updated_at'>>
+
+// ============================================================
+// Employee Documents (Dokumen Karyawan)
+// ============================================================
+export type HrEmployeeDocument = {
+  id: string
+  tenant_id: string
+  employee_id: string
+  document_type: 'ktp' | 'kk' | 'ijazah' | 'sertifikat' | 'kontrak' | 'sk' | 'passfoto' | 'npwp' | 'bpjs_card' | 'other'
+  document_name: string
+  file_url: string
+  file_size: number | null
+  mime_type: string | null
+  is_verified: boolean
+  verified_by: string | null
+  verified_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type HrEmployeeDocumentInsert = Omit<HrEmployeeDocument, 'id' | 'created_at' | 'updated_at'>
+export type HrEmployeeDocumentUpdate = Partial<Omit<HrEmployeeDocument, 'id' | 'created_at' | 'updated_at' | 'file_url' | 'file_size' | 'mime_type'>>
