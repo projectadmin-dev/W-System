@@ -90,40 +90,47 @@ interface UserTableProps {
   onRefresh?: () => void
   onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
   onFilterChange?: (filters: { search: string; role_id: string; is_active?: boolean }) => void
+  pagination?: { pageIndex: number; pageSize: number }
 }
 
-export function UserTable({ users, total, roles = [], isLoading = false, onRefresh, onPaginationChange, onFilterChange }: UserTableProps) {
+export function UserTable({ users, total, roles = [], isLoading = false, onRefresh, onPaginationChange, onFilterChange, pagination: controlledPagination }: UserTableProps) {
   const router = useRouter()
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [roleFilter, setRoleFilter] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("")
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
-  })
+  const pagination = controlledPagination || { pageIndex: 0, pageSize: 10 }
   const [columnVisibility, setColumnVisibility] = React.useState({})
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [userToDelete, setUserToDelete] = React.useState<User | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
-  // Notify parent when pagination changes
-  React.useEffect(() => {
-    if (onPaginationChange) {
-      onPaginationChange(pagination)
-    }
-  }, [pagination, onPaginationChange])
+  // Controlled pagination wrapper to bridge TanStack updater pattern with parent's callback
+  const handleTablePaginationChange = React.useCallback((updater: any) => {
+    if (!onPaginationChange) return
+    const next = typeof updater === 'function' ? updater(pagination) : updater
+    onPaginationChange(next)
+  }, [onPaginationChange, pagination])
 
-  // Notify parent when filters change
+  // Notify parent when filters change (skip initial mount / no-op updates)
+  const prevFiltersRef = React.useRef({ search: "", role_id: "", is_active: undefined as boolean | undefined })
   React.useEffect(() => {
-    if (onFilterChange) {
-      onFilterChange({
-        search: globalFilter,
-        role_id: roleFilter,
-        is_active: statusFilter === "" ? undefined : statusFilter === "true",
-      })
+    if (!onFilterChange) return
+    const next = {
+      search: globalFilter,
+      role_id: roleFilter,
+      is_active: statusFilter === "" ? undefined : statusFilter === "true",
     }
+    if (
+      prevFiltersRef.current.search === next.search &&
+      prevFiltersRef.current.role_id === next.role_id &&
+      prevFiltersRef.current.is_active === next.is_active
+    ) {
+      return
+    }
+    prevFiltersRef.current = next
+    onFilterChange(next)
   }, [globalFilter, roleFilter, statusFilter, onFilterChange])
 
   const columns: ColumnDef<User>[] = [
@@ -303,7 +310,7 @@ export function UserTable({ users, total, roles = [], isLoading = false, onRefre
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
-    onPaginationChange: setPagination,
+    onPaginationChange: handleTablePaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

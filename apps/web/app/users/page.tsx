@@ -158,6 +158,7 @@ export default function UsersPage() {
                 onRefresh={fetchUsers}
                 onPaginationChange={handlePaginationChange}
                 onFilterChange={handleFilterChange}
+                pagination={pagination}
               />
 
             </div>

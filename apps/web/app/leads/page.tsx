@@ -42,7 +42,7 @@ import {
 } from "@workspace/ui/components/select"
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
-import { Plus, Search, Filter, TrendingUp, Clock, AlertCircle } from "lucide-react"
+import { Plus, Search, Filter, TrendingUp, Clock, AlertCircle, LayoutDashboard } from "lucide-react"
 import Link from "next/link"
 
 interface Lead {
@@ -219,12 +219,20 @@ export default function LeadsPage() {
                     Manage and track leads through the sales pipeline
                   </p>
                 </div>
-                <Link href="/leads/new">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add New Lead
-                  </Button>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link href="/leads/kanban">
+                    <Button variant="outline">
+                      <LayoutDashboard className="w-4 h-4 mr-2" />
+                      Kanban View
+                    </Button>
+                  </Link>
+                  <Link href="/leads/new">
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New Lead
+                    </Button>
+                  </Link>
+                </div>
               </div>
 
               {/* Stats Cards */}
