@@ -48,7 +48,7 @@ export default function FinanceDashboard() {
             <Link href="/finance/ar-aging" className="block">
               <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-green-500 transition-colors">
                 <h4 className="font-semibold mb-2">AR Aging (Piutang)</h4>
-                <p className="text-sm text-gray-400">Umur piutang per customer (1-30 / 31-60 / 61-90 / >90)</p>
+                <p className="text-sm text-gray-400">Umur piutang per customer (1-30 / 31-60 / 61-90 / &gt;90)</p>
                 <div className="mt-3 text-green-400 text-sm font-medium">View →</div>
               </div>
             </Link>
