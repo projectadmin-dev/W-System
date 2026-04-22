@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@workspace/ui/components/sidebar"
-import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon } from "lucide-react"
+import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon, FileTextIcon } from "lucide-react"
 
 // This is sample data.
 const data = {
@@ -120,6 +120,21 @@ const data = {
         {
           title: "New Project Brief",
           url: "/project-briefs/new",
+        },
+      ],
+    },
+    {
+      title: "Quotations",
+      url: "#",
+      icon: <FileTextIcon />,
+      items: [
+        {
+          title: "Quotation List",
+          url: "/quotations",
+        },
+        {
+          title: "New Quotation",
+          url: "/quotations/new",
         },
       ],
     },
