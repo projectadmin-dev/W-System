@@ -19,13 +19,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@workspace/ui/components/sidebar"
-import { ArrowLeft, PencilIcon, UserIcon, MailIcon, PhoneIcon, BuildingIcon, BadgeIcon, CalendarIcon } from "lucide-react"
+import { ArrowLeft, PencilIcon, UserIcon, MailIcon, PhoneIcon, BuildingIcon, BadgeIcon, CalendarIcon, Users, MapPin, FileText, Files } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/ui/components/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
 import { toast } from "sonner"
 import { Loader2Icon } from "lucide-react"
 import Link from "next/link"
+import { EmployeeContractsTab } from "@/components/employee-contracts-tab"
+import { EmployeeDocumentsTab } from "@/components/employee-documents-tab"
 
 const profile = {
   user: {
@@ -51,6 +54,24 @@ interface UserProfile {
   last_login_at: string | null
   created_at: string
   updated_at: string
+  // HR Employee Fields
+  nik: string | null
+  employee_number: string | null
+  employment_status: string | null
+  join_date: string | null
+  base_salary: string | null
+  bank_account: string | null
+  bank_name: string | null
+  npwp: string | null
+  bpjs_kesehatan: string | null
+  bpjs_ketenagakerjaan: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  emergency_contact_relation: string | null
+  address: string | null
+  city: string | null
+  province: string | null
+  postal_code: string | null
 }
 
 export default function UserDetailPage() {
@@ -217,6 +238,16 @@ export default function UserDetailPage() {
                   avatar_url: user.avatar_url,
                   timezone: user.timezone,
                   language: user.language,
+                  // HR fields (map from detail page API response)
+                  employee_id: user.employee_number || "",
+                  job_title: user.role_name || "",
+                  employment_type: 
+                    user.employment_status === "tetap" ? "full-time" :
+                    user.employment_status === "kontrak" ? "contract" :
+                    user.employment_status === "magang" ? "intern" : undefined,
+                  join_date: user.join_date || "",
+                  work_location: "onsite",
+                  is_active: user.is_active,
                 }}
                 roles={roles}
                 tenants={tenants}
@@ -294,8 +325,22 @@ export default function UserDetailPage() {
               </Button>
             </div>
 
-            {/* User Details */}
-            <div className="grid gap-6 md:grid-cols-2">
+            {/* HR Tabs */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="contracts" className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  Contracts
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="flex items-center gap-1">
+                  <Files className="h-4 w-4" />
+                  Documents
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-6 mt-6">
+                <div className="grid gap-6 md:grid-cols-2">
               
               {/* Basic Information */}
               <Card>
@@ -421,6 +466,84 @@ export default function UserDetailPage() {
                 </CardContent>
               </Card>
 
+                            {/* Employee Information */}
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Employee Information
+                  </CardTitle>
+                  <CardDescription>HR and employment details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">NIK</p>
+                      <p className="font-medium">{user.nik || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Employee Number</p>
+                      <p className="font-medium">{user.employee_number || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <p className="font-medium">{user.employment_status ? user.employment_status.charAt(0).toUpperCase() + user.employment_status.slice(1) : "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Join Date</p>
+                      <p className="font-medium">{user.join_date ? new Date(user.join_date).toLocaleDateString("id-ID") : "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Base Salary</p>
+                      <p className="font-medium">{user.base_salary ? "Rp " + parseFloat(user.base_salary).toLocaleString("id-ID") : "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">NPWP</p>
+                      <p className="font-medium">{user.npwp || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">BPJS Kesehatan</p>
+                      <p className="font-medium">{user.bpjs_kesehatan || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">BPJS Ketenagakerjaan</p>
+                      <p className="font-medium">{user.bpjs_ketenagakerjaan || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Bank Account</p>
+                      <p className="font-medium">{user.bank_account ? (user.bank_name || "") + " " + user.bank_account : "—"}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Address & Emergency Contact */}
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Address & Emergency Contact
+                  </CardTitle>
+                  <CardDescription>Contact and address details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Address</h4>
+                      <p className="text-sm">{user.address || "—"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {user.city || "—"}, {user.province || "—"} {(user.postal_code || "")}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Emergency Contact</h4>
+                      <p className="text-sm font-medium">{user.emergency_contact_name || "—"}</p>
+                      <p className="text-sm text-muted-foreground">{user.emergency_contact_phone || "—"} {user.emergency_contact_relation ? "(" + user.emergency_contact_relation + ")" : ""}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Avatar */}
               {user.avatar_url && (
                 <Card>
@@ -439,7 +562,17 @@ export default function UserDetailPage() {
               )}
 
             </div>
+              </TabsContent>
 
+              <TabsContent value="contracts" className="mt-6">
+                <EmployeeContractsTab employeeId={user.id} />
+              </TabsContent>
+
+              <TabsContent value="documents" className="mt-6">
+                <EmployeeDocumentsTab employeeId={user.id} />
+              </TabsContent>
+
+          </Tabs>
           </div>
         </div>
       </SidebarInset>

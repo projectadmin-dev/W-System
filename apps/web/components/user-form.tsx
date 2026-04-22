@@ -42,11 +42,19 @@ const userFormSchema = z.object({
   full_name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   role_id: z.string().uuid({ message: "Please select a role" }),
-  department: z.string().optional(),
-  phone: z.string().optional(),
+  department: z.string().optional().or(z.literal("")),
+  phone: z.string().optional().or(z.literal("")),
   avatar_url: z.string().url().optional().or(z.literal("")),
   timezone: z.string().optional(),
   language: z.string().optional(),
+  // HR fields
+  employee_id: z.string().optional().or(z.literal("")),
+  job_title: z.string().optional().or(z.literal("")),
+  employment_type: z.enum(["full-time", "part-time", "contract", "intern"]).optional().or(z.literal("")),
+  join_date: z.string().optional().or(z.literal("")),
+  manager_id: z.string().uuid().optional().or(z.literal("")),
+  work_location: z.enum(["onsite", "remote", "hybrid"]).optional().or(z.literal("")),
+  is_active: z.boolean().optional(),
 })
 
 type UserFormValues = z.infer<typeof userFormSchema>
@@ -63,13 +71,22 @@ interface UserFormProps {
     avatar_url?: string | null
     timezone?: string
     language?: string
+    // HR fields
+    employee_id?: string | null
+    job_title?: string | null
+    employment_type?: "full-time" | "part-time" | "contract" | "intern" | null
+    join_date?: string | null
+    manager_id?: string | null
+    work_location?: "onsite" | "remote" | "hybrid" | null
+    is_active?: boolean | null
   }
   roles: { id: string; name: string; description: string }[]
   tenants: { id: string; name: string; slug: string }[]
+  managers?: { id: string; full_name: string }[] // For dropdown
   mode: "create" | "edit"
 }
 
-export function UserForm({ initialData, roles, tenants, mode }: UserFormProps) {
+export function UserForm({ initialData, roles, tenants, managers, mode }: UserFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const isEdit = mode === "edit"
@@ -86,6 +103,14 @@ export function UserForm({ initialData, roles, tenants, mode }: UserFormProps) {
       avatar_url: initialData?.avatar_url || "",
       timezone: initialData?.timezone ?? "Asia/Jakarta",
       language: initialData?.language ?? "id",
+      // HR fields
+      employee_id: initialData?.employee_id || "",
+      job_title: initialData?.job_title || "",
+      employment_type: initialData?.employment_type || undefined,
+      join_date: initialData?.join_date || "",
+      manager_id: initialData?.manager_id || "",
+      work_location: initialData?.work_location || undefined,
+      is_active: initialData?.is_active ?? true,
     },
   })
 
@@ -243,6 +268,187 @@ export function UserForm({ initialData, roles, tenants, mode }: UserFormProps) {
                     </FormItem>
                   )}
                 />
+              </div>
+            </div>
+
+            {/* Employment Information (HR) */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <BuildingIcon className="h-4 w-4" />
+                Employment Information
+              </h3>
+              <Separator />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="employee_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Employee ID</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="EMP-001"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Unique employee identifier</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="job_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Job Title</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Software Engineer"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Position or job title</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="employment_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Employment Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="full-time">Full Time</SelectItem>
+                          <SelectItem value="part-time">Part Time</SelectItem>
+                          <SelectItem value="contract">Contract</SelectItem>
+                          <SelectItem value="intern">Intern</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Employment contract type</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="join_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Join Date</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormDescription>Date employee joined</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="work_location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Work Location</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="onsite">On-site</SelectItem>
+                          <SelectItem value="remote">Remote</SelectItem>
+                          <SelectItem value="hybrid">Hybrid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Primary work arrangement</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {managers && managers.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="manager_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Reporting Manager</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select manager" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">None</SelectItem>
+                            {managers.map((mgr) => (
+                              <SelectItem key={mgr.id} value={mgr.id}>
+                                {mgr.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Direct supervisor</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {isEdit && (
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="h-4 w-4 mt-1"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Active Employee</FormLabel>
+                          <FormDescription>
+                            Mark as active/inactive status
+                          </FormDescription>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </div>
 
