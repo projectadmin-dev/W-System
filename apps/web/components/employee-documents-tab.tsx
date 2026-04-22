@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import { Button } from "@workspace/ui/components/button"
@@ -10,15 +10,13 @@ import {
   File,
   FileText,
   FileImage,
-  FileBadge,
-  FileCheck,
-  FileX,
   Upload,
   Trash2,
   CheckCircle2,
   Clock,
   ExternalLink,
 } from "lucide-react"
+import { DocumentFormDialog } from "./employee-document-form"
 
 interface Document {
   id: string
@@ -42,26 +40,47 @@ interface EmployeeDocumentsTabProps {
 export function EmployeeDocumentsTab({ employeeId }: EmployeeDocumentsTabProps) {
   const [documents, setDocuments] = useState<Document[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
-  useEffect(() => {
-    async function fetchDocuments() {
-      try {
-        const res = await fetch(`/api/hc/employee-documents?employee_id=${employeeId}`)
-        if (!res.ok) throw new Error("Failed to fetch documents")
-        const result = await res.json()
-        setDocuments(result.data || [])
-      } catch (error) {
-        console.error(error)
-        toast.error("Failed to load documents")
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchDocuments = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/hc/employee-documents?employee_id=${employeeId}`)
+      if (!res.ok) throw new Error("Failed to fetch documents")
+      const result = await res.json()
+      setDocuments(result.data || [])
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to load documents")
+    } finally {
+      setIsLoading(false)
     }
-    fetchDocuments()
   }, [employeeId])
 
+  useEffect(() => {
+    fetchDocuments()
+  }, [fetchDocuments])
+
+  const handleDelete = async (id: string, fileUrl: string) => {
+    if (!confirm("Delete this document?")) return
+    try {
+      const res = await fetch(`/api/hc/employee-documents/${id}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) throw new Error("Failed to delete document")
+      toast.success("Document deleted")
+      fetchDocuments()
+    } catch (error) {
+      toast.error((error as Error).message)
+    }
+  }
+
+  const handleSuccess = () => {
+    fetchDocuments()
+  }
+
   const getDocumentIcon = (type: string) => {
-    if (type === 'passfoto' || type === 'ktp') return <FileImage className="h-5 w-5" />
+    if (type === "passfoto" || type === "ktp") return <FileImage className="h-5 w-5" />
     return <FileText className="h-5 w-5" />
   }
 
@@ -88,26 +107,22 @@ export function EmployeeDocumentsTab({ employeeId }: EmployeeDocumentsTabProps) 
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Employee Documents</h3>
-        <Button size="sm">
+        <Button size="sm" onClick={() => setIsFormOpen(true)}>
           <Upload className="h-4 w-4 mr-1" />
           Upload Document
         </Button>
       </div>
 
-      {documents.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : documents.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             <File className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
@@ -124,7 +139,9 @@ export function EmployeeDocumentsTab({ employeeId }: EmployeeDocumentsTabProps) 
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
-                  <div className="mt-1 text-muted-foreground">{getDocumentIcon(doc.document_type)}</div>
+                  <div className="mt-1 text-muted-foreground">
+                    {getDocumentIcon(doc.document_type)}
+                  </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -145,13 +162,16 @@ export function EmployeeDocumentsTab({ employeeId }: EmployeeDocumentsTabProps) 
                       <span>•</span>
                       <span>{formatFileSize(doc.file_size)}</span>
                       <span>•</span>
-                      <span>Uploaded {new Date(doc.created_at).toLocaleDateString("id-ID")}</span>
+                      <span>
+                        Uploaded {new Date(doc.created_at).toLocaleDateString("id-ID")}
+                      </span>
                     </div>
 
                     {doc.is_verified && doc.verified_at && (
                       <p className="text-xs text-green-600 mt-1">
                         Verified on {new Date(doc.verified_at).toLocaleDateString("id-ID")}
-                        {doc.verifier?.full_name && ` by ${doc.verifier.full_name}`}
+                        {doc.verifier?.full_name &&
+                          ` by ${doc.verifier.full_name}`}
                       </p>
                     )}
                   </div>
@@ -163,7 +183,12 @@ export function EmployeeDocumentsTab({ employeeId }: EmployeeDocumentsTabProps) 
                       </a>
                     </Button>
                     {!doc.is_verified && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => handleDelete(doc.id, doc.file_url)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -174,6 +199,13 @@ export function EmployeeDocumentsTab({ employeeId }: EmployeeDocumentsTabProps) 
           ))}
         </div>
       )}
+
+      <DocumentFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        employeeId={employeeId}
+        onSuccess={handleSuccess}
+      />
     </div>
   )
 }

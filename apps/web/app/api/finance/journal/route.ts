@@ -102,12 +102,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { lines, ...entryData } = body;
+    
+    // Auto-generate entry number if not provided
+    let entryNumber = entryData.entry_number;
+    if (!entryNumber) {
+      const date = new Date(entryData.transaction_date || new Date());
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const ts = Date.now().toString().slice(-5);
+      entryNumber = `JE-${year}${month}-${ts}`;
+    }
+    
+    const linesWithTenant = lines.map((line: any) => ({
+      ...line,
+      tenant_id: tenantId,
+      created_by: '812558af-8be8-4c53-b581-e6a4f1c91147',
+      updated_by: '812558af-8be8-4c53-b581-e6a4f1c91147'
+    }));
+
     const entry = await createJournalEntry(
       { 
-        ...body,
-        prepared_by: '00000000-0000-0000-0000-000000000000' // System user
+        ...entryData,
+        entry_number: entryNumber,
+        prepared_by: '812558af-8be8-4c53-b581-e6a4f1c91147',
+        created_by: '812558af-8be8-4c53-b581-e6a4f1c91147',
+        tenant_id: tenantId
       }, 
-      body.lines
+      linesWithTenant
     )
     return NextResponse.json(entry, { status: 201 })
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 import { Button } from "@workspace/ui/components/button"
@@ -12,13 +12,11 @@ import {
   DollarSign,
   Building2,
   Briefcase,
-  CheckCircle2,
-  XCircle,
   Plus,
   Pencil,
   Trash2,
-  Loader2,
 } from "lucide-react"
+import { ContractFormDialog } from "./employee-contract-form"
 
 interface Contract {
   id: string
@@ -46,31 +44,52 @@ interface EmployeeContractsTabProps {
 export function EmployeeContractsTab({ employeeId }: EmployeeContractsTabProps) {
   const [contracts, setContracts] = useState<Contract[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingContract, setEditingContract] = useState<Contract | null>(null)
 
-  useEffect(() => {
-    async function fetchContracts() {
-      try {
-        const res = await fetch(`/api/hc/employee-contracts?employee_id=${employeeId}`)
-        if (!res.ok) throw new Error("Failed to fetch contracts")
-        const result = await res.json()
-        setContracts(result.data || [])
-      } catch (error) {
-        console.error(error)
-        toast.error("Failed to load contracts")
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchContracts = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/hc/employee-contracts?employee_id=${employeeId}`)
+      if (!res.ok) throw new Error("Failed to fetch contracts")
+      const result = await res.json()
+      setContracts(result.data || [])
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to load contracts")
+    } finally {
+      setIsLoading(false)
     }
-    fetchContracts()
   }, [employeeId])
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    )
+  useEffect(() => {
+    fetchContracts()
+  }, [fetchContracts])
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to deactivate this contract?")) return
+    try {
+      const res = await fetch(`/api/hc/employee-contracts/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete contract")
+      toast.success("Contract deactivated")
+      fetchContracts()
+    } catch (error) {
+      toast.error((error as Error).message)
+    }
+  }
+
+  const handleEdit = (contract: Contract) => {
+    setEditingContract(contract)
+    setIsFormOpen(true)
+  }
+
+  const handleAddNew = () => {
+    setEditingContract(null)
+    setIsFormOpen(true)
+  }
+
+  const handleSuccess = () => {
+    fetchContracts()
   }
 
   const getContractTypeLabel = (type: string) => {
@@ -100,13 +119,18 @@ export function EmployeeContractsTab({ employeeId }: EmployeeContractsTabProps) 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Employment Contracts</h3>
-        <Button size="sm">
+        <Button size="sm" onClick={handleAddNew}>
           <Plus className="h-4 w-4 mr-1" />
           Add Contract
         </Button>
       </div>
 
-      {contracts.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : contracts.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
@@ -117,7 +141,10 @@ export function EmployeeContractsTab({ employeeId }: EmployeeContractsTabProps) 
       ) : (
         <div className="grid gap-4">
           {contracts.map((contract) => (
-            <Card key={contract.id} className={contract.is_active ? "border-green-200 dark:border-green-900" : ""}>
+            <Card
+              key={contract.id}
+              className={contract.is_active ? "border-green-200 dark:border-green-900" : ""}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -130,11 +157,21 @@ export function EmployeeContractsTab({ employeeId }: EmployeeContractsTabProps) 
                     </p>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleEdit(contract)}
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    {!contract.is_active && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    {contract.is_active && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => handleDelete(contract.id)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -147,7 +184,9 @@ export function EmployeeContractsTab({ employeeId }: EmployeeContractsTabProps) 
                     <p className="text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" /> Start Date
                     </p>
-                    <p className="font-medium">{new Date(contract.start_date).toLocaleDateString("id-ID")}</p>
+                    <p className="font-medium">
+                      {new Date(contract.start_date).toLocaleDateString("id-ID")}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-muted-foreground flex items-center gap-1">
@@ -206,6 +245,14 @@ export function EmployeeContractsTab({ employeeId }: EmployeeContractsTabProps) 
           ))}
         </div>
       )}
+
+      <ContractFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        employeeId={employeeId}
+        contract={editingContract}
+        onSuccess={handleSuccess}
+      />
     </div>
   )
 }
