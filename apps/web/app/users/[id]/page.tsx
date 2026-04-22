@@ -19,13 +19,16 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@workspace/ui/components/sidebar"
-import { ArrowLeft, PencilIcon, UserIcon, MailIcon, PhoneIcon, BuildingIcon, BadgeIcon, CalendarIcon, Users, MapPin } from "lucide-react"
+import { ArrowLeft, PencilIcon, UserIcon, MailIcon, PhoneIcon, BuildingIcon, BadgeIcon, CalendarIcon, Users, MapPin, FileText, Files } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/ui/components/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
 import { toast } from "sonner"
 import { Loader2Icon } from "lucide-react"
 import Link from "next/link"
+import { EmployeeContractsTab } from "@/components/employee-contracts-tab"
+import { EmployeeDocumentsTab } from "@/components/employee-documents-tab"
 
 const profile = {
   user: {
@@ -322,8 +325,22 @@ export default function UserDetailPage() {
               </Button>
             </div>
 
-            {/* User Details */}
-            <div className="grid gap-6 md:grid-cols-2">
+            {/* HR Tabs */}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="contracts" className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  Contracts
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="flex items-center gap-1">
+                  <Files className="h-4 w-4" />
+                  Documents
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-6 mt-6">
+                <div className="grid gap-6 md:grid-cols-2">
               
               {/* Basic Information */}
               <Card>
@@ -545,7 +562,17 @@ export default function UserDetailPage() {
               )}
 
             </div>
+              </TabsContent>
 
+              <TabsContent value="contracts" className="mt-6">
+                <EmployeeContractsTab employeeId={user.id} />
+              </TabsContent>
+
+              <TabsContent value="documents" className="mt-6">
+                <EmployeeDocumentsTab employeeId={user.id} />
+              </TabsContent>
+
+          </Tabs>
           </div>
         </div>
       </SidebarInset>
