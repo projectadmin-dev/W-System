@@ -41,6 +41,7 @@ import {
   SendIcon,
   MoreVerticalIcon,
   Loader2Icon,
+  CheckCircleIcon,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -58,10 +59,14 @@ interface CustomerInvoice {
   amount: number
   tax_amount: number
   total_amount: number
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+  paid_amount: number
+  balance_due: number
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'partial'
   issue_date: string
   due_date: string
   paid_date?: string
+  paid_at?: string
+  paid_days?: number
   description?: string
   created_at: string
   updated_at: string
@@ -77,6 +82,8 @@ export default function CustomerInvoicesPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('transfer')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentNotes, setPaymentNotes] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null)
 
@@ -153,6 +160,49 @@ export default function CustomerInvoicesPage() {
     }
   }
 
+  const handleRecordPayment = async () => {
+    if (!selectedInvoice) return
+    const amount = parseFloat(paymentAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('Please enter a valid payment amount')
+      return
+    }
+    if (amount > selectedInvoice.balance_due) {
+      toast.error(`Payment amount cannot exceed balance due (${formatCurrency(selectedInvoice.balance_due)})`)
+      return
+    }
+
+    setPaymentLoading(true)
+    try {
+      const response = await fetch(`/api/finance/customer-invoices/${selectedInvoice.id}/record-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          payment_method: paymentMethod,
+          payment_date: paymentDate,
+          notes: paymentNotes || `Payment for invoice ${selectedInvoice.invoice_number}`,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(`Payment ${formatCurrency(amount)} recorded successfully`)
+        setPaymentDialogOpen(false)
+        setPaymentAmount('')
+        setPaymentNotes('')
+        fetchInvoices()
+      } else {
+        const error = await response.json()
+        toast.error(error.message || 'Failed to record payment')
+      }
+    } catch (error) {
+      toast.error('Error recording payment')
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
   const handleSendInvoice = async (invoice: CustomerInvoice) => {
     try {
       const response = await fetch(`/api/finance/customer-invoices/${invoice.id}/send`, {
@@ -200,6 +250,7 @@ export default function CustomerInvoicesPage() {
       draft: 'secondary',
       sent: 'outline',
       paid: 'default',
+      partial: 'outline',
       overdue: 'destructive',
       cancelled: 'secondary',
     }
@@ -319,8 +370,8 @@ export default function CustomerInvoicesPage() {
                 <TableHead className="text-muted-foreground font-semibold text-right">Amount</TableHead>
                 <TableHead className="text-muted-foreground font-semibold text-right">Tax (11%)</TableHead>
                 <TableHead className="text-muted-foreground font-semibold text-right">Total</TableHead>
+                <TableHead className="text-muted-foreground font-semibold text-right">Balance Due</TableHead>
                 <TableHead className="text-muted-foreground font-semibold">Status</TableHead>
-                <TableHead className="text-muted-foreground font-semibold">Issue Date</TableHead>
                 <TableHead className="text-muted-foreground font-semibold">Due Date</TableHead>
                 <TableHead className="text-muted-foreground font-semibold">Actions</TableHead>
               </TableRow>
@@ -340,11 +391,11 @@ export default function CustomerInvoicesPage() {
                     <TableCell>{invoice.customer_name}</TableCell>
                     <TableCell className="text-right">{formatCurrency(invoice.amount)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(invoice.tax_amount)}</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatCurrency(invoice.total_amount)}
+                    <TableCell className="text-right font-semibold">{formatCurrency(invoice.total_amount)}</TableCell>
+                    <TableCell className={`text-right font-semibold ${invoice.balance_due > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {formatCurrency(invoice.balance_due || 0)}
                     </TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell>{formatDate(invoice.issue_date)}</TableCell>
                     <TableCell>{formatDate(invoice.due_date)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -358,6 +409,12 @@ export default function CustomerInvoicesPage() {
                             <EyeIcon className="h-4 w-4 mr-2" />
                             View
                           </DropdownMenuItem>
+                          {(invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'partial') && (
+                            <DropdownMenuItem onClick={() => { setSelectedInvoice(invoice); setPaymentAmount(String(invoice.balance_due)); setPaymentDialogOpen(true) }}>
+                              <CheckCircleIcon className="h-4 w-4 mr-2" />
+                              Record Payment
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleSendInvoice(invoice)}>
                             <SendIcon className="h-4 w-4 mr-2" />
                             Send
@@ -550,6 +607,92 @@ export default function CustomerInvoicesPage() {
             <Button onClick={() => selectedInvoice && handleSendInvoice(selectedInvoice)}>
               <SendIcon className="h-4 w-4 mr-2" />
               Send Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              {selectedInvoice?.invoice_number} - Balance Due: {selectedInvoice && formatCurrency(selectedInvoice.balance_due)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Payment Amount</label>
+                <Input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder={selectedInvoice ? String(selectedInvoice.balance_due) : ''}
+                  className="bg-gray-900 border-gray-700"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                >
+                  <option value="transfer">Bank Transfer</option>
+                  <option value="cash">Cash</option>
+                  <option value="check">Check</option>
+                  <option value="credit_card">Credit Card</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Payment Date</label>
+              <Input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="bg-gray-900 border-gray-700"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Notes</label>
+              <Input
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                placeholder="Payment reference, notes, etc."
+                className="bg-gray-900 border-gray-700"
+              />
+            </div>
+            {selectedInvoice && (
+              <div className="bg-gray-900 p-4 rounded-lg">
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400">Total Amount:</span>
+                  <span>{formatCurrency(selectedInvoice.total_amount)}</span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-400">Paid Amount:</span>
+                  <span>{formatCurrency(selectedInvoice.paid_amount || 0)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-lg border-t border-gray-700 pt-2">
+                  <span>Balance Due:</span>
+                  <span className="text-red-400">{formatCurrency(selectedInvoice.balance_due)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)} disabled={paymentLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleRecordPayment} disabled={paymentLoading}>
+              {paymentLoading ? (
+                <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircleIcon className="h-4 w-4 mr-2" />
+              )}
+              Record Payment
             </Button>
           </DialogFooter>
         </DialogContent>

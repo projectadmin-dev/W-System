@@ -1,12 +1,188 @@
-import Link from 'next/link';
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import {
+  TrendingUpIcon,
+  TrendingDownIcon,
+  AlertTriangleIcon,
+  DollarSignIcon,
+  FileTextIcon,
+} from 'lucide-react'
+
+interface ARStats {
+  total: number
+  current: number
+  days_1_30: number
+  days_31_60: number
+  days_61_90: number
+  over_90: number
+  overdue_total: number
+}
+
+interface InvoiceSummary {
+  total_count: number
+  total_amount: number
+  paid_total: number
+  overdue_count: number
+  draft_count: number
+  sent_count: number
+}
 
 export default function FinanceDashboard() {
+  const [stats, setStats] = useState<ARStats | null>(null)
+  const [summary, setSummary] = useState<InvoiceSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    setLoading(true)
+    try {
+      // Fetch AR Aging
+      const arResponse = await fetch('/api/finance/ar-aging')
+      let arData: ARStats | null = null
+      if (arResponse.ok) {
+        const { data } = await arResponse.json()
+        arData = data
+        setStats(data)
+      }
+
+      // Fetch Invoice Summary
+      const invResponse = await fetch('/api/finance/customer-invoices')
+      if (invResponse.ok) {
+        const { data: invoices } = await invResponse.json()
+        const summary: InvoiceSummary = {
+          total_count: invoices?.length || 0,
+          total_amount: invoices?.reduce((acc: number, inv: any) => acc + (Number(inv.total_amount) || 0), 0) || 0,
+          paid_total: invoices?.reduce((acc: number, inv: any) => acc + (Number(inv.paid_amount) || 0), 0) || 0,
+          overdue_count: invoices?.filter((inv: any) => inv.status === 'overdue').length || 0,
+          draft_count: invoices?.filter((inv: any) => inv.status === 'draft').length || 0,
+          sent_count: invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'partial').length || 0,
+        }
+        setSummary(summary)
+      }
+    } catch (error) {
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0)
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Finance Module</h1>
           <p className="text-gray-400">W.System Financial Management</p>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-gray-400">Total Outstanding AR</div>
+              <TrendingUpIcon className="h-5 w-5 text-yellow-400" />
+            </div>
+            {loading ? (
+              <div className="h-8 bg-gray-700 rounded animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-yellow-400">
+                {formatCurrency(stats?.total || 0)}
+              </div>
+            )}
+          </div>
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-gray-400">Overdue AR</div>
+              <AlertTriangleIcon className="h-5 w-5 text-red-400" />
+            </div>
+            {loading ? (
+              <div className="h-8 bg-gray-700 rounded animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-red-400">
+                {formatCurrency((stats?.days_31_60 || 0) + (stats?.days_61_90 || 0) + (stats?.over_90 || 0))}
+              </div>
+            )}
+            <div className="text-xs text-gray-500 mt-1">31-60 / 61-90 / 90+ days</div>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-gray-400">Total Paid (YTD)</div>
+              <DollarSignIcon className="h-5 w-5 text-green-400" />
+            </div>
+            {loading ? (
+              <div className="h-8 bg-gray-700 rounded animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-green-400">
+                {formatCurrency(summary?.paid_total || 0)}
+              </div>
+            )}
+          </div>
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-gray-400">Active Invoices</div>
+              <FileTextIcon className="h-5 w-5 text-blue-400" />
+            </div>
+            {loading ? (
+              <div className="h-8 bg-gray-700 rounded animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold text-blue-400">
+                {summary?.sent_count || 0} Unpaid
+              </div>
+            )}
+            <div className="text-xs text-gray-500 mt-1">
+              {summary?.overdue_count || 0} Overdue
+            </div>
+          </div>
+        </div>
+
+        {/* AR Aging Quick View */}
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">AR Aging Breakdown</h3>
+            <Link href="/finance/ar-aging" className="text-blue-400 hover:text-blue-300 text-sm">
+              View Detail →
+            </Link>
+          </div>
+          {loading ? (
+            <div className="h-20 bg-gray-700 rounded animate-pulse" />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-gray-900 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-400 mb-1">Current</div>
+                <div className="text-lg font-semibold text-green-400">{formatCurrency(stats?.current || 0)}</div>
+              </div>
+              <div className="bg-gray-900 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-400 mb-1">1-30 Days</div>
+                <div className="text-lg font-semibold text-yellow-400">{formatCurrency(stats?.days_1_30 || 0)}</div>
+              </div>
+              <div className="bg-gray-900 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-400 mb-1">31-60 Days</div>
+                <div className="text-lg font-semibold text-orange-400">{formatCurrency(stats?.days_31_60 || 0)}</div>
+              </div>
+              <div className="bg-gray-900 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-400 mb-1">61-90 Days</div>
+                <div className="text-lg font-semibold text-red-400">{formatCurrency(stats?.days_61_90 || 0)}</div>
+              </div>
+              <div className="bg-gray-900 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-400 mb-1">90+ Days</div>
+                <div className="text-lg font-semibold text-red-500">{formatCurrency(stats?.over_90 || 0)}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -91,5 +267,5 @@ export default function FinanceDashboard() {
         </div>
       </div>
     </div>
-  );
+  )
 }
