@@ -203,6 +203,12 @@ export default function FinanceDashboard() {
           icon={<ArrowLeftRightIcon className="h-5 w-5" />}
         />
         <ModuleCard
+          title="Petty Cash"
+          description="Manage small cash fund: top-up, expenses, settlement, running balance"
+          href="/finance/petty-cash"
+          icon={<WalletIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
           title="Budget vs Actual"
           description="Track monthly spending against budget by kind & category"
           href="/finance/budget-vs-actual"

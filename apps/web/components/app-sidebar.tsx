@@ -187,6 +187,10 @@ const data = {
           url: "/finance/payment-reconciliation",
         },
         {
+          title: "Petty Cash",
+          url: "/finance/petty-cash",
+        },
+        {
           title: "Journal History",
           url: "/finance/journal",
         },
