@@ -1,63 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase-server'
+    import { createClient } from '@supabase/supabase-js'
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createAdminClient()
-    const { data, error } = await supabase
-      .from('customer_invoices')
-      .select(`
-        *,
-        customer:customer_id (customer_name, customer_code)
-      `)
-      .is('deleted_at', null)
-      .neq('status', 'paid')
-      .order('due_date', { ascending: true })
-    
-    if (error) throw new Error(error.message)
-    
-    const today = new Date()
-    const rows = (data || []).map((inv: any) => {
-      const due = new Date(inv.due_date || inv.invoice_date)
-      const age = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
-      let bucket = 'current'
-      if (age > 90) bucket = '90plus'
-      else if (age > 60) bucket = '61-90'
-      else if (age > 30) bucket = '31-60'
-      else if (age > 0) bucket = '1-30'
-      return {
-        ...inv,
-        age_days: age < 0 ? 0 : age,
-        bucket,
-        remaining: Number(inv.total_amount || 0) - Number(inv.amount_paid || 0),
+    export async function GET(request: NextRequest) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        const today = new Date().toISOString().split('T')[0]
+
+        // Aggregate real aging buckets from customer_invoices
+        const { data, error } = await supabase.rpc('get_ar_aging')
+        if (error || !data) {
+          // Fallback if RPC missing
+          const { data: rows, error: err2 } = await supabase
+            .from('customer_invoices')
+            .select('total_amount, paid_amount, balance_due, due_date, status')
+            .is('deleted_at', null)
+            .in('status', ['sent','overdue','partial','draft'])
+          if (err2) throw err2
+          const buckets = { current:0, days_1_30:0, days_31_60:0, days_61_90:0, over_90:0, total:0 }
+          for (const r of rows || []) {
+            const bal = Number(r.balance_due) || (Number(r.total_amount)-Number(r.paid_amount))
+            if (bal <= 0) continue
+            const due = r.due_date ? new Date(r.due_date) : new Date()
+            const diff = Math.floor((new Date(today).getTime() - due.getTime()) / 86400000)
+            buckets.total += bal
+            if (diff <= 0) buckets.current += bal
+            else if (diff <= 30) buckets.days_1_30 += bal
+            else if (diff <= 60) buckets.days_31_60 += bal
+            else if (diff <= 90) buckets.days_61_90 += bal
+            else buckets.over_90 += bal
+          }
+          return NextResponse.json({ data: buckets })
+        }
+        return NextResponse.json({ data })
+      } catch (err) {
+        return NextResponse.json({ error: 'Internal error' }, { status: 500 })
       }
-    })
-    
-    // Group by customer
-    const grouped: Record< string, any[]> = {}
-    rows.forEach(r => {
-      const key = r.customer_id || 'unknown'
-      ;(grouped[key] = grouped[key] || []).push(r)
-    })
-    
-    const customers = Object.entries(grouped).map(([cid, invoices]) => {
-      const c = invoices[0]?.customer || {}
-      const buckets = {
-        current: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90plus': 0
-      }
-      invoices.forEach((inv: any) => { buckets[inv.bucket as keyof typeof buckets] += inv.remaining })
-      return {
-        customer_id: cid,
-        customer_name: c?.customer_name || 'Unknown',
-        customer_code: c?.customer_code || '-',
-        invoices: invoices.length,
-        total_remaining: invoices.reduce((s: number, i: any) => s + i.remaining, 0),
-        ...buckets,
-      }
-    })
-    
-    return NextResponse.json({ customers })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-}
+    }
