@@ -103,7 +103,7 @@ export function LoginForm({
       />
 
       {/* Title */}
-      <h2 className="text-2xl font-bold text-slate-800 text-center mb-2">Welcome Back</h2>
+      <h2 className="text-2xl font-bold text-slate-800 text-center mb-2">Sampurasun</h2>
       <p className="text-slate-500 text-center text-sm mb-6">
         Sign in to your account to continue
       </p>
