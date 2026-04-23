@@ -221,6 +221,13 @@ export default function FinanceDashboard() {
                 <div className="mt-3 text-cyan-400 text-sm font-medium">View →</div>
               </div>
             </Link>
+            <Link href="/finance/bank-reconciliation" className="block">
+              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-indigo-500 transition-colors">
+                <h4 className="font-semibold mb-2">Bank Reconciliation</h4>
+                <p className="text-sm text-gray-400">Match bank statements with journal entries</p>
+                <div className="mt-3 text-indigo-400 text-sm font-medium">View →</div>
+              </div>
+            </Link>
             <Link href="/finance/money-requests" className="block">
               <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-purple-500 transition-colors">
                 <h4 className="font-semibold mb-2">Money Requests</h4>

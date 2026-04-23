@@ -152,6 +152,10 @@ const data = {
           url: "/finance/coa",
         },
         {
+          title: "Bank Reconciliation",
+          url: "/finance/bank-reconciliation",
+        },
+        {
           title: "Journal History",
           url: "/finance/journal",
         },
