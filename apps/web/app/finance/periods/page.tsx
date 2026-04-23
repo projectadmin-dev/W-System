@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 interface FiscalPeriod {
   id: string;
@@ -11,6 +12,11 @@ interface FiscalPeriod {
   period_type: 'monthly' | 'quarterly' | 'annual';
   is_active: boolean;
   is_closed: boolean;
+  closed_at?: string;
+  closed_by?: string;
+  reopened_reason?: string;
+  reopened_at?: string;
+  reopened_by?: string;
   created_at: string;
 }
 
@@ -18,6 +24,9 @@ export default function PeriodsPage() {
   const [periods, setPeriods] = useState<FiscalPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPeriod, setCurrentPeriod] = useState<FiscalPeriod | null>(null);
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const [reopenModal, setReopenModal] = useState<{open: boolean; periodId: string}>({ open: false, periodId: '' });
+  const [reopenReason, setReopenReason] = useState('');
 
   useEffect(() => {
     loadPeriods();
@@ -32,12 +41,55 @@ export default function PeriodsPage() {
       ]);
       const allData = await allRes.json();
       const currentData = await currentRes.json();
-      setPeriods(allData);
-      setCurrentPeriod(currentData);
+      setPeriods(Array.isArray(allData) ? allData : []);
+      setCurrentPeriod(currentData?.id ? currentData : null);
     } catch (error) {
       console.error('Failed to load fiscal periods:', error);
+      toast.error('Failed to load fiscal periods');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onClosePeriod = async (periodId: string) => {
+    setClosingId(periodId);
+    try {
+      const res = await fetch('/api/finance/periods/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: periodId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to close period');
+      }
+      toast.success('Period closed successfully');
+      loadPeriods();
+    } catch (e: any) {
+      toast.error(`Failed to close period: ${e.message}`);
+    } finally {
+      setClosingId(null);
+    }
+  };
+
+  const onReopenPeriod = async () => {
+    if (!reopenModal.periodId || !reopenReason.trim()) return;
+    try {
+      const res = await fetch('/api/finance/periods/reopen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reopenModal.periodId, reason: reopenReason }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to reopen period');
+      }
+      toast.success('Period reopened successfully');
+      setReopenModal({ open: false, periodId: '' });
+      setReopenReason('');
+      loadPeriods();
+    } catch (e: any) {
+      toast.error(`Failed to reopen period: ${e.message}`);
     }
   };
 
@@ -171,14 +223,22 @@ export default function PeriodsPage() {
                           Edit
                         </button>
                         {!period.is_closed && (
-                          <button className="text-red-400 hover:text-red-300 text-sm font-medium">
-                            Delete
-                          </button>
+                          <>
+                            <button className="text-red-400 hover:text-red-300 text-sm font-medium">Delete</button>
+                            <button
+                              onClick={() => onClosePeriod(period.id)}
+                              disabled={closingId === period.id}
+                              className="text-yellow-400 hover:text-yellow-300 text-sm font-medium disabled:opacity-50"
+                            >
+                              {closingId === period.id ? 'Closing...' : 'Close'}
+                            </button>
+                          </>
                         )}
-                        {!period.is_closed && (
-                          <button className="text-yellow-400 hover:text-yellow-300 text-sm font-medium">
-                            Close
-                          </button>
+                        {period.is_closed && (
+                          <button
+                            onClick={() => setReopenModal({ open: true, periodId: period.id })}
+                            className="text-yellow-400 hover:text-yellow-300 text-sm font-medium"
+                          >Reopen</button>
                         )}
                       </div>
                     </td>
