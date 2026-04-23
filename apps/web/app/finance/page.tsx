@@ -217,8 +217,15 @@ export default function FinanceDashboard() {
             <Link href="/finance/cash-register" className="block">
               <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-cyan-500 transition-colors">
                 <h4 className="font-semibold mb-2">Cash / Bank Register</h4>
-                <p className="text-sm text-gray-400">Tracking uang masuk & keluar harian + saldo</p>
+                <p className="text-sm text-gray-400">Tracking uang masuk &amp; keluar harian + saldo</p>
                 <div className="mt-3 text-cyan-400 text-sm font-medium">View →</div>
+              </div>
+            </Link>
+            <Link href="/finance/money-requests" className="block">
+              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-purple-500 transition-colors">
+                <h4 className="font-semibold mb-2">Money Requests</h4>
+                <p className="text-sm text-gray-400">Permintaan uang via NIK — Procurement, Reimbursement, Cash Advance</p>
+                <div className="mt-3 text-purple-400 text-sm font-medium">View →</div>
               </div>
             </Link>
             <Link href="/finance/ar-aging" className="block">
