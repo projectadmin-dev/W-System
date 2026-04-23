@@ -45,6 +45,8 @@ import {
 
 interface Payment {
   id: string
+  invoice_id?: string
+  invoice_number?: string
   payment_number: string
   payment_type: 'incoming' | 'outgoing'
   reference_type: 'invoice' | 'bill' | 'other'
@@ -296,6 +298,7 @@ export default function PaymentsPage() {
                   <TableHead className="text-gray-300">Payment #</TableHead>
                   <TableHead className="text-gray-300">Type</TableHead>
                   <TableHead className="text-gray-300">Party</TableHead>
+                  <TableHead className="text-gray-300">Linked Invoice</TableHead>
                   <TableHead className="text-gray-300">Payment Date</TableHead>
                   <TableHead className="text-gray-300">Method</TableHead>
                   <TableHead className="text-gray-300 text-right">Amount</TableHead>
@@ -313,6 +316,18 @@ export default function PaymentsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-white">{payment.party_name}</TableCell>
+                    <TableCell>
+                      {payment.invoice_id ? (
+                        <Link
+                          href={`/finance/customer-invoices?id=${payment.invoice_id}`}
+                          className="text-blue-400 hover:text-blue-300 underline font-mono text-sm"
+                        >
+                          {payment.invoice_number || payment.reference_id || payment.invoice_id}
+                        </Link>
+                      ) : (
+                        <span className="text-gray-500 text-sm">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-gray-300">{payment.payment_date}</TableCell>
                     <TableCell className="text-gray-300 capitalize">
                       {payment.payment_method.replace('_', ' ')}
