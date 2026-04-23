@@ -140,12 +140,12 @@ export default function ReceiptsPage() {
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
-      draft: 'bg-gray-600 text-white',
-      issued: 'bg-blue-600 text-white',
-      sent: 'bg-green-600 text-white',
-      cancelled: 'bg-red-600 text-white',
+      draft: 'bg-muted text-foreground',
+      issued: 'bg-blue-600 text-foreground',
+      sent: 'bg-green-600 text-foreground',
+      cancelled: 'bg-red-600 text-foreground',
     }
-    return badges[status] || 'bg-gray-600 text-white'
+    return badges[status] || 'bg-muted text-foreground'
   }
 
   const handleCreateReceipt = async () => {
@@ -219,18 +219,18 @@ export default function ReceiptsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Receipts</h1>
-            <p className="text-gray-400">Manage customer payment receipts</p>
+            <h1 className="text-2xl font-bold tracking-tight">Receipts</h1>
+            <p className="text-muted-foreground">Manage customer payment receipts</p>
           </div>
           <div className="flex items-center gap-4">
             <Link
               href="/finance/transactions"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-primary hover:text-primary/80"
             >
               ← Back to Transactions
             </Link>
@@ -248,22 +248,22 @@ export default function ReceiptsPage() {
       {/* Main Content */}
       <div className="p-8">
         {/* Filters */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search receipts..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64 bg-gray-700 border-gray-600 text-white"
+                  className="pl-10 w-64 bg-muted border-border text-foreground"
                 />
               </div>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                className="bg-muted border border-border rounded-lg px-4 py-2 text-foreground"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
@@ -272,48 +272,48 @@ export default function ReceiptsPage() {
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
-            <Button variant="outline" onClick={fetchReceipts} className="border-gray-600">
+            <Button variant="outline" onClick={fetchReceipts} className="border-border">
               <RefreshCwIcon className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
 
         {/* Receipts Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           {isLoading ? (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-muted-foreground">
               <Loader2Icon className="w-8 h-8 mx-auto mb-2 animate-spin" />
               Loading receipts...
             </div>
           ) : filteredReceipts.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">No receipts found</div>
+            <div className="p-8 text-center text-muted-foreground">No receipts found</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-700">
-                  <TableHead className="text-gray-300">Receipt #</TableHead>
-                  <TableHead className="text-gray-300">Customer</TableHead>
-                  <TableHead className="text-gray-300">Invoice #</TableHead>
-                  <TableHead className="text-gray-300">Receipt Date</TableHead>
-                  <TableHead className="text-gray-300">Payment Method</TableHead>
-                  <TableHead className="text-gray-300 text-right">Amount</TableHead>
-                  <TableHead className="text-gray-300">Status</TableHead>
-                  <TableHead className="text-gray-300 text-right">Actions</TableHead>
+                <TableRow className="border-border">
+                  <TableHead className="text-foreground">Receipt #</TableHead>
+                  <TableHead className="text-foreground">Customer</TableHead>
+                  <TableHead className="text-foreground">Invoice #</TableHead>
+                  <TableHead className="text-foreground">Receipt Date</TableHead>
+                  <TableHead className="text-foreground">Payment Method</TableHead>
+                  <TableHead className="text-foreground text-right">Amount</TableHead>
+                  <TableHead className="text-foreground">Status</TableHead>
+                  <TableHead className="text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReceipts.map((receipt) => (
-                  <TableRow key={receipt.id} className="border-gray-700 hover:bg-gray-750">
-                    <TableCell className="font-mono text-white">{receipt.receipt_number}</TableCell>
-                    <TableCell className="text-white">{extractCustomerName(receipt)}</TableCell>
-                    <TableCell className="text-gray-300">
+                  <TableRow key={receipt.id} className="hover:bg-muted/50">
+                    <TableCell className="font-mono text-foreground">{receipt.receipt_number}</TableCell>
+                    <TableCell className="text-foreground">{extractCustomerName(receipt)}</TableCell>
+                    <TableCell className="text-foreground">
                       {receipt.invoice_number || '-'}
                     </TableCell>
-                    <TableCell className="text-gray-300">{receipt.receipt_date}</TableCell>
-                    <TableCell className="text-gray-300 capitalize">
+                    <TableCell className="text-foreground">{receipt.receipt_date}</TableCell>
+                    <TableCell className="text-foreground capitalize">
                       {extractPaymentMethod(receipt).replace('_', ' ')}
                     </TableCell>
-                    <TableCell className="text-right font-semibold text-white">
+                    <TableCell className="text-right font-semibold text-foreground">
                       Rp {receipt.amount.toLocaleString('id-ID')}
                     </TableCell>
                     <TableCell>
@@ -328,13 +328,13 @@ export default function ReceiptsPage() {
                             <MoreVerticalIcon className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedReceipt(receipt)
                               setViewDialogOpen(true)
                             }}
-                            className="text-gray-300 hover:bg-gray-700"
+                            className="text-foreground hover:bg-muted"
                           >
                             <EyeIcon className="w-4 h-4 mr-2" />
                             View
@@ -342,7 +342,7 @@ export default function ReceiptsPage() {
                           {receipt.status === 'issued' && (
                             <DropdownMenuItem
                               onClick={() => handleSendReceipt(receipt.id)}
-                              className="text-blue-400 hover:bg-gray-700"
+                              className="text-primary hover:bg-muted"
                             >
                               <MailIcon className="w-4 h-4 mr-2" />
                               Send
@@ -350,15 +350,15 @@ export default function ReceiptsPage() {
                           )}
                           <DropdownMenuItem
                             onClick={() => router.push(`/finance/receipts/${receipt.id}/bkm`)}
-                            className="text-gray-300 hover:bg-gray-700"
+                            className="text-foreground hover:bg-muted"
                           >
                             <PrinterIcon className="w-4 h-4 mr-2" />
                             Print
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuSeparator className="bg-muted" />
                           <DropdownMenuItem
                             onClick={() => handleDeleteReceipt(receipt.id)}
-                            className="text-red-400 hover:bg-gray-700"
+                            className="text-destructive hover:bg-destructive/10"
                           >
                             <Trash2Icon className="w-4 h-4 mr-2" />
                             Delete
@@ -376,60 +376,60 @@ export default function ReceiptsPage() {
 
       {/* Create Receipt Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+        <DialogContent className="bg-card border-border text-foreground max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create New Receipt</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Record a customer payment receipt
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Customer Name</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Customer Name</label>
                 <Input
                   value={newReceipt.customer_name}
                   onChange={(e) => setNewReceipt({ ...newReceipt, customer_name: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="PT Customer Abadi"
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Receipt Date</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Receipt Date</label>
                 <Input
                   type="date"
                   value={newReceipt.receipt_date}
                   onChange={(e) => setNewReceipt({ ...newReceipt, receipt_date: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                 />
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Invoice Number (Optional)</label>
+              <label className="text-sm text-muted-foreground mb-1 block">Invoice Number (Optional)</label>
               <Input
                 value={newReceipt.invoice_number}
                 onChange={(e) => setNewReceipt({ ...newReceipt, invoice_number: e.target.value })}
-                className="bg-gray-700 border-gray-600 text-white"
+               
                 placeholder="INV-2025-001"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Amount (Rp)</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Amount (Rp)</label>
                 <Input
                   type="number"
                   value={newReceipt.amount}
                   onChange={(e) => setNewReceipt({ ...newReceipt, amount: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="1000000"
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Payment Method</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Payment Method</label>
                 <select
                   value={newReceipt.payment_method}
                   onChange={(e) => setNewReceipt({ ...newReceipt, payment_method: e.target.value as any })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-foreground"
                 >
                   <option value="bank_transfer">Bank Transfer</option>
                   <option value="cash">Cash</option>
@@ -439,17 +439,17 @@ export default function ReceiptsPage() {
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Notes</label>
+              <label className="text-sm text-muted-foreground mb-1 block">Notes</label>
               <Input
                 value={newReceipt.notes}
                 onChange={(e) => setNewReceipt({ ...newReceipt, notes: e.target.value })}
-                className="bg-gray-700 border-gray-600 text-white"
+               
                 placeholder="Payment reference, bank name, etc."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="border-gray-600">
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="border-border">
               Cancel
             </Button>
             <Button onClick={handleCreateReceipt} className="bg-blue-600 hover:bg-blue-700">
@@ -461,7 +461,7 @@ export default function ReceiptsPage() {
 
       {/* View Receipt Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+        <DialogContent className="bg-card border-border text-foreground max-w-2xl">
           <DialogHeader>
             <DialogTitle>Receipt Details</DialogTitle>
           </DialogHeader>
@@ -469,53 +469,53 @@ export default function ReceiptsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm">Receipt Number</p>
-                  <p className="font-mono text-white">{selectedReceipt.receipt_number}</p>
+                  <p className="text-muted-foreground text-sm">Receipt Number</p>
+                  <p className="font-mono text-foreground">{selectedReceipt.receipt_number}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Status</p>
+                  <p className="text-muted-foreground text-sm">Status</p>
                   <Badge className={getStatusBadge(selectedReceipt.status)}>
                     {selectedReceipt.status.charAt(0).toUpperCase() + selectedReceipt.status.slice(1)}
                   </Badge>
                 </div>
               </div>
               <div>
-                <p className="text-gray-400 text-sm">Customer</p>
-                <p className="text-white">{extractCustomerName(selectedReceipt)}</p>
+                <p className="text-muted-foreground text-sm">Customer</p>
+                <p className="text-foreground">{extractCustomerName(selectedReceipt)}</p>
               </div>
               {selectedReceipt.invoice_number && (
                 <div>
-                  <p className="text-gray-400 text-sm">Invoice Reference</p>
-                  <p className="font-mono text-white">{selectedReceipt.invoice_number}</p>
+                  <p className="text-muted-foreground text-sm">Invoice Reference</p>
+                  <p className="font-mono text-foreground">{selectedReceipt.invoice_number}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm">Receipt Date</p>
-                  <p className="text-white">{selectedReceipt.receipt_date}</p>
+                  <p className="text-muted-foreground text-sm">Receipt Date</p>
+                  <p className="text-foreground">{selectedReceipt.receipt_date}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Payment Method</p>
-                  <p className="text-white capitalize">{extractPaymentMethod(selectedReceipt).replace('_', ' ')}</p>
+                  <p className="text-muted-foreground text-sm">Payment Method</p>
+                  <p className="text-foreground capitalize">{extractPaymentMethod(selectedReceipt).replace('_', ' ')}</p>
                 </div>
               </div>
-              <div className="border-t border-gray-700 pt-4">
+              <div className="border-t border-border pt-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Amount Received</span>
-                  <span className="text-white font-bold text-xl">Rp {selectedReceipt.amount.toLocaleString('id-ID')}</span>
+                  <span className="text-muted-foreground">Amount Received</span>
+                  <span className="text-foreground font-bold text-xl">Rp {selectedReceipt.amount.toLocaleString('id-ID')}</span>
                 </div>
               </div>
               {selectedReceipt.notes && (
                 <div>
-                  <p className="text-gray-400 text-sm">Notes</p>
-                  <p className="text-white">{selectedReceipt.notes}</p>
+                  <p className="text-muted-foreground text-sm">Notes</p>
+                  <p className="text-foreground">{selectedReceipt.notes}</p>
                 </div>
               )}
             </div>
           )}
           <DialogFooter>
             <div className="flex gap-2">
-              <Button variant="outline" className="border-gray-600">
+              <Button variant="outline" className="border-border">
                 <PrinterIcon className="w-4 h-4 mr-2" />
                 Print
               </Button>

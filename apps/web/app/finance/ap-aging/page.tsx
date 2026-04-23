@@ -121,31 +121,31 @@ export default function APAgingPage() {
     }).format(n);
 
   const Row = ({ label, current, b1, b2, b3, b4, total, bold }: any) => (
-    <tr className={`${bold ? "bg-gray-800 font-semibold" : "hover:bg-gray-700/40"}`}>
+    <tr className={`${bold ? "bg-card font-semibold" : "hover:bg-muted/40"}`}>
       <td className="px-4 py-3">{label}</td>
       <td className="px-4 py-3 text-right">{current ? fmt(current) : "-"}</td>
       <td className="px-4 py-3 text-right">{b1 ? fmt(b1) : "-"}</td>
       <td className="px-4 py-3 text-right">{b2 ? fmt(b2) : "-"}</td>
       <td className="px-4 py-3 text-right">{b3 ? fmt(b3) : "-"}</td>
-      <td className="px-4 py-3 text-right text-red-400">{b4 ? fmt(b4) : "-"}</td>
+      <td className="px-4 py-3 text-right text-destructive">{b4 ? fmt(b4) : "-"}</td>
       <td className="px-4 py-3 text-right font-bold">{total ? fmt(total) : "-"}</td>
     </tr>
   );
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">AP Aging</h1>
-            <p className="text-gray-400 text-sm mt-1">Hutang Usaha per Vendor — analisis umur hutang</p>
+            <p className="text-muted-foreground text-sm mt-1">Hutang Usaha per Vendor — analisis umur hutang</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">As of: 22 Apr 2026</span>
+            <span className="text-sm text-muted-foreground">As of: 22 Apr 2026</span>
             <Link
               href="/finance"
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm font-medium transition-colors"
             >
               ← Kembali
             </Link>
@@ -155,15 +155,15 @@ export default function APAgingPage() {
         {/* Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
           {[
-            { label: "Total Hutang", value: grand.total, cls: "text-white" },
-            { label: "Current (≤0 hari)", value: grand.current, cls: "text-green-400" },
-            { label: "1-30 hari", value: grand.bucket1, cls: "text-yellow-400" },
+            { label: "Total Hutang", value: grand.total, cls: "text-foreground" },
+            { label: "Current (≤0 hari)", value: grand.current, cls: "text-emerald-600" },
+            { label: "1-30 hari", value: grand.bucket1, cls: "text-amber-600" },
             { label: "31-60 hari", value: grand.bucket2, cls: "text-orange-400" },
-            { label: "61-90 hari", value: grand.bucket3, cls: "text-red-400" },
+            { label: "61-90 hari", value: grand.bucket3, cls: "text-destructive" },
             { label: ">90 hari", value: grand.bucket4, cls: "text-red-500" },
           ].map((s) => (
-            <div key={s.label} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-              <p className="text-xs text-gray-400 uppercase font-medium">{s.label}</p>
+            <div key={s.label} className="bg-card border border-border rounded-lg p-4">
+              <p className="text-xs text-muted-foreground uppercase font-medium">{s.label}</p>
               <p className={`text-lg font-bold mt-1 ${s.cls}`}>{fmt(s.value)}</p>
             </div>
           ))}
@@ -176,21 +176,21 @@ export default function APAgingPage() {
             placeholder="Cari vendor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-80 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+            className="w-full sm:w-80 bg-card border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
           />
         </div>
 
         {/* Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-900/60 text-gray-300">
+              <thead>
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Vendor</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-400">Current</th>
-                  <th className="px-4 py-3 text-right font-medium text-yellow-400">1 – 30</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Current</th>
+                  <th className="px-4 py-3 text-right font-medium text-amber-600">1 – 30</th>
                   <th className="px-4 py-3 text-right font-medium text-orange-400">31 – 60</th>
-                  <th className="px-4 py-3 text-right font-medium text-red-400">61 – 90</th>
+                  <th className="px-4 py-3 text-right font-medium text-destructive">61 – 90</th>
                   <th className="px-4 py-3 text-right font-medium text-red-500">&gt; 90</th>
                   <th className="px-4 py-3 text-right font-medium">Total</th>
                 </tr>
@@ -198,7 +198,7 @@ export default function APAgingPage() {
               <tbody className="divide-y divide-gray-700">
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                       Tidak ada data
                     </td>
                   </tr>

@@ -151,7 +151,7 @@ export default function BankReconciliationPage() {
         <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
         {selectedIds.length > 0 && (
           <>
-            <Button size="sm" onClick={() => updateReconciliation(true)} disabled={reconciling} className="bg-emerald-600 hover:bg-emerald-500 text-white">
+            <Button size="sm" onClick={() => updateReconciliation(true)} disabled={reconciling} className="bg-emerald-600 hover:bg-emerald-500 text-foreground">
               {reconciling ? <Loader2Icon className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircleIcon className="w-4 h-4 mr-1" />}Reconcile
             </Button>
             <Button size="sm" variant="outline" onClick={() => updateReconciliation(false)} disabled={reconciling} className="border-destructive text-destructive hover:bg-destructive/10">
@@ -172,7 +172,7 @@ export default function BankReconciliationPage() {
                     <input type="checkbox" checked={transactions.length > 0 && transactions.every(t => selectedIds.includes(t.id))} onChange={() => {
                       const allSelected = transactions.every(t => selectedIds.includes(t.id))
                       setSelectedIds(allSelected ? selectedIds.filter(id => !transactions.some(t => t.id === id)) : [...new Set([...selectedIds, ...transactions.map(t => t.id)])])
-                    }} className="rounded border-gray-300" />
+                    }} className="rounded border-border" />
                   </th>
                   <th className="px-4 py-3 text-sm font-medium text-muted-foreground">Date</th>
                   <th className="px-4 py-3 text-sm font-medium text-muted-foreground">Reference</th>

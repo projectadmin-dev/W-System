@@ -51,12 +51,12 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-600',
+  draft: 'bg-muted',
   submitted: 'bg-blue-600',
   approved: 'bg-yellow-500',
   paid: 'bg-green-500',
   rejected: 'bg-red-500',
-  closed: 'bg-gray-500',
+  closed: 'bg-muted',
 }
 
 export default function MoneyRequestsPage() {
@@ -235,16 +235,16 @@ export default function MoneyRequestsPage() {
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('id-ID') : '-'
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Money Requests</h1>
-            <p className="text-gray-400">Permintaan uang oleh departemen via NIK</p>
+            <p className="text-muted-foreground">Permintaan uang oleh departemen via NIK</p>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/finance" className="text-blue-400 hover:text-blue-300 transition-colors">← Back to Finance</Link>
+            <Link href="/finance" className="text-primary hover:text-primary/80">← Back to Finance</Link>
             <Button onClick={() => setCreateOpen(true)}>
               <PlusIcon className="h-4 w-4 mr-2" /> New Request
             </Button>
@@ -255,20 +255,20 @@ export default function MoneyRequestsPage() {
       <div className="p-8">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400">Pending</div>
-            <div className="text-2xl font-bold text-yellow-400">{requests.filter(r => r.approval_status === 'pending').length}</div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Pending</div>
+            <div className="text-2xl font-bold text-amber-600">{requests.filter(r => r.approval_status === 'pending').length}</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400">Approved</div>
-            <div className="text-2xl font-bold text-blue-400">{requests.filter(r => r.approval_status === 'approved').length}</div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Approved</div>
+            <div className="text-2xl font-bold text-primary">{requests.filter(r => r.approval_status === 'approved').length}</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400">Paid</div>
-            <div className="text-2xl font-bold text-green-400">{requests.filter(r => r.status === 'paid').length}</div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Paid</div>
+            <div className="text-2xl font-bold text-emerald-600">{requests.filter(r => r.status === 'paid').length}</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400">Total Amount</div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Total Amount</div>
             <div className="text-2xl font-bold text-cyan-400">
               {formatCurrency(requests.reduce((s, r) => s + r.amount, 0))}
             </div>
@@ -276,25 +276,25 @@ export default function MoneyRequestsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by NIK, name, or request number..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 bg-gray-900 border-gray-700"
+                className="pl-9"
               />
             </div>
-            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
               <option value="all">All Types</option>
               <option value="procurement">Procurement</option>
               <option value="reimbursement">Reimbursement</option>
               <option value="cash_in_advance">Cash in Advance</option>
               <option value="other">Other</option>
             </select>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
@@ -307,26 +307,26 @@ export default function MoneyRequestsPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-700">
-                <TableHead className="text-gray-400">Request #</TableHead>
-                <TableHead className="text-gray-400">NIK</TableHead>
-                <TableHead className="text-gray-400">Employee</TableHead>
-                <TableHead className="text-gray-400">Department</TableHead>
-                <TableHead className="text-gray-400">Type</TableHead>
-                <TableHead className="text-gray-400">Purpose</TableHead>
-                <TableHead className="text-gray-400 text-right">Amount</TableHead>
-                <TableHead className="text-gray-400">Status</TableHead>
-                <TableHead className="text-gray-400 text-right">Actions</TableHead>
+              <TableRow className="border-border">
+                <TableHead className="text-muted-foreground">Request #</TableHead>
+                <TableHead className="text-muted-foreground">NIK</TableHead>
+                <TableHead className="text-muted-foreground">Employee</TableHead>
+                <TableHead className="text-muted-foreground">Department</TableHead>
+                <TableHead className="text-muted-foreground">Type</TableHead>
+                <TableHead className="text-muted-foreground">Purpose</TableHead>
+                <TableHead className="text-muted-foreground text-right">Amount</TableHead>
+                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-muted-foreground text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2Icon className="h-6 w-6 animate-spin mx-auto text-gray-500" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="h-24 text-center"><Loader2Icon className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
               ) : filtered.length > 0 ? filtered.map(r => (
-                <TableRow key={r.id} className="border-gray-700">
+                <TableRow key={r.id} className="border-border">
                   <TableCell className="font-medium">{r.request_number}</TableCell>
                   <TableCell className="font-mono text-sm">{r.employee_nik}</TableCell>
                   <TableCell>{r.employee_name}</TableCell>
@@ -344,10 +344,10 @@ export default function MoneyRequestsPage() {
                         </DropdownMenuItem>
                         {r.approval_status === 'pending' && (
                           <>
-                            <DropdownMenuItem onClick={() => { setSelected(r); setApproveOpen(true) }} className="text-green-400">
+                            <DropdownMenuItem onClick={() => { setSelected(r); setApproveOpen(true) }} className="text-emerald-600">
                               <CheckCircleIcon className="h-4 w-4 mr-2" /> Approve
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setSelected(r); setRejectOpen(true) }} className="text-red-400">
+                            <DropdownMenuItem onClick={() => { setSelected(r); setRejectOpen(true) }} className="text-destructive">
                               <XCircleIcon className="h-4 w-4 mr-2" /> Reject
                             </DropdownMenuItem>
                           </>
@@ -366,7 +366,7 @@ export default function MoneyRequestsPage() {
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={9} className="h-24 text-center text-gray-500">No requests found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="h-24 text-center text-muted-foreground">No requests found</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -381,21 +381,21 @@ export default function MoneyRequestsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">NIK (Employee ID)</label>
-                <Input value={form.employee_nik} onChange={e => setForm({ ...form, employee_nik: e.target.value })} placeholder="e.g. 12345" className="bg-gray-900 border-gray-700" />
+                <Input value={form.employee_nik} onChange={e => setForm({ ...form, employee_nik: e.target.value })} placeholder="e.g. 12345" className="bg-background border-border" />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Employee Name</label>
-                <Input value={form.employee_name} onChange={e => setForm({ ...form, employee_name: e.target.value })} placeholder="e.g. Budi Santoso" className="bg-gray-900 border-gray-700" />
+                <Input value={form.employee_name} onChange={e => setForm({ ...form, employee_name: e.target.value })} placeholder="e.g. Budi Santoso" className="bg-background border-border" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Department</label>
-                <Input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder="e.g. IT" className="bg-gray-900 border-gray-700" />
+                <Input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder="e.g. IT" className="bg-background border-border" />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Request Type</label>
-                <select value={form.request_type} onChange={e => setForm({ ...form, request_type: e.target.value as any })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                <select value={form.request_type} onChange={e => setForm({ ...form, request_type: e.target.value as any })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground text-sm">
                   <option value="procurement">Procurement</option>
                   <option value="reimbursement">Reimbursement</option>
                   <option value="cash_in_advance">Cash in Advance</option>
@@ -405,17 +405,17 @@ export default function MoneyRequestsPage() {
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Purpose</label>
-              <Input value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="Detail of the request" className="bg-gray-900 border-gray-700" />
+              <Input value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="Detail of the request" className="bg-background border-border" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Amount (IDR)</label>
-                <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="1000000" className="bg-gray-900 border-gray-700" />
+                <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="1000000" className="bg-background border-border" />
               </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Notes (Optional)</label>
-              <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Additional notes" className="bg-gray-900 border-gray-700" />
+              <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Additional notes" className="bg-background border-border" />
             </div>
           </div>
           <DialogFooter>
@@ -435,21 +435,21 @@ export default function MoneyRequestsPage() {
           {selected && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><div className="text-sm text-gray-400">Request Number</div><div className="font-mono">{selected.request_number}</div></div>
-                <div><div className="text-sm text-gray-400">Status</div><Badge className={STATUS_COLORS[selected.status]}>{selected.status.toUpperCase()}</Badge></div>
-                <div><div className="text-sm text-gray-400">NIK</div><div>{selected.employee_nik}</div></div>
-                <div><div className="text-sm text-gray-400">Employee</div><div>{selected.employee_name}</div></div>
-                <div><div className="text-sm text-gray-400">Department</div><div>{selected.department}</div></div>
-                <div><div className="text-sm text-gray-400">Type</div><div>{TYPE_LABELS[selected.request_type]}</div></div>
+                <div><div className="text-sm text-muted-foreground">Request Number</div><div className="font-mono">{selected.request_number}</div></div>
+                <div><div className="text-sm text-muted-foreground">Status</div><Badge className={STATUS_COLORS[selected.status]}>{selected.status.toUpperCase()}</Badge></div>
+                <div><div className="text-sm text-muted-foreground">NIK</div><div>{selected.employee_nik}</div></div>
+                <div><div className="text-sm text-muted-foreground">Employee</div><div>{selected.employee_name}</div></div>
+                <div><div className="text-sm text-muted-foreground">Department</div><div>{selected.department}</div></div>
+                <div><div className="text-sm text-muted-foreground">Type</div><div>{TYPE_LABELS[selected.request_type]}</div></div>
               </div>
               <div>
-                <div className="text-sm text-gray-400">Purpose</div>
-                <div className="bg-gray-900 p-3 rounded-lg mt-1">{selected.purpose}</div>
+                <div className="text-sm text-muted-foreground">Purpose</div>
+                <div className="bg-background p-3 rounded-lg mt-1">{selected.purpose}</div>
               </div>
-              <div className="bg-gray-900 p-4 rounded-lg">
-                <div className="flex justify-between mb-2"><span className="text-gray-400">Amount:</span><span className="font-semibold">{formatCurrency(selected.amount)}</span></div>
-                {selected.approved_by && <div className="flex justify-between mb-2"><span className="text-gray-400">Approved By:</span><span>{selected.approved_by} at {formatDate(selected.approved_at)}</span></div>}
-                {selected.paid_by && <div className="flex justify-between mb-2"><span className="text-gray-400">Paid By:</span><span>{selected.paid_by} at {formatDate(selected.paid_at)}</span></div>}
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="flex justify-between mb-2"><span className="text-muted-foreground">Amount:</span><span className="font-semibold">{formatCurrency(selected.amount)}</span></div>
+                {selected.approved_by && <div className="flex justify-between mb-2"><span className="text-muted-foreground">Approved By:</span><span>{selected.approved_by} at {formatDate(selected.approved_at)}</span></div>}
+                {selected.paid_by && <div className="flex justify-between mb-2"><span className="text-muted-foreground">Paid By:</span><span>{selected.paid_by} at {formatDate(selected.paid_at)}</span></div>}
               </div>
               {selected.approval_status === 'pending' && (
                 <div className="flex gap-3">
@@ -471,7 +471,7 @@ export default function MoneyRequestsPage() {
           <DialogHeader><DialogTitle>Approve Request</DialogTitle><DialogDescription>Approve {selected?.request_number} for {formatCurrency(selected?.amount || 0)}</DialogDescription></DialogHeader>
           <div className="py-4">
             <label className="text-sm font-medium mb-2 block">Approval Notes (Optional)</label>
-            <Input value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Notes..." className="bg-gray-900 border-gray-700" />
+            <Input value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Notes..." className="bg-background border-border" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveOpen(false)}>Cancel</Button>
@@ -486,7 +486,7 @@ export default function MoneyRequestsPage() {
           <DialogHeader><DialogTitle>Reject Request</DialogTitle><DialogDescription>Reject {selected?.request_number}</DialogDescription></DialogHeader>
           <div className="py-4">
             <label className="text-sm font-medium mb-2 block">Rejection Reason</label>
-            <Input value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Reason for rejection..." className="bg-gray-900 border-gray-700" />
+            <Input value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="Reason for rejection..." className="bg-background border-border" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectOpen(false)}>Cancel</Button>

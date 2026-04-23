@@ -91,86 +91,86 @@ export default function GeneralLedgerPage() {
   const fmtDate = (str: string) => str ? new Date(str).toLocaleDateString('id-ID') : '-';
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <Link href="/finance/coa" className="text-gray-400 hover:text-white text-sm mb-2 block">← Back to Chart of Accounts</Link>
+          <Link href="/finance/coa" className="text-muted-foreground hover:text-foreground text-sm mb-2 block">← Back to Chart of Accounts</Link>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold">General Ledger</h1>
             {account && (
-              <span className="bg-blue-900/30 text-blue-400 px-3 py-1 rounded-full text-sm border border-blue-700 font-mono">
+              <span className="bg-blue-50 text-primary px-3 py-1 rounded-full text-sm border border-blue-700 font-mono">
                 {account.account_code}
               </span>
             )}
           </div>
           {account && (
-            <p className="text-gray-400 mt-1">{account.account_name} — {account.account_type} | Normal: {account.normal_balance} {account.is_active ? '' : '(Inactive)'}</p>
+            <p className="text-muted-foreground mt-1">{account.account_name} — {account.account_type} | Normal: {account.normal_balance} {account.is_active ? '' : '(Inactive)'}</p>
           )}
         </div>
 
-        {error && <div className="mb-4 bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg">{error}</div>}
+        {error && <div className="mb-4 bg-red-50 border border-red-700 text-red-300 px-4 py-3 rounded-lg">{error}</div>}
 
         {/* Date Filter */}
         <div className="mb-6 flex gap-4 items-center">
           <div>
-            <label className="text-sm text-gray-400 mr-2">From:</label>
+            <label className="text-sm text-muted-foreground mr-2">From:</label>
             <input
               type="date"
               value={startDate}
               onChange={e => { const v = e.target.value; setStartDate(v); loadData(String(id), v, endDate); }}
-              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white"
+              className="bg-card border border-border rounded-lg px-3 py-2 text-foreground"
             />
           </div>
           <div>
-            <label className="text-sm text-gray-400 mr-2">To:</label>
+            <label className="text-sm text-muted-foreground mr-2">To:</label>
             <input
               type="date"
               value={endDate}
               onChange={e => { const v = e.target.value; setEndDate(v); loadData(String(id), startDate, v); }}
-              className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white"
+              className="bg-card border border-border rounded-lg px-3 py-2 text-foreground"
             />
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-900 border-b border-gray-700">
+            <thead className="bg-background border-b border-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400">Entry #</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400">Description</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-400">Debit</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-400">Credit</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-400">Balance</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Entry #</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Description</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground">Debit</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground">Credit</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground">Balance</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">Loading...</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">Loading...</td>
                 </tr>
               ) : lines.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-400">No transactions found for this period.</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">No transactions found for this period.</td>
                 </tr>
               ) : (
                 lines.map((line) => (
-                  <tr key={line.id} className="hover:bg-gray-750">
-                    <td className="px-6 py-3 text-sm text-gray-300">{fmtDate(line.transaction_date)}</td>
+                  <tr key={line.id} className="hover:bg-muted/50">
+                    <td className="px-6 py-3 text-sm text-foreground">{fmtDate(line.transaction_date)}</td>
                     <td className="px-6 py-3 text-sm font-mono">
-                      <Link href={`/finance/journal/${line.entry_number.replace('JE-', '')}`} className="text-blue-400 hover:underline">
+                      <Link href={`/finance/journal/${line.entry_number.replace('JE-', '')}`} className="text-primary hover:underline">
                         {line.entry_number}
                       </Link>
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-300">{line.description}</td>
-                    <td className="px-6 py-3 text-sm text-green-400 text-right font-medium">{line.movement_type === 'debit' ? formatC(line.movement_amount) : '-'}</td>
-                    <td className="px-6 py-3 text-sm text-red-400 text-right font-medium">{line.movement_type === 'credit' ? formatC(line.movement_amount) : '-'}</td>
+                    <td className="px-6 py-3 text-sm text-foreground">{line.description}</td>
+                    <td className="px-6 py-3 text-sm text-emerald-600 text-right font-medium">{line.movement_type === 'debit' ? formatC(line.movement_amount) : '-'}</td>
+                    <td className="px-6 py-3 text-sm text-destructive text-right font-medium">{line.movement_type === 'credit' ? formatC(line.movement_amount) : '-'}</td>
                     <td className="px-6 py-3 text-sm font-bold text-right">{formatC(line.running_balance)}</td>
                     <td className="px-6 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs border ${
-                        line.status === 'posted' ? 'bg-green-900/30 text-green-400 border-green-700' : 'bg-gray-700 text-gray-400 border-gray-600'
+                        line.status === 'posted' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-muted text-muted-foreground border-border'
                       }`}>
                         {line.status}
                       </span>
@@ -179,11 +179,11 @@ export default function GeneralLedgerPage() {
                 ))
               )}
             </tbody>
-            <tfoot className="bg-gray-900/30 border-t border-gray-700">
+            <tfoot className="border-t">
               <tr>
-                <td colSpan={3} className="px-6 py-3 text-right text-sm font-semibold text-gray-400">Totals</td>
-                <td className="px-6 py-3 text-right text-sm font-bold text-green-400">{formatC(lines.reduce((s, l) => s + (l.movement_type === 'debit' ? l.movement_amount : 0), 0))}</td>
-                <td className="px-6 py-3 text-right text-sm font-bold text-red-400">{formatC(lines.reduce((s, l) => s + (l.movement_type === 'credit' ? l.movement_amount : 0), 0))}</td>
+                <td colSpan={3} className="px-6 py-3 text-right text-sm font-semibold text-muted-foreground">Totals</td>
+                <td className="px-6 py-3 text-right text-sm font-bold text-emerald-600">{formatC(lines.reduce((s, l) => s + (l.movement_type === 'debit' ? l.movement_amount : 0), 0))}</td>
+                <td className="px-6 py-3 text-right text-sm font-bold text-destructive">{formatC(lines.reduce((s, l) => s + (l.movement_type === 'credit' ? l.movement_amount : 0), 0))}</td>
                 <td className="px-6 py-3 text-right text-sm font-bold">{formatC(lines.length > 0 ? lines[lines.length - 1].running_balance : 0)}</td>
                 <td />
               </tr>

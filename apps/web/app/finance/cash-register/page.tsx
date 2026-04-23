@@ -149,15 +149,15 @@ export default function CashRegisterPage() {
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0)
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Cash / Bank Register</h1>
-            <p className="text-gray-400">Tracking uang masuk & keluar harian + saldo real-time</p>
+            <p className="text-muted-foreground">Tracking uang masuk & keluar harian + saldo real-time</p>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/finance" className="text-blue-400 hover:text-blue-300 transition-colors">← Back to Finance</Link>
+            <Link href="/finance" className="text-primary hover:text-primary/80">← Back to Finance</Link>
             <Button onClick={() => setCreateOpen(true)}>
               <PlusIcon className="h-4 w-4 mr-2" /> Tambah Entry
             </Button>
@@ -168,42 +168,42 @@ export default function CashRegisterPage() {
       <div className="p-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-800 border border-green-700/50 rounded-lg p-4">
-            <div className="text-sm text-green-400 mb-1">Total Masuk</div>
-            <div className="text-2xl font-bold text-green-400">{formatCurrency(summary.total_in)}</div>
-            <ArrowDownLeftIcon className="h-4 w-4 text-green-400 mt-1" />
+          <div className="bg-card border border-emerald-200/50 rounded-lg p-4">
+            <div className="text-sm text-emerald-600 mb-1">Total Masuk</div>
+            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(summary.total_in)}</div>
+            <ArrowDownLeftIcon className="h-4 w-4 text-emerald-600 mt-1" />
           </div>
-          <div className="bg-gray-800 border border-red-700/50 rounded-lg p-4">
-            <div className="text-sm text-red-400 mb-1">Total Keluar</div>
-            <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.total_out)}</div>
-            <ArrowUpRightIcon className="h-4 w-4 text-red-400 mt-1" />
+          <div className="bg-card border border-red-700/50 rounded-lg p-4">
+            <div className="text-sm text-destructive mb-1">Total Keluar</div>
+            <div className="text-2xl font-bold text-destructive">{formatCurrency(summary.total_out)}</div>
+            <ArrowUpRightIcon className="h-4 w-4 text-destructive mt-1" />
           </div>
-          <div className="bg-gray-800 border border-cyan-700/50 rounded-lg p-4 md:col-span-2">
+          <div className="bg-card border border-cyan-700/50 rounded-lg p-4 md:col-span-2">
             <div className="text-sm text-cyan-400 mb-1">Saldo Akhir</div>
             <div className="text-3xl font-bold text-cyan-400">{formatCurrency(summary.running_balance)}</div>
-            <div className="text-xs text-gray-500 mt-1">Auto-calculated from all entries</div>
+            <div className="text-xs text-muted-foreground mt-1">Auto-calculated from all entries</div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search description or reference..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="pl-9 bg-gray-900 border-gray-700"
+                className="pl-9"
               />
             </div>
-            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
               <option value="all">All Types</option>
               <option value="in">Cash In</option>
               <option value="out">Cash Out</option>
             </select>
-            <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="bg-gray-900 border-gray-700 w-40" placeholder="From" />
-            <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="bg-gray-900 border-gray-700 w-40" placeholder="To" />
+            <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="bg-background border-border w-40" placeholder="From" />
+            <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="bg-background border-border w-40" placeholder="To" />
             <Button variant="outline" onClick={fetchData} disabled={loading}>
               <RefreshCwIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
             </Button>
@@ -211,10 +211,10 @@ export default function CashRegisterPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-900 text-gray-400">
+              <thead className="bg-background text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Date</th>
                   <th className="px-4 py-3 text-left font-medium">Type</th>
@@ -229,24 +229,24 @@ export default function CashRegisterPage() {
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {loading ? (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500"><Loader2Icon className="h-6 w-6 animate-spin mx-auto" /></td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground"><Loader2Icon className="h-6 w-6 animate-spin mx-auto" /></td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">Tidak ada transaksi</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Tidak ada transaksi</td></tr>
                 ) : filtered.map((e) => (
-                  <tr key={e.id} className="hover:bg-gray-700/40 transition-colors">
+                  <tr key={e.id} className="hover:bg-muted/40 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{e.entry_date}</td>
                     <td>
-                      <Badge className={e.entry_type === 'in' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}>
+                      <Badge className={e.entry_type === 'in' ? 'bg-green-600 text-foreground' : 'bg-red-600 text-foreground'}>
                         {e.entry_type === 'in' ? 'IN' : 'OUT'}
                       </Badge>
                     </td>
-                    <td className="text-gray-400">{SOURCE_LABELS[e.source_type] || e.source_type}</td>
+                    <td className="text-muted-foreground">{SOURCE_LABELS[e.source_type] || e.source_type}</td>
                     <td>{e.account_name}</td>
-                    <td className="font-mono text-gray-400 text-sm">{e.reference_number || '-'}</td>
+                    <td className="font-mono text-muted-foreground text-sm">{e.reference_number || '-'}</td>
                     <td className="max-w-[250px] truncate" title={e.description}>{e.description}</td>
-                    <td className="px-4 py-3 text-right text-green-400">{e.entry_type === 'in' ? formatCurrency(e.amount) : '-'}</td>
-                    <td className="px-4 py-3 text-right text-red-400">{e.entry_type === 'out' ? formatCurrency(e.amount) : '-'}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${e.running_balance >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                    <td className="px-4 py-3 text-right text-emerald-600">{e.entry_type === 'in' ? formatCurrency(e.amount) : '-'}</td>
+                    <td className="px-4 py-3 text-right text-destructive">{e.entry_type === 'out' ? formatCurrency(e.amount) : '-'}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${e.running_balance >= 0 ? 'text-cyan-400' : 'text-destructive'}`}>
                       {formatCurrency(e.running_balance)}
                     </td>
                   </tr>
@@ -265,11 +265,11 @@ export default function CashRegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Tanggal</label>
-                <Input type="date" value={form.entry_date} onChange={e => setForm({ ...form, entry_date: e.target.value })} className="bg-gray-900 border-gray-700" />
+                <Input type="date" value={form.entry_date} onChange={e => setForm({ ...form, entry_date: e.target.value })} className="bg-background border-border" />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Tipe</label>
-                <select value={form.entry_type} onChange={e => setForm({ ...form, entry_type: e.target.value as 'in' | 'out' })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                <select value={form.entry_type} onChange={e => setForm({ ...form, entry_type: e.target.value as 'in' | 'out' })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground text-sm">
                   <option value="out">Cash Out (Keluar)</option>
                   <option value="in">Cash In (Masuk)</option>
                 </select>
@@ -278,7 +278,7 @@ export default function CashRegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Source</label>
-                <select value={form.source_type} onChange={e => setForm({ ...form, source_type: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                <select value={form.source_type} onChange={e => setForm({ ...form, source_type: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground text-sm">
                   <option value="other">Other</option>
                   <option value="money_request">Money Request</option>
                   <option value="customer_payment">Customer Payment</option>
@@ -289,7 +289,7 @@ export default function CashRegisterPage() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Account</label>
-                <select value={form.account_name} onChange={e => setForm({ ...form, account_name: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                <select value={form.account_name} onChange={e => setForm({ ...form, account_name: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground text-sm">
                   <option value="Kas Kecil">Kas Kecil</option>
                   <option value="Bank BCA">Bank BCA</option>
                   <option value="Bank Mandiri">Bank Mandiri</option>
@@ -298,16 +298,16 @@ export default function CashRegisterPage() {
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Description</label>
-              <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="e.g. Bayar vendor" className="bg-gray-900 border-gray-700" />
+              <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="e.g. Bayar vendor" className="bg-background border-border" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Nominal (IDR)</label>
-                <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="1000000" className="bg-gray-900 border-gray-700" />
+                <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="1000000" className="bg-background border-border" />
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Reference No (Optional)</label>
-                <Input value={form.reference_number} onChange={e => setForm({ ...form, reference_number: e.target.value })} placeholder="e.g. INV-001" className="bg-gray-900 border-gray-700" />
+                <Input value={form.reference_number} onChange={e => setForm({ ...form, reference_number: e.target.value })} placeholder="e.g. INV-001" className="bg-background border-border" />
               </div>
             </div>
           </div>

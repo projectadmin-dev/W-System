@@ -170,18 +170,18 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Customer Management</h1>
-            <p className="text-gray-400">Manage customers and client master data</p>
+            <h1 className="text-2xl font-bold tracking-tight">Customer Management</h1>
+            <p className="text-muted-foreground">Manage customers and client master data</p>
           </div>
           <div className="flex items-center gap-4">
             <Link
               href="/finance/transactions"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-primary hover:text-primary/80"
             >
               ← Back to Transactions
             </Link>
@@ -199,24 +199,24 @@ export default function CustomersPage() {
       {/* Main Content */}
       <div className="p-8">
         {/* Filters */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="relative">
-                <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search customers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64 bg-gray-700 border-gray-600 text-white"
+                  className="pl-10 w-64 bg-muted border-border text-foreground"
                 />
               </div>
               <button
                 onClick={() => setFilter('all')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-blue-600 text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 All
@@ -225,8 +225,8 @@ export default function CustomersPage() {
                 onClick={() => setFilter('active')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === 'active'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-green-600 text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 Active
@@ -235,90 +235,90 @@ export default function CustomersPage() {
                 onClick={() => setFilter('inactive')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === 'inactive'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-red-600 text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 Inactive
               </button>
             </div>
-            <div className="text-gray-400 text-sm">
+            <div className="text-muted-foreground text-sm">
               Showing {filteredCustomers.length} of {customers.length} customers
             </div>
-            <Button variant="outline" onClick={fetchCustomers} className="border-gray-600">
+            <Button variant="outline" onClick={fetchCustomers} className="border-border">
               <RefreshCwIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
 
         {/* Customers Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-muted-foreground">
               <Loader2Icon className="w-8 h-8 mx-auto mb-2 animate-spin" />
               Loading customers...
             </div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">No customers found</div>
+            <div className="p-8 text-center text-muted-foreground">No customers found</div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-gray-700">
-                  <TableHead className="text-gray-300">Code</TableHead>
-                  <TableHead className="text-gray-300">Name</TableHead>
-                  <TableHead className="text-gray-300">Type</TableHead>
-                  <TableHead className="text-gray-300">Contact</TableHead>
-                  <TableHead className="text-gray-300">Payment Terms</TableHead>
-                  <TableHead className="text-gray-300">Credit Limit</TableHead>
-                  <TableHead className="text-gray-300">COA Account</TableHead>
-                  <TableHead className="text-gray-300">Status</TableHead>
-                  <TableHead className="text-gray-300 text-right">Actions</TableHead>
+                <TableRow className="border-border">
+                  <TableHead className="text-foreground">Code</TableHead>
+                  <TableHead className="text-foreground">Name</TableHead>
+                  <TableHead className="text-foreground">Type</TableHead>
+                  <TableHead className="text-foreground">Contact</TableHead>
+                  <TableHead className="text-foreground">Payment Terms</TableHead>
+                  <TableHead className="text-foreground">Credit Limit</TableHead>
+                  <TableHead className="text-foreground">COA Account</TableHead>
+                  <TableHead className="text-foreground">Status</TableHead>
+                  <TableHead className="text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id} className="border-gray-700 hover:bg-gray-750">
-                    <TableCell className="font-mono text-white">{customer.customer_code}</TableCell>
-                    <TableCell className="text-white font-medium">{customer.customer_name}</TableCell>
-                    <TableCell className="text-gray-300 capitalize">{customer.customer_type}</TableCell>
-                    <TableCell className="text-gray-300">
+                  <TableRow key={customer.id} className="hover:bg-muted/50">
+                    <TableCell className="font-mono text-foreground">{customer.customer_code}</TableCell>
+                    <TableCell className="text-foreground font-medium">{customer.customer_name}</TableCell>
+                    <TableCell className="text-foreground capitalize">{customer.customer_type}</TableCell>
+                    <TableCell className="text-foreground">
                       <div className="flex items-center gap-2">
-                        <MailIcon className="w-3 h-3 text-gray-500" />
+                        <MailIcon className="w-3 h-3 text-muted-foreground" />
                         {customer.email}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <PhoneIcon className="w-3 h-3" />
                         {customer.phone}
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-300">
+                    <TableCell className="text-foreground">
                       {customer.payment_terms_days} days
                     </TableCell>
-                    <TableCell className="text-gray-300">
+                    <TableCell className="text-foreground">
                       {customer.credit_limit ? (
-                        <span className="text-white font-medium">
+                        <span className="text-foreground font-medium">
                           Rp {customer.credit_limit.toLocaleString('id-ID')}
                         </span>
                       ) : (
-                        <span className="text-gray-500">No limit</span>
+                        <span className="text-muted-foreground">No limit</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-gray-300">
+                    <TableCell className="text-foreground">
                       {customer.coa ? (
                         <div>
-                          <div className="font-mono text-white">{customer.coa.account_code}</div>
-                          <div className="text-xs text-gray-500">{customer.coa.account_name}</div>
+                          <div className="font-mono text-foreground">{customer.coa.account_code}</div>
+                          <div className="text-xs text-muted-foreground">{customer.coa.account_name}</div>
                         </div>
                       ) : (
-                        <span className="text-gray-500">Not assigned</span>
+                        <span className="text-muted-foreground">Not assigned</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <Badge
                         className={
                           customer.is_active
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-600 text-gray-300'
+                            ? 'bg-green-600 text-foreground'
+                            : 'bg-muted text-foreground'
                         }
                       >
                         {customer.is_active ? 'Active' : 'Inactive'}
@@ -331,25 +331,25 @@ export default function CustomersPage() {
                             <MoreVerticalIcon className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+                        <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedCustomer(customer)
                               setViewDialogOpen(true)
                             }}
-                            className="text-gray-300 hover:bg-gray-700"
+                            className="text-foreground hover:bg-muted"
                           >
                             <EyeIcon className="w-4 h-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-gray-300 hover:bg-gray-700">
+                          <DropdownMenuItem className="text-foreground hover:bg-muted">
                             <PencilIcon className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuSeparator className="bg-muted" />
                           <DropdownMenuItem
                             onClick={() => handleDeleteCustomer(customer.id)}
-                            className="text-red-400 hover:bg-gray-700"
+                            className="text-destructive hover:bg-destructive/10"
                           >
                             <Trash2Icon className="w-4 h-4 mr-2" />
                             Delete
@@ -367,30 +367,30 @@ export default function CustomersPage() {
 
       {/* Create Customer Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-3xl">
+        <DialogContent className="bg-card border-border text-foreground max-w-3xl">
           <DialogHeader>
             <DialogTitle>Create New Customer</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Enter the customer details
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Customer Name</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Customer Name</label>
                 <Input
                   value={newCustomer.customer_name}
                   onChange={(e) => setNewCustomer({ ...newCustomer, customer_name: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="PT Customer Sejahtera"
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Customer Type</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Customer Type</label>
                 <select
                   value={newCustomer.customer_type}
                   onChange={(e) => setNewCustomer({ ...newCustomer, customer_type: e.target.value })}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-muted border border-border rounded-lg px-4 py-2 text-foreground"
                 >
                   <option value="company">Company</option>
                   <option value="individual">Individual</option>
@@ -399,68 +399,68 @@ export default function CustomersPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Email</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Email</label>
                 <Input
                   type="email"
                   value={newCustomer.email}
                   onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="contact@customer.com"
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Phone</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Phone</label>
                 <Input
                   value={newCustomer.phone}
                   onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="+62 812 3456 7890"
                 />
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Address</label>
+              <label className="text-sm text-muted-foreground mb-1 block">Address</label>
               <Input
                 value={newCustomer.address}
                 onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                className="bg-gray-700 border-gray-600 text-white"
+               
                 placeholder="Jl. Contoh No. 123, Jakarta"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Tax ID (NPWP)</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Tax ID (NPWP)</label>
                 <Input
                   value={newCustomer.tax_id}
                   onChange={(e) => setNewCustomer({ ...newCustomer, tax_id: e.target.value })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="01.234.567.8-901.000"
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-300 mb-1 block">Payment Terms (Days)</label>
+                <label className="text-sm text-muted-foreground mb-1 block">Payment Terms (Days)</label>
                 <Input
                   type="number"
                   value={newCustomer.payment_terms_days}
                   onChange={(e) => setNewCustomer({ ...newCustomer, payment_terms_days: parseInt(e.target.value) })}
-                  className="bg-gray-700 border-gray-600 text-white"
+                 
                   placeholder="30"
                 />
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-300 mb-1 block">Credit Limit (Rp)</label>
+              <label className="text-sm text-muted-foreground mb-1 block">Credit Limit (Rp)</label>
               <Input
                 type="number"
                 value={newCustomer.credit_limit}
                 onChange={(e) => setNewCustomer({ ...newCustomer, credit_limit: e.target.value })}
-                className="bg-gray-700 border-gray-600 text-white"
+               
                 placeholder="10000000"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="border-gray-600">
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="border-border">
               Cancel
             </Button>
             <Button onClick={handleCreateCustomer} className="bg-blue-600 hover:bg-blue-700">
@@ -472,7 +472,7 @@ export default function CustomersPage() {
 
       {/* View Customer Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+        <DialogContent className="bg-card border-border text-foreground max-w-2xl">
           <DialogHeader>
             <DialogTitle>Customer Details</DialogTitle>
           </DialogHeader>
@@ -480,16 +480,16 @@ export default function CustomersPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm">Customer Code</p>
-                  <p className="font-mono text-white">{selectedCustomer.customer_code}</p>
+                  <p className="text-muted-foreground text-sm">Customer Code</p>
+                  <p className="font-mono text-foreground">{selectedCustomer.customer_code}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Status</p>
+                  <p className="text-muted-foreground text-sm">Status</p>
                   <Badge
                     className={
                       selectedCustomer.is_active
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-600 text-gray-300'
+                        ? 'bg-green-600 text-foreground'
+                        : 'bg-muted text-foreground'
                     }
                   >
                     {selectedCustomer.is_active ? 'Active' : 'Inactive'}
@@ -497,46 +497,46 @@ export default function CustomersPage() {
                 </div>
               </div>
               <div>
-                <p className="text-gray-400 text-sm">Customer Name</p>
-                <p className="text-white font-medium text-lg">{selectedCustomer.customer_name}</p>
+                <p className="text-muted-foreground text-sm">Customer Name</p>
+                <p className="text-foreground font-medium text-lg">{selectedCustomer.customer_name}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm">Type</p>
-                  <p className="text-white capitalize">{selectedCustomer.customer_type}</p>
+                  <p className="text-muted-foreground text-sm">Type</p>
+                  <p className="text-foreground capitalize">{selectedCustomer.customer_type}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Tax ID</p>
-                  <p className="text-white font-mono">{selectedCustomer.tax_id || '-'}</p>
+                  <p className="text-muted-foreground text-sm">Tax ID</p>
+                  <p className="text-foreground font-mono">{selectedCustomer.tax_id || '-'}</p>
                 </div>
               </div>
               <div>
-                <p className="text-gray-400 text-sm">Contact Information</p>
+                <p className="text-muted-foreground text-sm">Contact Information</p>
                 <div className="space-y-1 mt-1">
-                  <div className="flex items-center gap-2 text-white">
-                    <MailIcon className="w-4 h-4 text-gray-500" />
+                  <div className="flex items-center gap-2 text-foreground">
+                    <MailIcon className="w-4 h-4 text-muted-foreground" />
                     {selectedCustomer.email}
                   </div>
-                  <div className="flex items-center gap-2 text-white">
-                    <PhoneIcon className="w-4 h-4 text-gray-500" />
+                  <div className="flex items-center gap-2 text-foreground">
+                    <PhoneIcon className="w-4 h-4 text-muted-foreground" />
                     {selectedCustomer.phone}
                   </div>
                 </div>
               </div>
               {selectedCustomer.address && (
                 <div>
-                  <p className="text-gray-400 text-sm">Address</p>
-                  <p className="text-white">{selectedCustomer.address}</p>
+                  <p className="text-muted-foreground text-sm">Address</p>
+                  <p className="text-foreground">{selectedCustomer.address}</p>
                 </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400 text-sm">Payment Terms</p>
-                  <p className="text-white">{selectedCustomer.payment_terms_days} days</p>
+                  <p className="text-muted-foreground text-sm">Payment Terms</p>
+                  <p className="text-foreground">{selectedCustomer.payment_terms_days} days</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Credit Limit</p>
-                  <p className="text-white font-medium">
+                  <p className="text-muted-foreground text-sm">Credit Limit</p>
+                  <p className="text-foreground font-medium">
                     {selectedCustomer.credit_limit
                       ? `Rp ${selectedCustomer.credit_limit.toLocaleString('id-ID')}`
                       : 'No limit'}
@@ -545,10 +545,10 @@ export default function CustomersPage() {
               </div>
               {selectedCustomer.coa && (
                 <div>
-                  <p className="text-gray-400 text-sm">COA Account</p>
-                  <div className="text-white">
+                  <p className="text-muted-foreground text-sm">COA Account</p>
+                  <div className="text-foreground">
                     <div className="font-mono">{selectedCustomer.coa.account_code}</div>
-                    <div className="text-sm text-gray-400">{selectedCustomer.coa.account_name}</div>
+                    <div className="text-sm text-muted-foreground">{selectedCustomer.coa.account_name}</div>
                   </div>
                 </div>
               )}

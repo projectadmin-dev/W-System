@@ -163,89 +163,89 @@ export default function NewJournalEntryPage() {
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
-      asset: 'text-blue-400',
-      liability: 'text-red-400',
+      asset: 'text-primary',
+      liability: 'text-destructive',
       equity: 'text-purple-400',
-      revenue: 'text-green-400',
-      expense: 'text-yellow-400',
+      revenue: 'text-emerald-600',
+      expense: 'text-amber-600',
     };
-    return colors[type] || 'text-gray-400';
+    return colors[type] || 'text-muted-foreground';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-xl">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/finance/journal" className="text-gray-400 hover:text-white text-sm mb-2 block">
+          <Link href="/finance/journal" className="text-muted-foreground hover:text-foreground text-sm mb-2 block">
             &larr; Back to Journal Entries
           </Link>
           <h1 className="text-3xl font-bold">New Journal Entry</h1>
-          <p className="text-gray-400 mt-1">Create a new double-entry journal (PSAK compliant)</p>
+          <p className="text-muted-foreground mt-1">Create a new double-entry journal (PSAK compliant)</p>
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg">
+          <div className="mb-6 bg-red-50 border border-red-700 text-red-300 px-4 py-3 rounded-lg">
             {error}
           </div>
         )}
 
         {/* Balance Warning/Status */}
-        <div className={`mb-6 p-4 rounded-lg border ${isBalanced ? 'bg-green-900/20 border-green-700' : 'bg-yellow-900/20 border-yellow-700'}`}>
+        <div className={`mb-6 p-4 rounded-lg border ${isBalanced ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
           <div className="flex justify-between items-center">
             <div className="flex gap-8">
               <div>
-                <div className="text-sm text-gray-400">Total Debit</div>
-                <div className="text-xl font-bold text-green-400">{formatCurrency(totalDebit)}</div>
+                <div className="text-sm text-muted-foreground">Total Debit</div>
+                <div className="text-xl font-bold text-emerald-600">{formatCurrency(totalDebit)}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-400">Total Credit</div>
-                <div className="text-xl font-bold text-red-400">{formatCurrency(totalCredit)}</div>
+                <div className="text-sm text-muted-foreground">Total Credit</div>
+                <div className="text-xl font-bold text-destructive">{formatCurrency(totalCredit)}</div>
               </div>
             </div>
-            <div className={`text-lg font-bold ${isBalanced ? 'text-green-400' : 'text-yellow-400'}`}>
+            <div className={`text-lg font-bold ${isBalanced ? 'text-emerald-600' : 'text-amber-600'}`}>
               {isBalanced ? '✓ Balanced' : '⚠ Not Balanced'}
             </div>
           </div>
         </div>
 
         {/* Form Fields */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-6">
+        <div className="bg-card rounded-lg border border-border p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Transaction Date *</label>
+              <label className="block text-sm text-muted-foreground mb-1">Transaction Date *</label>
               <input
                 type="date"
                 value={transactionDate}
                 onChange={e => setTransactionDate(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Posting Date</label>
+              <label className="block text-sm text-muted-foreground mb-1">Posting Date</label>
               <input
                 type="date"
                 value={postingDate}
                 onChange={e => setPostingDate(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
               />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Fiscal Period *</label>
+              <label className="block text-sm text-muted-foreground mb-1">Fiscal Period *</label>
               <select
                 value={selectedPeriod}
                 onChange={e => setSelectedPeriod(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
               >
                 {periods.map(p => (
                   <option key={p.id} value={p.id}>{p.period_name} ({p.status})</option>
@@ -253,54 +253,54 @@ export default function NewJournalEntryPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Reference Number</label>
+              <label className="block text-sm text-muted-foreground mb-1">Reference Number</label>
               <input
                 type="text"
                 value={referenceNumber}
                 onChange={e => setReferenceNumber(e.target.value)}
                 placeholder="e.g. INV-2026-001"
-                className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Description *</label>
+            <label className="block text-sm text-muted-foreground mb-1">Description *</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Enter journal entry description..."
               rows={2}
-              className="w-full bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:border-blue-500 focus:outline-none"
+              className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:border-blue-500 focus:outline-none"
             />
           </div>
         </div>
 
         {/* Journal Lines */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden mb-6">
-          <div className="px-6 py-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center">
+        <div className="bg-card rounded-lg border border-border overflow-hidden mb-6">
+          <div className="px-6 py-4 bg-background border-b border-border flex justify-between items-center">
             <h3 className="font-semibold">Journal Lines</h3>
-            <span className="text-sm text-gray-400">Minimum 2 lines required</span>
+            <span className="text-sm text-muted-foreground">Minimum 2 lines required</span>
           </div>
           <table className="w-full">
-            <thead className="bg-gray-900/50 border-b border-gray-700">
+            <thead className="bg-background/50 border-b border-border">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 w-12">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Account *</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Description</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Debit</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Credit</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 w-20">Action</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground w-12">#</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Account *</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Description</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Debit</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Credit</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground w-20">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
               {lines.map((line, idx) => (
-                <tr key={line.id} className="hover:bg-gray-750">
-                  <td className="px-4 py-3 text-sm text-gray-400">{idx + 1}</td>
+                <tr key={line.id} className="hover:bg-muted/50">
+                  <td className="px-4 py-3 text-sm text-muted-foreground">{idx + 1}</td>
                   <td className="px-4 py-3">
                     <select
                       value={line.coa_id}
                       onChange={e => updateLine(line.id, 'coa_id', e.target.value)}
-                      className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-none"
                     >
                       <option value="">Select Account...</option>
                       {coaList.map(coa => (
@@ -321,7 +321,7 @@ export default function NewJournalEntryPage() {
                       value={line.line_description}
                       onChange={e => updateLine(line.id, 'line_description', e.target.value)}
                       placeholder="Line description..."
-                      className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm text-foreground focus:border-blue-500 focus:outline-none"
                     />
                   </td>
                   <td className="px-4 py-3">
@@ -332,7 +332,7 @@ export default function NewJournalEntryPage() {
                       value={line.debit_amount}
                       onChange={e => updateLine(line.id, 'debit_amount', e.target.value)}
                       placeholder="0.00"
-                      className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-right text-green-400 focus:border-blue-500 focus:outline-none"
+                      className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm text-right text-emerald-600 focus:border-blue-500 focus:outline-none"
                     />
                   </td>
                   <td className="px-4 py-3">
@@ -343,13 +343,13 @@ export default function NewJournalEntryPage() {
                       value={line.credit_amount}
                       onChange={e => updateLine(line.id, 'credit_amount', e.target.value)}
                       placeholder="0.00"
-                      className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-right text-red-400 focus:border-blue-500 focus:outline-none"
+                      className="w-full bg-background border border-border rounded px-3 py-1.5 text-sm text-right text-destructive focus:border-blue-500 focus:outline-none"
                     />
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => removeLine(line.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
+                      className="text-destructive hover:text-red-300 text-sm"
                       title="Remove line"
                     >
                       &times;
@@ -358,19 +358,19 @@ export default function NewJournalEntryPage() {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-900/30 border-t border-gray-700">
+            <tfoot className="border-t">
               <tr>
-                <td colSpan={3} className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Totals:</td>
-                <td className="px-4 py-3 text-right text-sm font-bold text-green-400">{formatCurrency(totalDebit)}</td>
-                <td className="px-4 py-3 text-right text-sm font-bold text-red-400">{formatCurrency(totalCredit)}</td>
+                <td colSpan={3} className="px-4 py-3 text-right text-sm font-semibold text-foreground">Totals:</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-emerald-600">{formatCurrency(totalDebit)}</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-destructive">{formatCurrency(totalCredit)}</td>
                 <td></td>
               </tr>
             </tfoot>
           </table>
-          <div className="px-6 py-3 border-t border-gray-700">
+          <div className="px-6 py-3 border-t border-border">
             <button
               onClick={addLine}
-              className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1"
+              className="text-primary hover:text-blue-300 text-sm font-medium flex items-center gap-1"
             >
               <span>+</span> Add Line
             </button>
@@ -384,14 +384,14 @@ export default function NewJournalEntryPage() {
             disabled={submitting || !isBalanced || !allLinesValid}
             className={`px-8 py-3 rounded-lg font-medium transition-colors ${
               isBalanced && allLinesValid
-                ? 'bg-green-600 hover:bg-green-700 text-white'
-                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                ? 'bg-green-600 hover:bg-green-700 text-foreground'
+                : 'bg-muted text-muted-foreground cursor-not-allowed'
             }`}
           >
             {submitting ? 'Creating...' : 'Create Journal Entry'}
           </button>
           <Link href="/finance/journal">
-            <button className="bg-gray-700 hover:bg-gray-600 px-8 py-3 rounded-lg font-medium transition-colors text-white">
+            <button className="bg-muted hover:bg-muted/80 px-8 py-3 rounded-lg font-medium transition-colors text-foreground">
               Cancel
             </button>
           </Link>

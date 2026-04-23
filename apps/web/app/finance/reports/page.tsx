@@ -14,7 +14,7 @@ const reportCards = [
     description: 'Laporkan pendapatan, biaya, \u0026 laba/rugi bersih per periode.',
     href: '/finance/reports/profit-loss',
     icon: TrendingUpIcon,
-    color: 'text-green-400',
+    color: 'text-emerald-600',
     border: 'border-green-500/30',
     bg: 'bg-green-500/10',
   },
@@ -23,7 +23,7 @@ const reportCards = [
     description: 'Posisi keuangan: Aset, Kewajiban, \u0026 Ekuitas.',
     href: '/finance/reports/balance-sheet',
     icon: ScaleIcon,
-    color: 'text-blue-400',
+    color: 'text-primary',
     border: 'border-blue-500/30',
     bg: 'bg-blue-500/10',
   },
@@ -49,12 +49,12 @@ const reportCards = [
 
 export default function ReportsHubPage() {
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Financial Reports</h1>
-          <p className="text-gray-400">
+          <p className="text-muted-foreground">
             PSAK-compliant reports for period close, audit, and management review.
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function ReportsHubPage() {
             <Link
               key={card.href}
               href={card.href}
-              className={`block bg-gray-800 rounded-xl p-6 border ${card.border} hover:bg-gray-700/50 transition group`}
+              className={`block bg-card rounded-xl p-6 border ${card.border} hover:bg-muted/50 transition group`}
             >
               <div className="flex items-start gap-4">
                 <div className={`p-3 rounded-lg ${card.bg}`}>
@@ -75,7 +75,7 @@ export default function ReportsHubPage() {
                   <h3 className="text-lg font-semibold mb-1 group-hover:text-blue-300 transition">
                     {card.title}
                   </h3>
-                  <p className="text-sm text-gray-400">{card.description}</p>
+                  <p className="text-sm text-muted-foreground">{card.description}</p>
                 </div>
               </div>
             </Link>
@@ -83,11 +83,11 @@ export default function ReportsHubPage() {
         </div>
 
         {/* Compliance Note */}
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-          <h3 className="text-sm font-semibold text-gray-300 mb-2">
+        <div className="rounded-lg border border-border bg-card/50 p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-2">
             PSAK Compliance Notes
           </h3>
-          <ul className="text-sm text-gray-400 space-y-1 list-disc list-inside">
+          <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
             <li>
               Reports use double-entry journal data (debit = credit verified
               at posting time).

@@ -105,15 +105,15 @@ export default function BKMPrintPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-muted flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   if (error || !receipt) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-red-500">{error || 'Receipt not found'}</div>
       </div>
     )
@@ -124,31 +124,31 @@ export default function BKMPrintPage() {
   const methodName = receipt.payment_method?.method_name || 'Bank Transfer'
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-muted">
       {/* Toolbar - hidden on print */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between print:hidden">
+      <div className="bg-white border-b border-border px-6 py-3 flex items-center justify-between print:hidden">
         <div className="flex items-center gap-4">
           <Link
             href="/finance/receipts"
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Kembali
           </Link>
-          <span className="text-gray-300">|</span>
-          <h1 className="font-semibold text-gray-900">Print BKM View</h1>
+          <span className="text-foreground">|</span>
+          <h1 className="font-semibold text-foreground">Print BKM View</h1>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleSendEmail}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-foreground rounded-lg text-sm font-medium transition-colors"
           >
             <MailIcon className="w-4 h-4" />
             Kirim Email
           </button>
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-card hover:bg-muted text-foreground rounded-lg text-sm font-medium transition-colors"
           >
             <PrinterIcon className="w-4 h-4" />
             Print / PDF
@@ -162,19 +162,19 @@ export default function BKMPrintPage() {
         <div className="border-b-2 border-gray-800 p-8">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gray-900 rounded-lg flex items-center justify-center">
-                <Building2Icon className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 bg-background rounded-lg flex items-center justify-center">
+                <Building2Icon className="w-8 h-8 text-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">PT WIT Teknologi Indonesia</h1>
-                <p className="text-sm text-gray-500">Jl. Sudirman No. 123, Jakarta Selatan</p>
-                <p className="text-sm text-gray-500">NPWP: 09.123.456.7-123.000</p>
+                <h1 className="text-xl font-bold text-foreground">PT WIT Teknologi Indonesia</h1>
+                <p className="text-sm text-muted-foreground">Jl. Sudirman No. 123, Jakarta Selatan</p>
+                <p className="text-sm text-muted-foreground">NPWP: 09.123.456.7-123.000</p>
               </div>
             </div>
             <div className="text-right">
               <div className="inline-block border-2 border-gray-800 px-6 py-2">
-                <h2 className="text-lg font-bold text-gray-900">BUKTI KAS MASUK</h2>
-                <p className="text-sm text-gray-600">(BKM)</p>
+                <h2 className="text-lg font-bold text-foreground">BUKTI KAS MASUK</h2>
+                <p className="text-sm text-muted-foreground">(BKM)</p>
               </div>
             </div>
           </div>
@@ -184,45 +184,45 @@ export default function BKMPrintPage() {
         <div className="grid grid-cols-2 gap-8 p-8">
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Diterima Dari</p>
-              <p className="font-semibold text-gray-900">{customerName}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Diterima Dari</p>
+              <p className="font-semibold text-foreground">{customerName}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Alamat</p>
-              <p className="text-sm text-gray-700">{customerAddress}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Alamat</p>
+              <p className="text-sm text-foreground">{customerAddress}</p>
             </div>
           </div>
           <div className="space-y-3 text-right">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Nomor BKM</p>
-              <p className="font-mono font-semibold text-gray-900">{receipt.receipt_number}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Nomor BKM</p>
+              <p className="font-mono font-semibold text-foreground">{receipt.receipt_number}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Tanggal</p>
-              <p className="text-sm text-gray-700">{formatDateLong(receipt.receipt_date)}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Tanggal</p>
+              <p className="text-sm text-foreground">{formatDateLong(receipt.receipt_date)}</p>
             </div>
           </div>
         </div>
 
         {/* Amount */}
         <div className="px-8">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <div className="bg-gray-50 border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Jumlah</p>
-                <p className="text-3xl font-bold text-gray-900 font-mono">{formatRupiah(receipt.amount)}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Jumlah</p>
+                <p className="text-3xl font-bold text-foreground font-mono">{formatRupiah(receipt.amount)}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Metode Pembayaran</p>
-                <p className="text-sm font-medium text-gray-900">{methodName}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Metode Pembayaran</p>
+                <p className="text-sm font-medium text-foreground">{methodName}</p>
                 {receipt.reference_number && (
-                  <p className="text-xs text-gray-500 mt-0.5">Ref: {receipt.reference_number}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Ref: {receipt.reference_number}</p>
                 )}
               </div>
             </div>
-            <div className="border-t border-gray-200 pt-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Terbilang</p>
-              <p className="text-sm font-medium text-gray-700 italic">
+            <div className="border-t border-border pt-4">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Terbilang</p>
+              <p className="text-sm font-medium text-foreground italic">
                 {terbilang(receipt.amount)} Rupiah
               </p>
             </div>
@@ -232,8 +232,8 @@ export default function BKMPrintPage() {
         {/* Details */}
         {receipt.notes && (
           <div className="px-8 pt-6">
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Keterangan</p>
-            <p className="text-sm text-gray-700">{receipt.notes}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Keterangan</p>
+            <p className="text-sm text-foreground">{receipt.notes}</p>
           </div>
         )}
 
@@ -241,35 +241,35 @@ export default function BKMPrintPage() {
         <div className="p-8 mt-8">
           <div className="grid grid-cols-3 gap-8">
             <div className="text-center">
-              <p className="text-xs text-gray-500 mb-8">Dibuat Oleh,</p>
+              <p className="text-xs text-muted-foreground mb-8">Dibuat Oleh,</p>
               <div className="border-t border-gray-400 pt-2">
-                <p className="text-sm font-medium text-gray-900">Finance Staff</p>
-                <p className="text-xs text-gray-500">Staff Keuangan</p>
+                <p className="text-sm font-medium text-foreground">Finance Staff</p>
+                <p className="text-xs text-muted-foreground">Staff Keuangan</p>
               </div>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500 mb-8">Disetujui Oleh,</p>
+              <p className="text-xs text-muted-foreground mb-8">Disetujui Oleh,</p>
               <div className="border-t border-gray-400 pt-2">
-                <p className="text-sm font-medium text-gray-900">Arie Anggono</p>
-                <p className="text-xs text-gray-500">CFO</p>
+                <p className="text-sm font-medium text-foreground">Arie Anggono</p>
+                <p className="text-xs text-muted-foreground">CFO</p>
               </div>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500 mb-8">Diterima Oleh,</p>
+              <p className="text-xs text-muted-foreground mb-8">Diterima Oleh,</p>
               <div className="border-t border-gray-400 pt-2">
-                <p className="text-sm font-medium text-gray-900">{customerName}</p>
-                <p className="text-xs text-gray-500">Customer</p>
+                <p className="text-sm font-medium text-foreground">{customerName}</p>
+                <p className="text-xs text-muted-foreground">Customer</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-4 text-center">
-          <p className="text-xs text-gray-400">
+        <div className="border-t border-border p-4 text-center">
+          <p className="text-xs text-muted-foreground">
             Dokumen ini sah tanpa tanda tangan basah jika telah diproses melalui sistem W.System
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Dicetak pada {new Date().toLocaleString('id-ID')}
           </p>
         </div>

@@ -94,18 +94,18 @@ export default function ExpensesPage() {
   const totalAmount = expenses.reduce((s, e) => s + e.amount, 0)
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <div>
-            <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
-              <Link href="/finance" className="hover:text-white transition-colors">Finance</Link>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+              <Link href="/finance" className="hover:text-foreground transition-colors">Finance</Link>
               <span>/</span>
-              <span className="text-white">Expenses</span>
+              <span className="text-foreground">Expenses</span>
             </div>
             <h1 className="text-2xl font-bold">Expense Tracking</h1>
-            <p className="text-gray-400 text-sm">Pantau pengeluaran perusahaan vs budget bulanan</p>
+            <p className="text-muted-foreground text-sm">Pantau pengeluaran perusahaan vs budget bulanan</p>
           </div>
           <button
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
@@ -117,9 +117,9 @@ export default function ExpensesPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 mt-6">
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="text-xs text-gray-400 mb-1">Total Pengeluaran (Filtered)</div>
-            <div className="text-lg font-semibold font-mono text-white">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Total Pengeluaran (Filtered)</div>
+            <div className="text-lg font-semibold font-mono text-foreground">
               {new Intl.NumberFormat('id-ID', {
                 style: 'currency',
                 currency: 'IDR',
@@ -128,30 +128,30 @@ export default function ExpensesPage() {
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="text-xs text-gray-400 mb-1">Jumlah Transaksi</div>
-            <div className="text-lg font-semibold font-mono text-white">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Jumlah Transaksi</div>
+            <div className="text-lg font-semibold font-mono text-foreground">
               {count} transaksi
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="text-xs text-gray-400 mb-1">Periode Aktif</div>
-            <div className="text-lg font-semibold font-mono text-white">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Periode Aktif</div>
+            <div className="text-lg font-semibold font-mono text-foreground">
               {filter.period}
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="text-xs text-gray-400 mb-1">Status Budget</div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">Status Budget</div>
             {summaryLoading ? (
-              <div className="h-6 bg-gray-700 rounded animate-pulse" />
+              <div className="h-6 bg-muted rounded animate-pulse" />
             ) : summary ? (
-              <div className={`text-lg font-semibold font-mono ${summary.variance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`text-lg font-semibold font-mono ${summary.variance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                 {summary.variance >= 0 ? 'Under' : 'Over'} Budget
               </div>
             ) : (
-              <div className="text-lg font-semibold font-mono text-gray-500">-</div>
+              <div className="text-lg font-semibold font-mono text-muted-foreground">-</div>
             )}
           </div>
         </div>
@@ -162,7 +162,7 @@ export default function ExpensesPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 mb-4">
+        <div className="bg-card rounded-lg border border-border p-4 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Detail Pengeluaran</h2>
             <button
@@ -173,7 +173,7 @@ export default function ExpensesPage() {
                 sort_by: 'date',
                 sort_order: 'desc',
               })}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Reset Filter
             </button>
@@ -183,7 +183,7 @@ export default function ExpensesPage() {
 
         {/* Error */}
         {error && (
-          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-4 text-red-300">
+          <div className="bg-red-50 border border-red-700 rounded-lg p-4 mb-4 text-red-300">
             {error}
           </div>
         )}
@@ -191,8 +191,8 @@ export default function ExpensesPage() {
         {/* Table */}
         {loading && expenses.length === 0 ? (
           <div className="space-y-4">
-            <div className="h-10 bg-gray-700 rounded animate-pulse" />
-            <div className="h-64 bg-gray-700 rounded animate-pulse" />
+            <div className="h-10 bg-muted rounded animate-pulse" />
+            <div className="h-64 bg-muted rounded animate-pulse" />
           </div>
         ) : (
           <ExpenseTable

@@ -274,18 +274,18 @@ export default function CustomerInvoicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Customer Invoices</h1>
-            <p className="text-gray-400">Manage accounts receivable and customer billing</p>
+            <h1 className="text-2xl font-bold tracking-tight">Customer Invoices</h1>
+            <p className="text-muted-foreground">Manage accounts receivable and customer billing</p>
           </div>
           <div className="flex items-center gap-4">
             <Link
               href="/finance/transactions"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-primary hover:text-primary/80"
             >
               ← Back to Transactions
             </Link>
@@ -301,34 +301,34 @@ export default function CustomerInvoicesPage() {
       <div className="p-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <div className="text-2xl font-bold text-blue-400">
+          <div>
+            <div className="text-2xl font-bold text-primary">
               {invoices.filter((i) => i.status === 'draft').length}
             </div>
-            <div className="text-sm text-gray-400">Draft Invoices</div>
+            <div className="text-sm text-muted-foreground">Draft Invoices</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <div className="text-2xl font-bold text-yellow-400">
+          <div>
+            <div className="text-2xl font-bold text-amber-600">
               {invoices.filter((i) => i.status === 'sent').length}
             </div>
-            <div className="text-sm text-gray-400">Sent (Unpaid)</div>
+            <div className="text-sm text-muted-foreground">Sent (Unpaid)</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <div className="text-2xl font-bold text-green-400">
+          <div>
+            <div className="text-2xl font-bold text-emerald-600">
               {invoices.filter((i) => i.status === 'paid').length}
             </div>
-            <div className="text-sm text-gray-400">Paid Invoices</div>
+            <div className="text-sm text-muted-foreground">Paid Invoices</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <div className="text-2xl font-bold text-red-400">
+          <div>
+            <div className="text-2xl font-bold text-destructive">
               {invoices.filter((i) => i.status === 'overdue').length}
             </div>
-            <div className="text-sm text-gray-400">Overdue</div>
+            <div className="text-sm text-muted-foreground">Overdue</div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -336,11 +336,11 @@ export default function CustomerInvoicesPage() {
                 placeholder="Search by invoice number or customer..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 bg-gray-900 border-gray-700"
+                className="pl-9"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[200px] bg-gray-900 border-gray-700">
+              <SelectTrigger className="w-full sm:w-[200px] bg-background border-border">
                 <FilterIcon className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -361,7 +361,7 @@ export default function CustomerInvoicesPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           <Table>
             <TableHeader className="bg-muted">
               <TableRow className="bg-muted border-b">
@@ -386,13 +386,13 @@ export default function CustomerInvoicesPage() {
                 </TableRow>
               ) : filteredInvoices.length > 0 ? (
                 filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id} className="border-gray-700">
+                  <TableRow key={invoice.id} className="border-border">
                     <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                     <TableCell>{invoice.customer_name}</TableCell>
                     <TableCell className="text-right">{formatCurrency(invoice.amount)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(invoice.tax_amount)}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(invoice.total_amount)}</TableCell>
-                    <TableCell className={`text-right font-semibold ${invoice.balance_due > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    <TableCell className={`text-right font-semibold ${invoice.balance_due > 0 ? 'text-destructive' : 'text-emerald-600'}`}>
                       {formatCurrency(invoice.balance_due || 0)}
                     </TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
@@ -461,7 +461,7 @@ export default function CustomerInvoicesPage() {
                   value={newInvoice.customer_name}
                   onChange={(e) => setNewInvoice({ ...newInvoice, customer_name: e.target.value })}
                   placeholder="PT. Example Customer"
-                  className="bg-gray-900 border-gray-700"
+                  className="bg-background border-border"
                 />
               </div>
               <div>
@@ -470,7 +470,7 @@ export default function CustomerInvoicesPage() {
                   type="date"
                   value={newInvoice.issue_date}
                   onChange={(e) => setNewInvoice({ ...newInvoice, issue_date: e.target.value })}
-                  className="bg-gray-900 border-gray-700"
+                  className="bg-background border-border"
                 />
               </div>
             </div>
@@ -480,7 +480,7 @@ export default function CustomerInvoicesPage() {
                 value={newInvoice.description}
                 onChange={(e) => setNewInvoice({ ...newInvoice, description: e.target.value })}
                 placeholder="Services rendered, products sold, etc."
-                className="bg-gray-900 border-gray-700"
+                className="bg-background border-border"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -491,7 +491,7 @@ export default function CustomerInvoicesPage() {
                   value={newInvoice.amount}
                   onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
                   placeholder="10000000"
-                  className="bg-gray-900 border-gray-700"
+                  className="bg-background border-border"
                 />
               </div>
               <div>
@@ -500,7 +500,7 @@ export default function CustomerInvoicesPage() {
                   type="number"
                   value={newInvoice.tax_rate}
                   onChange={(e) => setNewInvoice({ ...newInvoice, tax_rate: e.target.value })}
-                  className="bg-gray-900 border-gray-700"
+                  className="bg-background border-border"
                 />
               </div>
             </div>
@@ -510,22 +510,22 @@ export default function CustomerInvoicesPage() {
                 type="date"
                 value={newInvoice.due_date}
                 onChange={(e) => setNewInvoice({ ...newInvoice, due_date: e.target.value })}
-                className="bg-gray-900 border-gray-700"
+                className="bg-background border-border"
               />
             </div>
             {newInvoice.amount && (
-              <div className="bg-gray-900 p-4 rounded-lg">
+              <div className="bg-muted p-4 rounded-lg">
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Subtotal:</span>
+                  <span className="text-muted-foreground">Subtotal:</span>
                   <span>{formatCurrency(parseFloat(newInvoice.amount) || 0)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">PPN ({newInvoice.tax_rate}%):</span>
+                  <span className="text-muted-foreground">PPN ({newInvoice.tax_rate}%):</span>
                   <span>
                     {formatCurrency((parseFloat(newInvoice.amount) || 0) * (parseFloat(newInvoice.tax_rate) / 100))}
                   </span>
                 </div>
-                <div className="flex justify-between font-bold text-lg border-t border-gray-700 pt-2">
+                <div className="flex justify-between font-bold text-lg border-t border-border pt-2">
                   <span>Total:</span>
                   <span>
                     {formatCurrency(
@@ -560,40 +560,40 @@ export default function CustomerInvoicesPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-gray-400">Status</div>
+                  <div className="text-sm text-muted-foreground">Status</div>
                   <div className="mt-1">{getStatusBadge(selectedInvoice.status)}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-400">Invoice Date</div>
+                  <div className="text-sm text-muted-foreground">Invoice Date</div>
                   <div className="mt-1">{formatDate(selectedInvoice.issue_date)}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-400">Due Date</div>
+                  <div className="text-sm text-muted-foreground">Due Date</div>
                   <div className="mt-1">{formatDate(selectedInvoice.due_date)}</div>
                 </div>
                 {selectedInvoice.paid_date && (
                   <div>
-                    <div className="text-sm text-gray-400">Paid Date</div>
+                    <div className="text-sm text-muted-foreground">Paid Date</div>
                     <div className="mt-1">{formatDate(selectedInvoice.paid_date)}</div>
                   </div>
                 )}
               </div>
               {selectedInvoice.description && (
                 <div>
-                  <div className="text-sm text-gray-400 mb-2">Description</div>
-                  <div className="bg-gray-900 p-4 rounded-lg">{selectedInvoice.description}</div>
+                  <div className="text-sm text-muted-foreground mb-2">Description</div>
+                  <div className="bg-muted p-4 rounded-lg">{selectedInvoice.description}</div>
                 </div>
               )}
-              <div className="bg-gray-900 p-6 rounded-lg">
+              <div className="bg-background p-6 rounded-lg">
                 <div className="flex justify-between mb-3">
-                  <span className="text-gray-400">Subtotal:</span>
+                  <span className="text-muted-foreground">Subtotal:</span>
                   <span>{formatCurrency(selectedInvoice.amount)}</span>
                 </div>
                 <div className="flex justify-between mb-3">
-                  <span className="text-gray-400">Tax (PPN 11%):</span>
+                  <span className="text-muted-foreground">Tax (PPN 11%):</span>
                   <span>{formatCurrency(selectedInvoice.tax_amount)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-xl border-t border-gray-700 pt-3">
+                <div className="flex justify-between font-bold text-xl border-t border-border pt-3">
                   <span>Total:</span>
                   <span>{formatCurrency(selectedInvoice.total_amount)}</span>
                 </div>
@@ -630,7 +630,7 @@ export default function CustomerInvoicesPage() {
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   placeholder={selectedInvoice ? String(selectedInvoice.balance_due) : ''}
-                  className="bg-gray-900 border-gray-700"
+                  className="bg-background border-border"
                 />
               </div>
               <div>
@@ -638,7 +638,7 @@ export default function CustomerInvoicesPage() {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground"
                 >
                   <option value="transfer">Bank Transfer</option>
                   <option value="cash">Cash</option>
@@ -653,7 +653,7 @@ export default function CustomerInvoicesPage() {
                 type="date"
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="bg-gray-900 border-gray-700"
+                className="bg-background border-border"
               />
             </div>
             <div>
@@ -662,22 +662,22 @@ export default function CustomerInvoicesPage() {
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
                 placeholder="Payment reference, notes, etc."
-                className="bg-gray-900 border-gray-700"
+                className="bg-background border-border"
               />
             </div>
             {selectedInvoice && (
-              <div className="bg-gray-900 p-4 rounded-lg">
+              <div className="bg-muted p-4 rounded-lg">
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Total Amount:</span>
+                  <span className="text-muted-foreground">Total Amount:</span>
                   <span>{formatCurrency(selectedInvoice.total_amount)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-gray-400">Paid Amount:</span>
+                  <span className="text-muted-foreground">Paid Amount:</span>
                   <span>{formatCurrency(selectedInvoice.paid_amount || 0)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-lg border-t border-gray-700 pt-2">
+                <div className="flex justify-between font-bold text-lg border-t border-border pt-2">
                   <span>Balance Due:</span>
-                  <span className="text-red-400">{formatCurrency(selectedInvoice.balance_due)}</span>
+                  <span className="text-destructive">{formatCurrency(selectedInvoice.balance_due)}</span>
                 </div>
               </div>
             )}

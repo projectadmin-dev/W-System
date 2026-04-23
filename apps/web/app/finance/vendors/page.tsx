@@ -48,22 +48,22 @@ export default function VendorsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Vendor Management</h1>
-            <p className="text-gray-400">Manage suppliers and vendor master data</p>
+            <h1 className="text-2xl font-bold tracking-tight">Vendor Management</h1>
+            <p className="text-muted-foreground">Manage suppliers and vendor master data</p>
           </div>
           <div className="flex items-center gap-4">
             <Link
               href="/finance/transactions"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-primary hover:text-primary/80"
             >
               ← Back to Transactions
             </Link>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+            <button className="bg-blue-600 hover:bg-blue-700 text-foreground px-4 py-2 rounded-lg transition-colors">
               + New Vendor
             </button>
           </div>
@@ -73,15 +73,15 @@ export default function VendorsPage() {
       {/* Main Content */}
       <div className="p-8">
         {/* Filters */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+        <div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setFilter('all')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-blue-600 text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 All Vendors
@@ -90,8 +90,8 @@ export default function VendorsPage() {
                 onClick={() => setFilter('active')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === 'active'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-green-600 text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 Active
@@ -100,98 +100,98 @@ export default function VendorsPage() {
                 onClick={() => setFilter('inactive')}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === 'inactive'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-red-600 text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted/80'
                 }`}
               >
                 Inactive
               </button>
             </div>
-            <div className="text-gray-400 text-sm">
+            <div className="text-muted-foreground text-sm">
               Showing {filteredVendors.length} of {vendors.length} vendors
             </div>
           </div>
         </div>
 
         {/* Vendors Table */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading vendors...</div>
+            <div className="p-8 text-center text-muted-foreground">Loading vendors...</div>
           ) : filteredVendors.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">No vendors found</div>
+            <div className="p-8 text-center text-muted-foreground">No vendors found</div>
           ) : (
             <table className="w-full">
-              <thead className="bg-gray-700">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Code
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Contact
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Payment Terms
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     COA Account
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {filteredVendors.map((vendor) => (
-                  <tr key={vendor.id} className="hover:bg-gray-750 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-mono">
+                  <tr key={vendor.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-mono">
                       {vendor.vendor_code}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {vendor.vendor_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">
                       {vendor.vendor_type}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       <div>{vendor.email}</div>
-                      <div className="text-xs text-gray-500">{vendor.phone}</div>
+                      <div className="text-xs text-muted-foreground">{vendor.phone}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {vendor.payment_terms_days} days
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                       {vendor.coa ? (
                         <div>
                           <div className="font-mono">{vendor.coa.account_code}</div>
-                          <div className="text-xs text-gray-500">{vendor.coa.account_name}</div>
+                          <div className="text-xs text-muted-foreground">{vendor.coa.account_name}</div>
                         </div>
                       ) : (
-                        <span className="text-gray-500">Not assigned</span>
+                        <span className="text-muted-foreground">Not assigned</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           vendor.is_active
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-600 text-gray-300'
+                            ? 'bg-green-600 text-foreground'
+                            : 'bg-muted text-foreground'
                         }`}
                       >
                         {vendor.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      <button className="text-blue-400 hover:text-blue-300 mr-3">Edit</button>
-                      <button className="text-red-400 hover:text-red-300">Delete</button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                      <button className="text-primary hover:text-blue-300 mr-3">Edit</button>
+                      <button className="text-destructive hover:text-red-300">Delete</button>
                     </td>
                   </tr>
                 ))}
