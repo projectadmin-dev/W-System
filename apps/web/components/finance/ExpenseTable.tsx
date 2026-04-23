@@ -116,6 +116,7 @@ export function ExpenseTable({
   limit,
   onPageChange,
   onRefresh,
+  onEdit,
 }: {
   data: Expense[]
   count: number
@@ -124,6 +125,7 @@ export function ExpenseTable({
   limit: number
   onPageChange: (page: number) => void
   onRefresh: () => void
+  onEdit: (expense: Expense) => void
 }) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
@@ -197,6 +199,13 @@ export function ExpenseTable({
                 </td>
                 <td className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => onEdit(expense)}
+                      className="text-blue-400 hover:text-blue-300"
+                      title="Edit"
+                    >
+                      ✎
+                    </button>
                     <button
                       onClick={() => handleDelete(expense.id)}
                       disabled={loadingId === expense.id}

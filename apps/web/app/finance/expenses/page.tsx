@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { BudgetVsActualChart } from '../../../components/finance/BudgetVsActualChart'
 import { ExpenseFilters, ExpenseTable } from '../../../components/finance/ExpenseTable'
+import { ExpenseForm } from '../../../components/finance/ExpenseForm'
 import type { Expense, ExpenseFilter, ExpenseSummary } from '../../../lib/repositories/finance-expenses'
 
 export default function ExpensesPage() {
@@ -21,6 +22,8 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [error, setError] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true)
@@ -73,6 +76,21 @@ export default function ExpensesPage() {
     setFilter(prev => ({ ...prev, page }))
   }
 
+  const handleAddNew = () => {
+    setSelectedExpense(null)
+    setFormOpen(true)
+  }
+
+  const handleEdit = (expense: Expense) => {
+    setSelectedExpense(expense)
+    setFormOpen(true)
+  }
+
+  const handleSuccess = () => {
+    fetchExpenses()
+    fetchSummary()
+  }
+
   const totalAmount = expenses.reduce((s, e) => s + e.amount, 0)
 
   return (
@@ -91,7 +109,7 @@ export default function ExpensesPage() {
           </div>
           <button
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
-            onClick={() => alert('Fitur tambah baru akan segera hadir')}
+            onClick={handleAddNew}
           >
             + Tambah Pengeluaran
           </button>
@@ -185,8 +203,17 @@ export default function ExpensesPage() {
             limit={filter.limit || 20}
             onPageChange={handlePageChange}
             onRefresh={fetchExpenses}
+            onEdit={handleEdit}
           />
         )}
+
+        {/* Form Dialog */}
+        <ExpenseForm
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          expense={selectedExpense}
+          onSuccess={handleSuccess}
+        />
       </div>
     </div>
   )
