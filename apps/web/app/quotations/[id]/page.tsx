@@ -121,9 +121,11 @@ export default function QuotationDetailPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [invoiceLink, setInvoiceLink] = useState<string | null>(null)
+  const [createProjectLoading, setCreateProjectLoading] = useState(false)
+  const [projectLink, setProjectLink] = useState<string | null>(null)
 
   useEffect(() => {
-    if (id) fetchQuotation()
+    if (id) { fetchQuotation() }
   }, [id])
 
   const fetchQuotation = async () => {
@@ -195,6 +197,25 @@ export default function QuotationDetailPage() {
   const formatCurrency = (amount: number, currency: string) => {
     if (currency === "IDR") return `Rp ${(amount).toLocaleString("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
     return `${currency} ${amount.toLocaleString()}`
+  }
+
+  const createProject = async () => {
+    try {
+      setCreateProjectLoading(true)
+      setError(null)
+      const res = await fetch(`/api/quotations/${id}/create-project`, { method: "POST", headers: { "Content-Type": "application/json" } })
+      const data = await res.json()
+      if (res.ok) {
+        setProjectLink(`/projects/${data.project.id}`)
+        fetchQuotation()
+      } else {
+        setError(data.error || "Failed to create project")
+      }
+    } catch (err) {
+      setError("Network error creating project")
+    } finally {
+      setCreateProjectLoading(false)
+    }
   }
 
   const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"
@@ -291,6 +312,28 @@ export default function QuotationDetailPage() {
                     <Link href={invoiceLink}>
                       <Button size="sm" variant="outline">
                         <FileText className="w-4 h-4 mr-1" /> View Invoice
+                      </Button>
+                    </Link>
+                  )}
+                  {/* Create Project — after invoice generated */}
+                  {!projectLink && (quotation.status === 'invoiced' || quotation.status === 'accepted') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={createProject}
+                      disabled={createProjectLoading}
+                    >
+                      {createProjectLoading ? (
+                        <span className="animate-spin mr-1">◌</span>
+                      ) : (
+                        <><Plus className="w-4 h-4 mr-1" /> Create Project</>
+                      )}
+                    </Button>
+                  )}
+                  {projectLink && (
+                    <Link href={projectLink}>
+                      <Button size="sm" variant="outline" className="bg-purple-50 border-purple-200 text-purple-700">
+                        <Play className="w-4 h-4 mr-1" /> View Project
                       </Button>
                     </Link>
                   )}
