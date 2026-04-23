@@ -41,6 +41,8 @@ import {
   Pencil,
   Trash2,
   Copy,
+  Receipt,
+  FileText,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -88,8 +90,9 @@ const STATUS_FLOW: Record<string, string[]> = {
   draft: ["sent"],
   sent: ["viewed", "rejected"],
   viewed: ["accepted", "rejected"],
+  accepted: ["invoiced", "revised"],
+  invoiced: [],
   rejected: ["revised"],
-  accepted: ["revised"],
   expired: ["revised"],
   revised: ["sent"],
 }
@@ -99,6 +102,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   sent: { label: "Sent", color: "bg-blue-100 text-blue-800", icon: Send },
   viewed: { label: "Viewed", color: "bg-indigo-100 text-indigo-800", icon: CheckCircle },
   accepted: { label: "Accepted", color: "bg-green-100 text-green-800", icon: CheckCircle },
+  invoiced: { label: "Invoiced", color: "bg-cyan-100 text-cyan-800", icon: CheckCircle },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-800", icon: XCircle },
   expired: { label: "Expired", color: "bg-orange-100 text-orange-800", icon: XCircle },
   revised: { label: "Revised", color: "bg-purple-100 text-purple-800", icon: RotateCcw },
@@ -115,6 +119,8 @@ export default function QuotationDetailPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [showRejectDialog, setShowRejectDialog] = useState(false)
+  const [invoiceLoading, setInvoiceLoading] = useState(false)
+  const [invoiceLink, setInvoiceLink] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) fetchQuotation()
@@ -160,6 +166,29 @@ export default function QuotationDetailPage() {
       setError("Failed to update status")
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  const generateInvoice = async () => {
+    try {
+      setInvoiceLoading(true)
+      setError(null)
+      const res = await fetch(`/api/quotations/${id}/generate-invoice`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setInvoiceLink(`/finance/customer-invoices`)
+        // Refresh quotation to show new status
+        fetchQuotation()
+      } else {
+        setError(data.error || "Failed to generate invoice")
+      }
+    } catch (err) {
+      setError("Network error generating invoice")
+    } finally {
+      setInvoiceLoading(false)
     }
   }
 
@@ -241,6 +270,29 @@ export default function QuotationDetailPage() {
                     <Button size="sm" variant="default" onClick={() => updateStatus("accepted")} disabled={actionLoading}>
                       <CheckCircle className="w-4 h-4 mr-1" /> Accept
                     </Button>
+                  )}
+                  {nextActions.includes("invoiced") && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={generateInvoice}
+                      disabled={invoiceLoading}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      {invoiceLoading ? (
+                        <span className="animate-spin mr-1">◌</span>
+                      ) : (
+                        <Receipt className="w-4 h-4 mr-1" />
+                      )}
+                      Generate Invoice
+                    </Button>
+                  )}
+                  {invoiceLink && (
+                    <Link href={invoiceLink}>
+                      <Button size="sm" variant="outline">
+                        <FileText className="w-4 h-4 mr-1" /> View Invoice
+                      </Button>
+                    </Link>
                   )}
                   {nextActions.includes("rejected") && (
                     <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
