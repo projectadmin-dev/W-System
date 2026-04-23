@@ -1,212 +1,325 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import {
+  PlusIcon, SearchIcon, RefreshCwIcon, FilterIcon,
+  ArrowDownLeftIcon, ArrowUpRightIcon, DollarSignIcon,
+  Loader2Icon,
+} from 'lucide-react'
+import { Button } from '@workspace/ui/components/button'
+import { Input } from '@workspace/ui/components/input'
+import { Badge } from '@workspace/ui/components/badge'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from '@workspace/ui/components/dialog'
 
 interface CashEntry {
-  id: string;
-  date: string;
-  account: string;
-  description: string;
-  debit: number;
-  credit: number;
-  reference: string;
-  type: "in" | "out";
+  id: string
+  entry_date: string
+  entry_type: 'in' | 'out'
+  source_type: string
+  source_id?: string
+  account_name: string
+  amount: number
+  description: string
+  reference_number?: string
+  running_balance: number
+  created_by?: string
+  created_at: string
 }
 
-const MOCK_ENTRIES: CashEntry[] = [
-  { id: "1", date: "2026-04-01", account: "Kas Kecil (10101)", description: "Saldo Awal April", debit: 5000000, credit: 0, reference: "SA-0001", type: "in" },
-  { id: "2", date: "2026-04-02", account: "Bank BCA (10201)", description: "Terima pembayaran Invoice #1001", debit: 12500000, credit: 0, reference: "RV-0001", type: "in" },
-  { id: "3", date: "2026-04-03", account: "Kas Kecil (10101)", description: "Biaya belanja kantor", debit: 0, credit: 750000, reference: "PV-0001", type: "out" },
-  { id: "4", date: "2026-04-05", account: "Bank BCA (10201)", description: "Transfer ke Kas Kecil", debit: 0, credit: 2000000, reference: "TF-0001", type: "out" },
-  {
-    id: "5", date: "2026-04-07", account: "Kas Kecil (10101)", description: "Bayar biaya jasa IT", debit: 0, credit: 1200000, reference: "PV-0002", type: "out" },
-  { id: "6", date: "2026-04-08", account: "Bank BCA (10201)", description: "Terima pembayaran Invoice #1002", debit: 8500000, credit: 0, reference: "RV-0002", type: "in" },
-  { id: "7", date: "2026-04-10", account: "Kas Kecil (10101)", description: "Bayar transportasi", debit: 0, credit: 350000, reference: "PV-0003", type: "out" },
-  { id: "8", date: "2026-04-12", account: "Bank BCA (10201)", description: "Bayar vendor ABC", debit: 0, credit: 5600000, reference: "PV-0004", type: "out" },
-];
+interface Summary {
+  total_in: number
+  total_out: number
+  running_balance: number
+  net: number
+}
 
-const ACCOUNTS = ["Semua", "Kas Kecil (10101)", "Bank BCA (10201)"];
+const SOURCE_LABELS: Record<string, string> = {
+  money_request: 'Money Request',
+  customer_payment: 'Customer Payment',
+  vendor_payment: 'Vendor Payment',
+  salary_payment: 'Salary',
+  journal_entry: 'Journal',
+  adjustment: 'Adjustment',
+  opening_balance: 'Opening Balance',
+  other: 'Other',
+}
 
-export default function CashBankRegister() {
-  const [activeFilter, setActiveFilter] = useState("Semua");
-  const [showAdd, setShowAdd] = useState(false);
+export default function CashRegisterPage() {
+  const [entries, setEntries] = useState<CashEntry[]>([])
+  const [summary, setSummary] = useState<Summary>({ total_in: 0, total_out: 0, running_balance: 0, net: 0 })
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
-  const filtered =
-    activeFilter === "Semua"
-      ? MOCK_ENTRIES
-      : MOCK_ENTRIES.filter((e) => e.account === activeFilter);
+  const [createOpen, setCreateOpen] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  const runningBalance = filtered.reduce((bal, e) => {
-    const balance = bal.at(-1) || 0;
-    return [...bal, balance + e.debit - e.credit];
-  }, [] as number[]);
+  const [form, setForm] = useState({
+    entry_date: new Date().toISOString().split('T')[0],
+    entry_type: 'out' as 'in' | 'out',
+    source_type: 'other' as string,
+    account_name: 'Kas Kecil',
+    amount: '',
+    description: '',
+    reference_number: '',
+  })
 
-  const totalDebit = filtered.reduce((s, e) => s + e.debit, 0);
-  const totalCredit = filtered.reduce((s, e) => s + e.credit, 0);
-  const saldoAkhir = totalDebit - totalCredit;
+  useEffect(() => { fetchData() }, [typeFilter, fromDate, toDate])
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(n);
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (typeFilter !== 'all') params.append('type', typeFilter)
+      if (fromDate) params.append('from', fromDate)
+      if (toDate) params.append('to', toDate)
+
+      const [entriesRes, summaryRes] = await Promise.all([
+        fetch(`/api/finance/cash-register?${params}`),
+        fetch('/api/finance/cash-register/summary'),
+      ])
+
+      if (entriesRes.ok) {
+        const { data } = await entriesRes.json()
+        setEntries(data || [])
+      }
+      if (summaryRes.ok) {
+        const { data } = await summaryRes.json()
+        setSummary(data || { total_in: 0, total_out: 0, running_balance: 0, net: 0 })
+      }
+    } catch {
+      toast.error('Failed to load cash register')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreate = async () => {
+    if (!form.amount || !form.description) {
+      toast.error('Please fill amount and description')
+      return
+    }
+    setActionLoading(true)
+    try {
+      const res = await fetch('/api/finance/cash-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          amount: parseFloat(form.amount),
+        }),
+      })
+      if (res.ok) {
+        toast.success('Entry recorded')
+        setCreateOpen(false)
+        setForm({
+          entry_date: new Date().toISOString().split('T')[0],
+          entry_type: 'out',
+          source_type: 'other',
+          account_name: 'Kas Kecil',
+          amount: '',
+          description: '',
+          reference_number: '',
+        })
+        fetchData()
+      } else {
+        const { error } = await res.json()
+        toast.error(error || 'Failed to record')
+      }
+    } catch {
+      toast.error('Error recording entry')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const filtered = entries.filter(e =>
+    (e.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     (e.reference_number?.toLowerCase().includes(searchTerm.toLowerCase()) || false))
+  )
+
+  const formatCurrency = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0)
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Cash / Bank Register</h1>
-            <p className="text-gray-400 text-sm mt-1">Tracking uang masuk &amp; keluar harian per rekening</p>
+            <h1 className="text-3xl font-bold mb-2">Cash / Bank Register</h1>
+            <p className="text-gray-400">Tracking uang masuk & keluar harian + saldo real-time</p>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowAdd(!showAdd)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              {showAdd ? "Tutup Form" : "+ Tambah Entry"}
-            </button>
-            <Link
-              href="/finance"
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
-            >
-              ← Kembali
-            </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/finance" className="text-blue-400 hover:text-blue-300 transition-colors">← Back to Finance</Link>
+            <Button onClick={() => setCreateOpen(true)}>
+              <PlusIcon className="h-4 w-4 mr-2" /> Tambah Entry
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Summary cards */}
+      <div className="p-8">
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
-            <p className="text-green-400 text-xs font-medium uppercase">Total Masuk</p>
-            <p className="text-xl font-bold mt-1">{fmt(totalDebit)}</p>
+          <div className="bg-gray-800 border border-green-700/50 rounded-lg p-4">
+            <div className="text-sm text-green-400 mb-1">Total Masuk</div>
+            <div className="text-2xl font-bold text-green-400">{formatCurrency(summary.total_in)}</div>
+            <ArrowDownLeftIcon className="h-4 w-4 text-green-400 mt-1" />
           </div>
-          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
-            <p className="text-red-400 text-xs font-medium uppercase">Total Keluar</p>
-            <p className="text-xl font-bold mt-1">{fmt(totalCredit)}</p>
+          <div className="bg-gray-800 border border-red-700/50 rounded-lg p-4">
+            <div className="text-sm text-red-400 mb-1">Total Keluar</div>
+            <div className="text-2xl font-bold text-red-400">{formatCurrency(summary.total_out)}</div>
+            <ArrowUpRightIcon className="h-4 w-4 text-red-400 mt-1" />
           </div>
-          <div className="bg-cyan-900/30 border border-cyan-700 rounded-lg p-4 md:col-span-2">
-            <p className="text-cyan-400 text-xs font-medium uppercase">Saldo Akhir</p>
-            <p className={`text-2xl font-bold mt-1 ${saldoAkhir >= 0 ? "text-cyan-400" : "text-red-400"}`}>
-              {fmt(saldoAkhir)}
-            </p>
+          <div className="bg-gray-800 border border-cyan-700/50 rounded-lg p-4 md:col-span-2">
+            <div className="text-sm text-cyan-400 mb-1">Saldo Akhir</div>
+            <div className="text-3xl font-bold text-cyan-400">{formatCurrency(summary.running_balance)}</div>
+            <div className="text-xs text-gray-500 mt-1">Auto-calculated from all entries</div>
           </div>
         </div>
 
-        {/* Filter */}
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto">
-          {ACCOUNTS.map((a) => (
-            <button
-              key={a}
-              onClick={() => setActiveFilter(a)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                activeFilter === a
-                  ? "bg-blue-600 border-blue-500 text-white"
-                  : "bg-gray-800 border-gray-600 text-gray-300 hover:border-gray-500"
-              }`}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-
-        {/* Add entry form */}
-        {showAdd && (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 mb-6">
-            <h2 className="text-lg font-semibold mb-4">Tambah Entry Baru</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Tanggal</label>
-                <input type="date" className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Rekening / Akun</label>
-                <select className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
-                  <option>Kas Kecil (10101)</option>
-                  <option>Bank BCA (10201)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Tipe</label>
-                <select className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
-                  <option value="in">Cash In (Masuk)</option>
-                  <option value="out">Cash Out (Keluar)</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm text-gray-400 mb-1">Deskripsi</label>
-                <input type="text" placeholder="e.g. Bayar vendor ABC" className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Nominal</label>
-                <input type="number" placeholder="0" className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
-              </div>
+        {/* Filters */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <Input
+                placeholder="Search description or reference..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9 bg-gray-900 border-gray-700"
+              />
             </div>
-            <div className="mt-4 flex gap-3">
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors">
-                Simpan
-              </button>
-              <button
-                onClick={() => setShowAdd(false)}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
-              >
-                Batal
-              </button>
-            </div>
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+              <option value="all">All Types</option>
+              <option value="in">Cash In</option>
+              <option value="out">Cash Out</option>
+            </select>
+            <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="bg-gray-900 border-gray-700 w-40" placeholder="From" />
+            <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="bg-gray-900 border-gray-700 w-40" placeholder="To" />
+            <Button variant="outline" onClick={fetchData} disabled={loading}>
+              <RefreshCwIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </Button>
           </div>
-        )}
+        </div>
 
         {/* Table */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-900/50 text-gray-300">
+              <thead className="bg-gray-900 text-gray-400">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Tanggal</th>
-                  <th className="px-4 py-3 text-left font-medium">Rekening</th>
-                  <th className="px-4 py-3 text-left font-medium">No. Ref</th>
-                  <th className="px-4 py-3 text-left font-medium">Deskripsi</th>
-                  <th className="px-4 py-3 text-right font-medium text-green-400">Debit (Masuk)</th>
-                  <th className="px-4 py-3 text-right font-medium text-red-400">Credit (Keluar)</th>
+                  <th className="px-4 py-3 text-left font-medium">Date</th>
+                  <th className="px-4 py-3 text-left font-medium">Type</th>
+                  <th className="px-4 py-3 text-left font-medium">Source</th>
+                  <th className="px-4 py-3 text-left font-medium">Account</th>
+                  <th className="px-4 py-3 text-left font-medium">Reference</th>
+                  <th className="px-4 py-3 text-left font-medium">Description</th>
+                  <th className="px-4 py-3 text-right font-medium">Debit (In)</th>
+                  <th className="px-4 py-3 text-right font-medium">Credit (Out)</th>
                   <th className="px-4 py-3 text-right font-medium">Running Balance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                      Tidak ada transaksi
+                {loading ? (
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500"><Loader2Icon className="h-6 w-6 animate-spin mx-auto" /></td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-500">Tidak ada transaksi</td></tr>
+                ) : filtered.map((e) => (
+                  <tr key={e.id} className="hover:bg-gray-700/40 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap">{e.entry_date}</td>
+                    <td>
+                      <Badge className={e.entry_type === 'in' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}>
+                        {e.entry_type === 'in' ? 'IN' : 'OUT'}
+                      </Badge>
+                    </td>
+                    <td className="text-gray-400">{SOURCE_LABELS[e.source_type] || e.source_type}</td>
+                    <td>{e.account_name}</td>
+                    <td className="font-mono text-gray-400 text-sm">{e.reference_number || '-'}</td>
+                    <td className="max-w-[250px] truncate" title={e.description}>{e.description}</td>
+                    <td className="px-4 py-3 text-right text-green-400">{e.entry_type === 'in' ? formatCurrency(e.amount) : '-'}</td>
+                    <td className="px-4 py-3 text-right text-red-400">{e.entry_type === 'out' ? formatCurrency(e.amount) : '-'}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${e.running_balance >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                      {formatCurrency(e.running_balance)}
                     </td>
                   </tr>
-                )}
-                {filtered.map((entry, idx) => {
-                  const balance = runningBalance[idx];
-                  return (
-                    <tr key={entry.id} className="hover:bg-gray-700/40 transition-colors">
-                      <td className="px-4 py-3 whitespace-nowrap">{entry.date}</td>
-                      <td className="px-4 py-3 whitespace-nowrap font-medium">{entry.account}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-400">{entry.reference}</td>
-                      <td className="px-4 py-3">{entry.description}</td>
-                      <td className="px-4 py-3 text-right text-green-400">
-                        {entry.debit ? fmt(entry.debit) : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-right text-red-400">
-                        {entry.credit ? fmt(entry.credit) : "-"}
-                      </td>
-                      <td className={`px-4 py-3 text-right font-semibold ${balance >= 0 ? "text-cyan-400" : "text-red-400"}`}>
-                        {fmt(balance)}
-                      </td>
-                    </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      {/* Create Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Tambah Entry Baru</DialogTitle><DialogDescription>Record cash / bank transaction</DialogDescription></DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Tanggal</label>
+                <Input type="date" value={form.entry_date} onChange={e => setForm({ ...form, entry_date: e.target.value })} className="bg-gray-900 border-gray-700" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Tipe</label>
+                <select value={form.entry_type} onChange={e => setForm({ ...form, entry_type: e.target.value as 'in' | 'out' })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                  <option value="out">Cash Out (Keluar)</option>
+                  <option value="in">Cash In (Masuk)</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Source</label>
+                <select value={form.source_type} onChange={e => setForm({ ...form, source_type: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                  <option value="other">Other</option>
+                  <option value="money_request">Money Request</option>
+                  <option value="customer_payment">Customer Payment</option>
+                  <option value="vendor_payment">Vendor Payment</option>
+                  <option value="salary_payment">Salary</option>
+                  <option value="adjustment">Adjustment</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Account</label>
+                <select value={form.account_name} onChange={e => setForm({ ...form, account_name: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm">
+                  <option value="Kas Kecil">Kas Kecil</option>
+                  <option value="Bank BCA">Bank BCA</option>
+                  <option value="Bank Mandiri">Bank Mandiri</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Description</label>
+              <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="e.g. Bayar vendor" className="bg-gray-900 border-gray-700" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Nominal (IDR)</label>
+                <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="1000000" className="bg-gray-900 border-gray-700" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Reference No (Optional)</label>
+                <Input value={form.reference_number} onChange={e => setForm({ ...form, reference_number: e.target.value })} placeholder="e.g. INV-001" className="bg-gray-900 border-gray-700" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Batal</Button>
+            <Button onClick={handleCreate} disabled={actionLoading}>
+              {actionLoading ? <Loader2Icon className="h-4 w-4 mr-2 animate-spin" /> : <PlusIcon className="h-4 w-4 mr-2" />}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }
