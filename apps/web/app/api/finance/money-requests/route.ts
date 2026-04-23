@@ -4,6 +4,9 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+/**
+ * GET /api/finance/money-requests
+ */
 export async function GET(request: NextRequest) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('money_requests')
-      .select('*')
+      .select('*, items:money_request_items(*)')
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
@@ -32,6 +35,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * POST /api/finance/money-requests
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -53,19 +59,37 @@ export async function POST(request: NextRequest) {
       : 1
     const request_number = `${prefix}-${String(seq).padStart(4, '0')}`
 
-    const { data, error } = await supabase
+    // Insert money request
+    const { data: mr, error } = await supabase
       .from('money_requests')
       .insert({
-        ...body,
         request_number,
+        employee_nik: body.employee_nik,
+        employee_name: body.employee_name,
+        department: body.department,
+        request_type: body.request_type,
+        purpose: body.purpose,
+        amount: body.amount,
         status: 'submitted',
         approval_status: 'pending',
+        notes: body.notes || null,
       })
       .select()
       .single()
 
     if (error) throw error
-    return NextResponse.json({ data }, { status: 201 })
+
+    // Insert items if provided
+    if (body.items && Array.isArray(body.items) && body.items.length > 0) {
+      const items = body.items.map((item: any) => ({
+        money_request_id: mr.id,
+        description: item.description,
+        amount: item.amount || 0,
+      }))
+      await supabase.from('money_request_items').insert(items)
+    }
+
+    return NextResponse.json({ data: mr }, { status: 201 })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
