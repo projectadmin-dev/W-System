@@ -5,11 +5,20 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import {
   TrendingUpIcon,
-  TrendingDownIcon,
   AlertTriangleIcon,
   DollarSignIcon,
   FileTextIcon,
+  LandmarkIcon,
+  BookOpenIcon,
+  CalendarIcon,
+  CalculatorIcon,
+  WalletIcon,
+  ClipboardListIcon,
+  ReceiptIcon,
+  BarChart3Icon,
 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import { Badge } from '@workspace/ui/components/badge'
 
 interface ARStats {
   total: number
@@ -18,7 +27,6 @@ interface ARStats {
   days_31_60: number
   days_61_90: number
   over_90: number
-  overdue_total: number
 }
 
 interface InvoiceSummary {
@@ -30,6 +38,15 @@ interface InvoiceSummary {
   sent_count: number
 }
 
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0)
+}
+
 export default function FinanceDashboard() {
   const [stats, setStats] = useState<ARStats | null>(null)
   const [summary, setSummary] = useState<InvoiceSummary | null>(null)
@@ -39,23 +56,18 @@ export default function FinanceDashboard() {
     fetchDashboardData()
   }, [])
 
-  const fetchDashboardData = async () => {
+  async function fetchDashboardData() {
     setLoading(true)
     try {
-      // Fetch AR Aging
-      const arResponse = await fetch('/api/finance/ar-aging')
-      let arData: ARStats | null = null
-      if (arResponse.ok) {
-        const { data } = await arResponse.json()
-        arData = data
+      const arRes = await fetch('/api/finance/ar-aging')
+      if (arRes.ok) {
+        const { data } = await arRes.json()
         setStats(data)
       }
-
-      // Fetch Invoice Summary
-      const invResponse = await fetch('/api/finance/customer-invoices')
-      if (invResponse.ok) {
-        const { data: invoices } = await invResponse.json()
-        const summary: InvoiceSummary = {
+      const invRes = await fetch('/api/finance/customer-invoices')
+      if (invRes.ok) {
+        const { data: invoices } = await invRes.json()
+        const s: InvoiceSummary = {
           total_count: invoices?.length || 0,
           total_amount: invoices?.reduce((acc: number, inv: any) => acc + (Number(inv.total_amount) || 0), 0) || 0,
           paid_total: invoices?.reduce((acc: number, inv: any) => acc + (Number(inv.paid_amount) || 0), 0) || 0,
@@ -63,230 +75,207 @@ export default function FinanceDashboard() {
           draft_count: invoices?.filter((inv: any) => inv.status === 'draft').length || 0,
           sent_count: invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'partial').length || 0,
         }
-        setSummary(summary)
+        setSummary(s)
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount || 0)
-  }
-
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Finance Module</h1>
-          <p className="text-gray-400">W.System Financial Management</p>
-        </div>
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Finance Dashboard</h1>
+        <p className="text-muted-foreground">Overview of your financial position and performance.</p>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-gray-400">Total Outstanding AR</div>
-              <TrendingUpIcon className="h-5 w-5 text-yellow-400" />
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Outstanding AR</CardTitle>
+            <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <LoadingPulse /> : formatCurrency(stats?.total || 0)}
             </div>
-            {loading ? (
-              <div className="h-8 bg-gray-700 rounded animate-pulse" />
-            ) : (
-              <div className="text-2xl font-bold text-yellow-400">
-                {formatCurrency(stats?.total || 0)}
-              </div>
-            )}
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-gray-400">Overdue AR</div>
-              <AlertTriangleIcon className="h-5 w-5 text-red-400" />
-            </div>
-            {loading ? (
-              <div className="h-8 bg-gray-700 rounded animate-pulse" />
-            ) : (
-              <div className="text-2xl font-bold text-red-400">
-                {formatCurrency((stats?.days_31_60 || 0) + (stats?.days_61_90 || 0) + (stats?.over_90 || 0))}
-              </div>
-            )}
-            <div className="text-xs text-gray-500 mt-1">31-60 / 61-90 / 90+ days</div>
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-gray-400">Total Paid (YTD)</div>
-              <DollarSignIcon className="h-5 w-5 text-green-400" />
-            </div>
-            {loading ? (
-              <div className="h-8 bg-gray-700 rounded animate-pulse" />
-            ) : (
-              <div className="text-2xl font-bold text-green-400">
-                {formatCurrency(summary?.paid_total || 0)}
-              </div>
-            )}
-          </div>
-          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-sm text-gray-400">Active Invoices</div>
-              <FileTextIcon className="h-5 w-5 text-blue-400" />
-            </div>
-            {loading ? (
-              <div className="h-8 bg-gray-700 rounded animate-pulse" />
-            ) : (
-              <div className="text-2xl font-bold text-blue-400">
-                {summary?.sent_count || 0} Unpaid
-              </div>
-            )}
-            <div className="text-xs text-gray-500 mt-1">
-              {summary?.overdue_count || 0} Overdue
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* AR Aging Quick View */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">AR Aging Breakdown</h3>
-            <Link href="/finance/ar-aging" className="text-blue-400 hover:text-blue-300 text-sm">
-              View Detail →
-            </Link>
-          </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Overdue AR</CardTitle>
+            <AlertTriangleIcon className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {loading ? <LoadingPulse /> : formatCurrency((stats?.days_31_60 || 0) + (stats?.days_61_90 || 0) + (stats?.over_90 || 0))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">31-60 / 61-90 / 90+ days</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Paid (YTD)</CardTitle>
+            <DollarSignIcon className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">
+              {loading ? <LoadingPulse /> : formatCurrency(summary?.paid_total || 0)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Active Invoices</CardTitle>
+            <FileTextIcon className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <LoadingPulse /> : summary?.sent_count || 0} Unpaid
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">{summary?.overdue_count || 0} Overdue</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AR Aging */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>AR Aging Breakdown</CardTitle>
+          <Link href="/finance/ar-aging" className="text-sm text-primary hover:underline">View Detail →</Link>
+        </CardHeader>
+        <CardContent>
           {loading ? (
-            <div className="h-20 bg-gray-700 rounded animate-pulse" />
+            <div className="h-20 bg-muted rounded animate-pulse" />
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-gray-900 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-400 mb-1">Current</div>
-                <div className="text-lg font-semibold text-green-400">{formatCurrency(stats?.current || 0)}</div>
-              </div>
-              <div className="bg-gray-900 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-400 mb-1">1-30 Days</div>
-                <div className="text-lg font-semibold text-yellow-400">{formatCurrency(stats?.days_1_30 || 0)}</div>
-              </div>
-              <div className="bg-gray-900 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-400 mb-1">31-60 Days</div>
-                <div className="text-lg font-semibold text-orange-400">{formatCurrency(stats?.days_31_60 || 0)}</div>
-              </div>
-              <div className="bg-gray-900 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-400 mb-1">61-90 Days</div>
-                <div className="text-lg font-semibold text-red-400">{formatCurrency(stats?.days_61_90 || 0)}</div>
-              </div>
-              <div className="bg-gray-900 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-400 mb-1">90+ Days</div>
-                <div className="text-lg font-semibold text-red-500">{formatCurrency(stats?.over_90 || 0)}</div>
-              </div>
+              {[
+                { label: 'Current', value: stats?.current, variant: 'default' as const },
+                { label: '1-30 Days', value: stats?.days_1_30, variant: 'secondary' as const },
+                { label: '31-60 Days', value: stats?.days_31_60, variant: 'outline' as const },
+                { label: '61-90 Days', value: stats?.days_61_90, variant: 'destructive' as const },
+                { label: '90+ Days', value: stats?.over_90, variant: 'destructive' as const },
+              ].map((item) => (
+                <div key={item.label} className="text-center p-4 rounded-lg bg-muted">
+                  <p className="text-sm text-muted-foreground mb-1">{item.label}</p>
+                  <p className="text-lg font-semibold">{formatCurrency(item.value || 0)}</p>
+                </div>
+              ))}
             </div>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* COA */}
-          <Link href="/finance/coa" className="block">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors">
-              <h2 className="text-xl font-semibold mb-2">Chart of Accounts</h2>
-              <p className="text-gray-400 text-sm">Manage account structure (add, edit, activate)</p>
-              <div className="mt-4 text-blue-400 text-sm font-medium">Manage COA →</div>
-            </div>
-          </Link>
-          <Link href="/finance/journal" className="block">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition-colors">
-              <h2 className="text-xl font-semibold mb-2">Journal Entries</h2>
-              <p className="text-gray-400 text-sm">Double-entry bookkeeping — create, post, reverse</p>
-              <div className="mt-4 text-green-400 text-sm font-medium">Manage Journals →</div>
-            </div>
-          </Link>
-          <Link href="/finance/periods" className="block">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-purple-500 transition-colors">
-              <h2 className="text-xl font-semibold mb-2">Fiscal Periods</h2>
-              <p className="text-gray-400 text-sm">Configure accounting periods</p>
-              <div className="mt-4 text-purple-400 text-sm font-medium">Manage Periods →</div>
-            </div>
-          </Link>
-        </div>
+      {/* Module Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ModuleCard
+          title="Chart of Accounts"
+          description="Manage account structure (add, edit, activate)"
+          href="/finance/coa"
+          icon={<BookOpenIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Journal Entries"
+          description="Double-entry bookkeeping — create, post, reverse"
+          href="/finance/journal"
+          icon={<FileTextIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Fiscal Periods"
+          description="Configure accounting periods"
+          href="/finance/periods"
+          icon={<CalendarIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Cash / Bank Register"
+          description="Tracking daily in & out + running balance"
+          href="/finance/cash-register"
+          icon={<WalletIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Bank Reconciliation"
+          description="Match bank statements with journal entries"
+          href="/finance/bank-reconciliation"
+          icon={<LandmarkIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Money Requests"
+          description="Procurement, Reimbursement, Cash Advance via NIK"
+          href="/finance/money-requests"
+          icon={<ClipboardListIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Expense Tracking"
+          description="Budget vs Actual + transaction detail"
+          href="/finance/expenses"
+          icon={<ReceiptIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="AR Aging (Piutang)"
+          description="Customer receivable aging analysis"
+          href="/finance/ar-aging"
+          icon={<CalculatorIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="AP Aging (Hutang)"
+          description="Vendor payable aging analysis"
+          href="/finance/ap-aging"
+          icon={<BarChart3Icon className="h-5 w-5" />}
+        />
+      </div>
 
-        {/* Operational */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4">Operational Daily</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link href="/finance/cash-register" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-cyan-500 transition-colors">
-                <h4 className="font-semibold mb-2">Cash / Bank Register</h4>
-                <p className="text-sm text-gray-400">Tracking uang masuk &amp; keluar harian + saldo</p>
-                <div className="mt-3 text-cyan-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/bank-reconciliation" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-indigo-500 transition-colors">
-                <h4 className="font-semibold mb-2">Bank Reconciliation</h4>
-                <p className="text-sm text-gray-400">Match bank statements with journal entries</p>
-                <div className="mt-3 text-indigo-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/money-requests" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-purple-500 transition-colors">
-                <h4 className="font-semibold mb-2">Money Requests</h4>
-                <p className="text-sm text-gray-400">Permintaan uang via NIK — Procurement, Reimbursement, Cash Advance</p>
-                <div className="mt-3 text-purple-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/expenses" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-emerald-500 transition-colors">
-                <h4 className="font-semibold mb-2">Expense Tracking</h4>
-                <p className="text-sm text-gray-400">Pantau pengeluaran vs budget — Budget vs Actual chart + detail transaksi</p>
-                <div className="mt-3 text-emerald-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/ar-aging" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-green-500 transition-colors">
-                <h4 className="font-semibold mb-2">AR Aging (Piutang)</h4>
-                <p className="text-sm text-gray-400">Umur piutang per customer (1-30 / 31-60 / 61-90 / &gt;90)</p>
-                <div className="mt-3 text-green-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/ap-aging" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-red-500 transition-colors">
-                <h4 className="font-semibold mb-2">AP Aging (Hutang)</h4>
-                <p className="text-sm text-gray-400">Umur hutang per vendor — analisis pembayaran</p>
-                <div className="mt-3 text-red-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* Reports */}
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4">Financial Reports</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link href="/finance/reports/trial-balance" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-yellow-500 transition-colors">
-                <h4 className="font-semibold mb-2">Trial Balance</h4>
-                <p className="text-sm text-gray-400">Saldo akun + cek balance debit/credit + Export CSV</p>
-                <div className="mt-3 text-yellow-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/reports/income-statement" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-orange-500 transition-colors">
-                <h4 className="font-semibold mb-2">Income Statement</h4>
-                <p className="text-sm text-gray-400">Laporan Laba Rugi — revenue vs expenses + Export CSV</p>
-                <div className="mt-3 text-orange-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-            <Link href="/finance/reports/balance-sheet" className="block">
-              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-cyan-500 transition-colors">
-                <h4 className="font-semibold mb-2">Balance Sheet</h4>
-                <p className="text-sm text-gray-400">Neraca — Assets, Liabilities, Equity + Export CSV</p>
-                <div className="mt-3 text-cyan-400 text-sm font-medium">View →</div>
-              </div>
-            </Link>
-          </div>
+      {/* Reports Section */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Financial Reports</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ReportCard title="Trial Balance" description="Account balances with debit=credit check" href="/finance/reports/trial-balance" />
+          <ReportCard title="Income Statement" description="Revenue vs expenses profitability" href="/finance/reports/profit-loss" />
+          <ReportCard title="Balance Sheet" description="Assets, liabilities, and equity position" href="/finance/reports/balance-sheet" />
         </div>
       </div>
     </div>
+  )
+}
+
+/* ---------- Subcomponents ---------- */
+
+function LoadingPulse() {
+  return <div className="h-8 bg-muted rounded animate-pulse" />
+}
+
+function ModuleCard({ title, description, href, icon }: { title: string; description: string; href: string; icon: React.ReactNode }) {
+  return (
+    <Link href={href}>
+      <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+        <CardContent className="p-5 flex items-start gap-4">
+          <div className="mt-1 text-primary">{icon}</div>
+          <div>
+            <h4 className="font-semibold">{title}</h4>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+function ReportCard({ title, description, href }: { title: string; description: string; href: string }) {
+  return (
+    <Link href={href}>
+      <Card className="hover:border-primary transition-colors cursor-pointer">
+        <CardContent className="p-5">
+          <h4 className="font-semibold mb-1">{title}</h4>
+          <p className="text-sm text-muted-foreground">{description}</p>
+          <Badge variant="secondary" className="mt-3">Report</Badge>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
