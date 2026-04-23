@@ -152,6 +152,10 @@ const data = {
           url: "/finance/coa",
         },
         {
+          title: "Budget vs Actual",
+          url: "/finance/budget-vs-actual",
+        },
+        {
           title: "Bank Reconciliation",
           url: "/finance/bank-reconciliation",
         },

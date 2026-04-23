@@ -4,18 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  TrendingUpIcon,
-  AlertTriangleIcon,
-  DollarSignIcon,
-  FileTextIcon,
-  LandmarkIcon,
-  BookOpenIcon,
-  CalendarIcon,
-  CalculatorIcon,
-  WalletIcon,
-  ClipboardListIcon,
-  ReceiptIcon,
-  BarChart3Icon,
+  TrendingUpIcon, AlertTriangleIcon, DollarSignIcon, FileTextIcon,
+  BookOpenIcon, CalendarIcon, WalletIcon, LandmarkIcon, TargetIcon,
+  ReceiptIcon, CalculatorIcon, BarChart3Icon, ClipboardListIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
@@ -204,6 +195,12 @@ export default function FinanceDashboard() {
           description="Match bank statements with journal entries"
           href="/finance/bank-reconciliation"
           icon={<LandmarkIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Budget vs Actual"
+          description="Track monthly spending against budget by kind & category"
+          href="/finance/budget-vs-actual"
+          icon={<TargetIcon className="h-5 w-5" />}
         />
         <ModuleCard
           title="Money Requests"
