@@ -1,63 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createAdminClient()
-    const { data, error } = await supabase
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    const today = new Date().toISOString().split('T')[0]
+
+    // Try RPC first
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('get_ap_aging')
+    if (!rpcErr && rpcData) {
+      return NextResponse.json({ data: rpcData })
+    }
+
+    // Fallback: manual calculation
+    const { data: rows, error } = await supabase
       .from('vendor_bills')
       .select(`
-        *,
-        vendor:vendor_id (vendor_name, vendor_code)
+        total_amount, amount_paid, amount_due, due_date, status,
+        vendor:vendors(vendor_name)
       `)
       .is('deleted_at', null)
-      .neq('status', 'paid')
-      .order('due_date', { ascending: true })
-    
-    if (error) throw new Error(error.message)
-    
-    const today = new Date()
-    const rows = (data || []).map((bill: any) => {
-      const due = new Date(bill.due_date || bill.bill_date)
-      const age = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
-      let bucket = 'current'
-      if (age > 90) bucket = '90plus'
-      else if (age > 60) bucket = '61-90'
-      else if (age > 30) bucket = '31-60'
-      else if (age > 0) bucket = '1-30'
-      return {
-        ...bill,
-        age_days: age < 0 ? 0 : age,
-        bucket,
-        remaining: Number(bill.total_amount || 0) - Number(bill.amount_paid || 0),
-      }
-    })
-    
+      .in('status', ['pending','approved','posted','partial'])
+
+    if (error) throw error
+
     // Group by vendor
-    const grouped: Record< string, any[]> = {}
-    rows.forEach(r => {
-      const key = r.vendor_id || 'unknown'
-      ;(grouped[key] = grouped[key] || []).push(r)
-    })
-    
-    const vendors = Object.entries(grouped).map(([vid, bills]) => {
-      const v = bills[0]?.vendor || {}
-      const buckets = {
-        current: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90plus': 0
+    const vendorMap = new Map()
+    for (const r of rows || []) {
+      const vendorName = r.vendor?.vendor_name || 'Unknown'
+      const bal = Math.max(0, Number(r.amount_due) || (Number(r.total_amount) - Number(r.amount_paid)))
+      if (bal <= 0) continue
+
+      const due = r.due_date ? new Date(r.due_date) : new Date()
+      const diff = Math.floor((new Date(today).getTime() - due.getTime()) / 86400000)
+
+      if (!vendorMap.has(vendorName)) {
+        vendorMap.set(vendorName, { vendor_name: vendorName, current: 0, days_1_30: 0, days_31_60: 0, days_61_90: 0, over_90: 0, total: 0 })
       }
-      bills.forEach((b: any) => { buckets[b.bucket as keyof typeof buckets] += b.remaining })
-      return {
-        vendor_id: vid,
-        vendor_name: v?.vendor_name || 'Unknown',
-        vendor_code: v?.vendor_code || '-',
-        bills: bills.length,
-        total_remaining: bills.reduce((s: number, i: any) => s + i.remaining, 0),
-        ...buckets,
-      }
-    })
-    
-    return NextResponse.json({ vendors })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+      const v = vendorMap.get(vendorName)
+      v.total += bal
+      if (diff <= 0) v.current += bal
+      else if (diff <= 30) v.days_1_30 += bal
+      else if (diff <= 60) v.days_31_60 += bal
+      else if (diff <= 90) v.days_61_90 += bal
+      else v.over_90 += bal
+    }
+
+    return NextResponse.json({ data: Array.from(vendorMap.values()) })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

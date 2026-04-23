@@ -33,6 +33,7 @@ import {
   DownloadIcon,
   MoreVerticalIcon,
   Loader2Icon,
+  CheckCircleIcon,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -50,10 +51,14 @@ interface VendorBill {
   amount: number
   tax_amount: number
   total_amount: number
-  status: 'draft' | 'pending' | 'approved' | 'paid' | 'cancelled'
+  amount_paid: number
+  amount_due: number
+  status: 'draft' | 'pending' | 'approved' | 'paid' | 'partial' | 'cancelled'
   bill_date: string
   due_date: string
   paid_date?: string
+  paid_at?: string
+  paid_days?: number
   description?: string
   created_at: string
   updated_at: string
@@ -66,6 +71,12 @@ export default function VendorBillsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('transfer')
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentNotes, setPaymentNotes] = useState('')
+  const [paymentLoading, setPaymentLoading] = useState(false)
   const [selectedBill, setSelectedBill] = useState<VendorBill | null>(null)
 
   // Form state for new bill

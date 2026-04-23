@@ -20,7 +20,7 @@ function diffDays(a: string, b: string) {
   return Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60 * 24)));
 }
 
-const MOCK: APVendor[] = [
+/* Real data fetched from API */ const MOCK: APVendor[] = [
   {
     id: "v1",
     name: "PT Sumber Supplier Indah",
