@@ -12,33 +12,89 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      allowance_types: {
+        Row: {
+          code: string
+          condition_rules: Json | null
+          created_at: string | null
+          created_by: string | null
+          deduct_on_alpha: boolean | null
+          deduct_on_paid_leave: boolean | null
+          deduct_on_sick_leave: boolean | null
+          default_nominal: number | null
+          deleted_at: string | null
+          description: string | null
+          display_order: number | null
+          entity_id: string | null
+          id: string
+          is_active: boolean | null
+          is_taxable: boolean | null
+          name: string
+          tenant_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          condition_rules?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          deduct_on_alpha?: boolean | null
+          deduct_on_paid_leave?: boolean | null
+          deduct_on_sick_leave?: boolean | null
+          default_nominal?: number | null
+          deleted_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_taxable?: boolean | null
+          name: string
+          tenant_id: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          condition_rules?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          deduct_on_alpha?: boolean | null
+          deduct_on_paid_leave?: boolean | null
+          deduct_on_sick_leave?: boolean | null
+          default_nominal?: number | null
+          deleted_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_taxable?: boolean | null
+          name?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allowance_types_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allowance_types_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_rules: {
         Row: {
           approver_role: string
@@ -511,6 +567,66 @@ export type Database = {
           },
         ]
       }
+      employee_allowances: {
+        Row: {
+          allowance_type_id: string
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          nominal: number
+          override_nominal: number | null
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          allowance_type_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          nominal?: number
+          override_nominal?: number | null
+          start_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          allowance_type_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          nominal?: number
+          override_nominal?: number | null
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_allowances_allowance_type_id_fkey"
+            columns: ["allowance_type_id"]
+            isOneToOne: false
+            referencedRelation: "allowance_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_allowances_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entities: {
         Row: {
           code: string
@@ -562,6 +678,167 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          budget: number | null
+          category_code: string
+          category_name: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          kind_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          budget?: number | null
+          category_code: string
+          category_name: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind_code: string
+          updated_at?: string | null
+        }
+        Update: {
+          budget?: number | null
+          category_code?: string
+          category_name?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind_code?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_kind_code_fkey"
+            columns: ["kind_code"]
+            isOneToOne: false
+            referencedRelation: "expense_kinds"
+            referencedColumns: ["kind_code"]
+          },
+        ]
+      }
+      expense_kinds: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          kind_code: string
+          label: string
+          monthly_budget: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind_code: string
+          label: string
+          monthly_budget?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind_code?: string
+          label?: string
+          monthly_budget?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          category_id: string
+          category_name: string
+          created_at: string | null
+          created_by: string
+          deleted_at: string | null
+          description: string
+          entity_id: string | null
+          expense_date: string
+          expense_number: string | null
+          id: string
+          kind_code: string
+          notes: string | null
+          payment_method: string
+          receipt_url: string | null
+          rejection_reason: string | null
+          status: string
+          updated_at: string | null
+          vendor: string | null
+        }
+        Insert: {
+          amount?: number
+          approved_by?: string | null
+          category_id: string
+          category_name: string
+          created_at?: string | null
+          created_by?: string
+          deleted_at?: string | null
+          description: string
+          entity_id?: string | null
+          expense_date?: string
+          expense_number?: string | null
+          id?: string
+          kind_code: string
+          notes?: string | null
+          payment_method?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string | null
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          category_id?: string
+          category_name?: string
+          created_at?: string | null
+          created_by?: string
+          deleted_at?: string | null
+          description?: string
+          entity_id?: string | null
+          expense_date?: string
+          expense_number?: string | null
+          id?: string
+          kind_code?: string
+          notes?: string | null
+          payment_method?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string | null
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_kind_code_fkey"
+            columns: ["kind_code"]
+            isOneToOne: false
+            referencedRelation: "expense_kinds"
+            referencedColumns: ["kind_code"]
           },
         ]
       }
@@ -1355,6 +1632,125 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_thr_eligibilities: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          basic_salary: number
+          created_at: string | null
+          created_by: string | null
+          employee_id: string
+          id: string
+          is_resigned_eligible: boolean | null
+          months_worked: number
+          override_amount: number | null
+          override_reason: string | null
+          status: string
+          thr_amount: number
+          thr_setting_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          basic_salary: number
+          created_at?: string | null
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          is_resigned_eligible?: boolean | null
+          months_worked: number
+          override_amount?: number | null
+          override_reason?: string | null
+          status?: string
+          thr_amount: number
+          thr_setting_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          basic_salary?: number
+          created_at?: string | null
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          is_resigned_eligible?: boolean | null
+          months_worked?: number
+          override_amount?: number | null
+          override_reason?: string | null
+          status?: string
+          thr_amount?: number
+          thr_setting_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_thr_eligibilities_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_thr_eligibilities_thr_setting_id_fkey"
+            columns: ["thr_setting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_thr_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_thr_settings: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          cut_off_date: string
+          entity_id: string
+          holiday_date: string
+          holiday_name: string
+          id: string
+          payment_date: string
+          religion: string | null
+          status: string
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          cut_off_date: string
+          entity_id: string
+          holiday_date: string
+          holiday_name: string
+          id?: string
+          payment_date: string
+          religion?: string | null
+          status?: string
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          cut_off_date?: string
+          entity_id?: string
+          holiday_date?: string
+          holiday_name?: string
+          id?: string
+          payment_date?: string
+          religion?: string | null
+          status?: string
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_thr_settings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -2456,490 +2852,6 @@ export type Database = {
           },
         ]
       }
-      vendors: {
-        Row: {
-          id: string
-          vendor_code: string
-          vendor_name: string
-          vendor_type: string
-          email: string
-          phone: string
-          address?: string | null
-          tax_id?: string | null
-          payment_terms_days: number
-          credit_limit?: number | null
-          coa_id?: string | null
-          entity_id?: string | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          vendor_code: string
-          vendor_name: string
-          vendor_type: string
-          email: string
-          phone: string
-          address?: string | null
-          tax_id?: string | null
-          payment_terms_days?: number
-          credit_limit?: number | null
-          coa_id?: string | null
-          entity_id?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          vendor_code?: string
-          vendor_name?: string
-          vendor_type?: string
-          email?: string
-          phone?: string
-          address?: string | null
-          tax_id?: string | null
-          payment_terms_days?: number
-          credit_limit?: number | null
-          coa_id?: string | null
-          entity_id?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vendors_coa_id_fkey"
-            columns: ["coa_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customers: {
-        Row: {
-          id: string
-          customer_code: string
-          customer_name: string
-          customer_type: string
-          email: string
-          phone: string
-          address?: string | null
-          tax_id?: string | null
-          payment_terms_days: number
-          credit_limit?: number | null
-          coa_id?: string | null
-          entity_id?: string | null
-          is_active: boolean
-          created_at: string
-          updated_at: string
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          customer_code: string
-          customer_name: string
-          customer_type: string
-          email: string
-          phone: string
-          address?: string | null
-          tax_id?: string | null
-          payment_terms_days?: number
-          credit_limit?: number | null
-          coa_id?: string | null
-          entity_id?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          customer_code?: string
-          customer_name?: string
-          customer_type?: string
-          email?: string
-          phone?: string
-          address?: string | null
-          tax_id?: string | null
-          payment_terms_days?: number
-          credit_limit?: number | null
-          coa_id?: string | null
-          entity_id?: string | null
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customers_coa_id_fkey"
-            columns: ["coa_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vendor_bills: {
-        Row: {
-          id: string
-          bill_number: string
-          vendor_id: string
-          bill_date: string
-          due_date: string
-          amount: number
-          tax_amount: number
-          total_amount: number
-          status: string
-          description?: string | null
-          coa_id?: string | null
-          entity_id?: string | null
-          created_at: string
-          updated_at: string
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          bill_number: string
-          vendor_id: string
-          bill_date: string
-          due_date: string
-          amount: number
-          tax_amount?: number
-          total_amount: number
-          status?: string
-          description?: string | null
-          coa_id?: string | null
-          entity_id?: string | null
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          bill_number?: string
-          vendor_id?: string
-          bill_date?: string
-          due_date?: string
-          amount?: number
-          tax_amount?: number
-          total_amount?: number
-          status?: string
-          description?: string | null
-          coa_id?: string | null
-          entity_id?: string | null
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vendor_bills_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vendor_bills_coa_id_fkey"
-            columns: ["coa_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vendor_bill_lines: {
-        Row: {
-          id: string
-          bill_id: string
-          description: string
-          amount: number
-          tax_rate?: number | null
-          tax_amount?: number | null
-          total_amount: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          bill_id: string
-          description: string
-          amount: number
-          tax_rate?: number | null
-          tax_amount?: number | null
-          total_amount: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          bill_id?: string
-          description?: string
-          amount?: number
-          tax_rate?: number | null
-          tax_amount?: number | null
-          total_amount?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vendor_bill_lines_bill_id_fkey"
-            columns: ["bill_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_bills"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customer_invoices: {
-        Row: {
-          id: string
-          invoice_number: string
-          customer_id: string
-          invoice_date: string
-          due_date: string
-          amount: number
-          tax_amount: number
-          total_amount: number
-          status: string
-          description?: string | null
-          coa_id?: string | null
-          entity_id?: string | null
-          created_at: string
-          updated_at: string
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          invoice_number: string
-          customer_id: string
-          invoice_date: string
-          due_date: string
-          amount: number
-          tax_amount?: number
-          total_amount: number
-          status?: string
-          description?: string | null
-          coa_id?: string | null
-          entity_id?: string | null
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          invoice_number?: string
-          customer_id?: string
-          invoice_date?: string
-          due_date?: string
-          amount?: number
-          tax_amount?: number
-          total_amount?: number
-          status?: string
-          description?: string | null
-          coa_id?: string | null
-          entity_id?: string | null
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_invoices_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_invoices_coa_id_fkey"
-            columns: ["coa_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customer_invoice_lines: {
-        Row: {
-          id: string
-          invoice_id: string
-          description: string
-          amount: number
-          tax_rate?: number | null
-          tax_amount?: number | null
-          total_amount: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          invoice_id: string
-          description: string
-          amount: number
-          tax_rate?: number | null
-          tax_amount?: number | null
-          total_amount: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          invoice_id?: string
-          description?: string
-          amount?: number
-          tax_rate?: number | null
-          tax_amount?: number | null
-          total_amount?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_invoice_lines_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "customer_invoices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      receipts: {
-        Row: {
-          id: string
-          receipt_number: string
-          customer_id: string
-          receipt_date: string
-          amount: number
-          payment_method: string
-          status: string
-          invoice_number?: string | null
-          notes?: string | null
-          entity_id?: string | null
-          created_at: string
-          updated_at: string
-          deleted_at: string | null
-        }
-        Insert: {
-          id?: string
-          receipt_number: string
-          customer_id: string
-          receipt_date: string
-          amount: number
-          payment_method: string
-          status?: string
-          invoice_number?: string | null
-          notes?: string | null
-          entity_id?: string | null
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Update: {
-          id?: string
-          receipt_number?: string
-          customer_id?: string
-          receipt_date?: string
-          amount?: number
-          payment_method?: string
-          status?: string
-          invoice_number?: string | null
-          notes?: string | null
-          entity_id?: string | null
-          created_at?: string
-          updated_at?: string
-          deleted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "receipts_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_allocations: {
-        Row: {
-          id: string
-          payment_id: string
-          bill_id: string
-          amount: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          payment_id: string
-          bill_id: string
-          amount: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          payment_id?: string
-          bill_id?: string
-          amount?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_allocations_payment_id_fkey"
-            columns: ["payment_id"]
-            isOneToOne: false
-            referencedRelation: "payments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_allocations_bill_id_fkey"
-            columns: ["bill_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_bills"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      receipt_allocations: {
-        Row: {
-          id: string
-          receipt_id: string
-          invoice_id: string
-          amount: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          receipt_id: string
-          invoice_id: string
-          amount: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          receipt_id?: string
-          invoice_id?: string
-          amount?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "receipt_allocations_receipt_id_fkey"
-            columns: ["receipt_id"]
-            isOneToOne: false
-            referencedRelation: "receipts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "receipt_allocations_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "customer_invoices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       priority_rules: {
         Row: {
           category: string
@@ -2989,6 +2901,56 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pro_rate_configs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_working_days: number
+          entity_id: string
+          id: string
+          is_active: boolean | null
+          name: string
+          payroll_cutoff_date: number
+          prorate_allowances: boolean | null
+          prorate_salary: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_working_days?: number
+          entity_id: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          payroll_cutoff_date?: number
+          prorate_allowances?: boolean | null
+          prorate_salary?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_working_days?: number
+          entity_id?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          payroll_cutoff_date?: number
+          prorate_allowances?: boolean | null
+          prorate_salary?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pro_rate_configs_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
         ]
@@ -3662,6 +3624,47 @@ export type Database = {
         }
         Relationships: []
       }
+      thr_configs: {
+        Row: {
+          calculation_base: string
+          created_at: string | null
+          created_by: string | null
+          entity_id: string
+          id: string
+          is_active: boolean | null
+          payment_timing: string
+          updated_at: string | null
+        }
+        Insert: {
+          calculation_base?: string
+          created_at?: string | null
+          created_by?: string | null
+          entity_id: string
+          id?: string
+          is_active?: boolean | null
+          payment_timing?: string
+          updated_at?: string | null
+        }
+        Update: {
+          calculation_base?: string
+          created_at?: string | null
+          created_by?: string | null
+          entity_id?: string
+          id?: string
+          is_active?: boolean | null
+          payment_timing?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thr_configs_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_time_logs: {
         Row: {
           activity_type: string
@@ -4124,6 +4127,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_current_user_role: { Args: never; Returns: string }
       get_user_roles: {
         Args: never
         Returns: {
@@ -4260,9 +4264,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
