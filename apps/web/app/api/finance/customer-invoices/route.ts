@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const entityId = searchParams.get('entity_id') || undefined
     const status = searchParams.get('status') || undefined
+    const quotationId = searchParams.get('quotation_id') || undefined
 
-    const invoices = await getCustomerInvoices(entityId, status)
+    const invoices = await getCustomerInvoices(entityId, status, quotationId)
     return NextResponse.json({ data: invoices })
   } catch (error) {
     console.error('Error fetching customer invoices:', error)

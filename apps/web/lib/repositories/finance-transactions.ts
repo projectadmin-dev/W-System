@@ -291,7 +291,7 @@ export async function deleteVendorBill(id: string) {
 // CUSTOMER INVOICES (ACCOUNTS RECEIVABLE) REPOSITORY
 // ============================================
 
-export async function getCustomerInvoices(entityId?: string, status?: string) {
+export async function getCustomerInvoices(entityId?: string, status?: string, quotationId?: string) {
   const supabase = await createAdminClient()
   let query = supabase
     .from('customer_invoices')
@@ -299,13 +299,15 @@ export async function getCustomerInvoices(entityId?: string, status?: string) {
       *,
       customer:customers(customer_name, customer_code),
       coa:coa_id(account_code, account_name),
-      lines:customer_invoice_lines(*)
+      lines:customer_invoice_lines(*),
+      quotation:quotations(id, quotation_number, version, status)
     `)
     .is('deleted_at', null)
     .order('invoice_date', { ascending: false })
 
   if (entityId) query = query.eq('entity_id', entityId)
   if (status) query = query.eq('status', status)
+  if (quotationId) query = query.eq('quotation_id', quotationId)
 
   const { data, error } = await query
   if (error) throw new Error(`Failed to fetch customer invoices: ${error.message}`)
