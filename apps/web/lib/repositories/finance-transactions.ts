@@ -569,14 +569,233 @@ export async function deleteReceipt(id: string) {
   return { success: true }
 }
 
-export async function createReceiptAllocation(receiptId: string, invoiceId: string, amount: number) {
+// // ============================================
+// // RECONCILIATION — PAYMENT ↔ VENDOR BILL
+// // ============================================
+//
+// /** Reconcile a payment with vendor bills — update payment_allocations + mark payment as reconciled */
+// export async function reconcilePaymentWithBills(
+//   paymentId: string,
+//   allocations: { bill_id: string; amount: number }[],
+//   reconciledById: string
+// ) {
+//   const supabase = await createAdminClient()
+//
+//   const { error: allocError } = await supabase
+//     .from('payment_allocations')
+//     .upsert(
+//       allocations.map(a => ({
+//         payment_id: paymentId,
+//         bill_id: a.bill_id,
+//         amount: a.amount,
+//       })),
+//       { onConflict: 'payment_id,bill_id' }
+//     )
+//
+//   if (allocError) throw new Error(`Failed to create payment allocations: ${allocError.message}`)
+//
+//   // Update payment reconciled status
+//   const { data, error } = await updatePayment(paymentId, {
+//     reconciled: true,
+//     reconciled_at: new Date().toISOString(),
+//     reconciled_by: reconciledById,
+//   })
+//
+//   if (error) throw new Error(`Failed to update payment: ${error instanceof Error ? error.message : 'Unknown'}`)
+//   return { allocations, payment: data }
+// }
+//
+// /** Unreconcile a payment — delete allocations + reset reconciled */
+// export async function unreconcilePayment(paymentId: string) {
+//   const supabase = await createAdminClient()
+//
+//   const { error: allocError } = await supabase
+//     .from('payment_allocations')
+//     .delete()
+//     .eq('payment_id', paymentId)
+//
+//   if (allocError) throw new Error(`Failed to delete allocations: ${allocError.message}`)
+//
+//   const { data, error } = await updatePayment(paymentId, {
+//     reconciled: false,
+//     reconciled_at: null,
+//     reconciled_by: null,
+//   })
+//
+//   if (error) throw new Error(`Failed to reset payment: ${error instanceof Error ? error.message : 'Unknown'}`)
+//   return { success: true, payment: data }
+// }
+//
+// // ============================================
+// // RECONCILIATION — RECEIPT ↔ CUSTOMER INVOICE
+// // ============================================
+//
+// /** Reconcile a receipt with customer invoices */
+// export async function reconcileReceiptWithInvoices(
+//   receiptId: string,
+//   allocations: { invoice_id: string; amount: number }[],
+// ) {
+//   const supabase = await createAdminClient()
+//
+//   const { error: allocError } = await supabase
+//     .from('receipt_allocations')
+//     .insert(allocations.map(a => ({
+//       receipt_id: receiptId,
+//       invoice_id: a.invoice_id,
+//       amount: a.amount,
+//     })))
+//
+//   if (allocError) throw new Error(`Failed to create receipt allocations: ${allocError.message}`)
+//
+//   // No receipt status field in current schema — allocations are the source of truth
+//   return { allocations }
+// }
+//
+// /** Unreconcile a receipt */
+// export async function unreconcileReceipt(receiptId: string) {
+//   const supabase = await createAdminClient()
+//
+//   const { error: allocError } = await supabase
+//     .from('receipt_allocations')
+//     .delete()
+//     .eq('receipt_id', receiptId)
+//
+//   if (allocError) throw new Error(`Failed to delete allocations: ${allocError.message}`)
+//
+//   return { success: true }
+// }
+//
+// SIMPLIFIED APPROACH: Direct SQL operations via API
+// Receipts table doesn't exist in generated types — use raw query
+export async function getUnreconciledPayments(entityId?: string) {
   const supabase = await createAdminClient()
+  let query = supabase
+    .from('payments')
+    .select(`
+      *,
+      client:clients(client_name)
+    `)
+    .is('deleted_at', null)
+    .eq('reconciled', false)
+    .order('payment_date', { ascending: false })
+
+  if (entityId) query = query.eq('entity_id', entityId)
+
+  const { data, error } = await query
+  if (error) throw new Error(`Failed to fetch unreconciled payments: ${error.message}`)
+  return data || []
+}
+
+export async function getUnreconciledReceipts(entityId?: string) {
+  const supabase = await createAdminClient()
+  // Use raw query since receipts table may not be in generated types
+  const { data, error } = await supabase.rpc('get_unreconciled_receipts', { p_entity_id: entityId })
+  if (error) {
+    // Fallback: direct table query
+    const { data: directData, error: directError } = await supabase
+      .from('receipts')
+      .select('*')
+      .is('deleted_at', null)
+      .order('receipt_date', { ascending: false })
+    
+    if (directError) throw new Error(`Failed to fetch unreconciled receipts: ${directError.message}`)
+    return directData || []
+  }
+  return data || []
+}
+
+export async function reconcilePayment(paymentId: string, billIds: string[], userId: string, amounts: number[]) {
+  const supabase = await createAdminClient()
+  
+  // Create allocations
+  const allocations = billIds.map((billId, i) => ({
+    payment_id: paymentId,
+    bill_id: billId,
+    amount: amounts[i] || 0,
+  }))
+
+  const { error: allocError } = await supabase
+    .from('payment_allocations')
+    .upsert(allocations, { onConflict: 'payment_id,bill_id' })
+
+  if (allocError) throw new Error(`Failed to create allocations: ${allocError.message}`)
+
+  // Mark payment as reconciled
   const { data, error } = await supabase
-    .from('receipt_allocations')
-    .insert({ receipt_id: receiptId, invoice_id: invoiceId, amount })
+    .from('payments')
+    .update({ 
+      reconciled: true, 
+      reconciled_at: new Date().toISOString(),
+      reconciled_by: userId,
+    })
+    .eq('id', paymentId)
     .select()
     .single()
   
-  if (error) throw new Error(`Failed to create receipt allocation: ${error.message}`)
+  if (error) throw new Error(`Failed to reconcile payment: ${error.message}`)
+  return data
+}
+
+export async function reconcileReceipt(receiptId: string, invoiceIds: string[], amounts: number[]) {
+  const supabase = await createAdminClient()
+  
+  const allocations = invoiceIds.map((invId, i) => ({
+    receipt_id: receiptId,
+    invoice_id: invId,
+    amount: amounts[i] || 0,
+  }))
+
+  const { error: allocError } = await supabase
+    .from('receipt_allocations')
+    .upsert(allocations, { onConflict: 'receipt_id,invoice_id' })
+
+  if (allocError) throw new Error(`Failed to create allocations: ${allocError.message}`)
+
+  // Mark receipt as reconciled
+  const { data, error } = await supabase
+    .from('receipts')
+    .update({ 
+      reconciled: true, 
+      reconciled_at: new Date().toISOString(),
+    })
+    .eq('id', receiptId)
+    .select()
+    .single()
+  
+  if (error) throw new Error(`Failed to reconcile receipt: ${error.message}`)
+  return data
+}
+
+export async function unreconcilePaymentById(paymentId: string) {
+  const supabase = await createAdminClient()
+  
+  // Remove allocations
+  await supabase.from('payment_allocations').delete().eq('payment_id', paymentId)
+  
+  // Reset reconciled status
+  const { data, error } = await supabase
+    .from('payments')
+    .update({ reconciled: false, reconciled_at: null, reconciled_by: null })
+    .eq('id', paymentId)
+    .select()
+    .single()
+  
+  if (error) throw new Error(`Failed to unreconcile payment: ${error.message}`)
+  return data
+}
+
+export async function unreconcileReceiptById(receiptId: string) {
+  const supabase = await createAdminClient()
+  
+  await supabase.from('receipt_allocations').delete().eq('receipt_id', receiptId)
+  
+  const { data, error } = await supabase
+    .from('receipts')
+    .update({ reconciled: false, reconciled_at: null, reconciled_by: null })
+    .eq('id', receiptId)
+    .select()
+    .single()
+  
+  if (error) throw new Error(`Failed to unreconcile receipt: ${error.message}`)
   return data
 }

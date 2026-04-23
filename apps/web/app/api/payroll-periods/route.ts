@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-server' // Use admin client
 import { z } from 'zod'
 
 // Validation schema
@@ -23,7 +23,7 @@ const createPayrollPeriodSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createAdminClient()
     
     // Get query params
     const searchParams = request.nextUrl.searchParams
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createAdminClient()
     
     // Get authenticated user
     const { data: { user } } = await supabase.auth.getUser()

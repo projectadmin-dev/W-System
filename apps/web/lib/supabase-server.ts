@@ -25,21 +25,24 @@ export async function createServerClient() {
           }
         },
       },
+      db: { schema: 'public' } // Force public schema
     }
   );
 }
 
-export async function createAdminClient() {
-  // Server-side only - uses Service Role Key to bypass RLS
-  // Using native Supabase client for full RLS bypass
+/**
+ * Create admin client with service role key (bypasses RLS)
+ * Use for server-side operations only
+ */
+export function createAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      db: { schema: 'public' },
+      auth: { autoRefreshToken: false, persistSession: false }
     }
   );
 }
+
+// Duplicate removed — createAdminClient already defined above

@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@workspace/ui/components/sidebar"
-import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon, FileTextIcon } from "lucide-react"
+import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon, FileTextIcon, HeartHandshakeIcon } from "lucide-react"
 
 // This is sample data.
 const data = {
@@ -139,6 +139,29 @@ const data = {
       ],
     },
     {
+      title: "After Sales",
+      url: "#",
+      icon: <HeartHandshakeIcon />,
+      items: [
+        {
+          title: "Dashboard",
+          url: "/after-sales",
+        },
+        {
+          title: "Client Relationship",
+          url: "/after-sales/clients",
+        },
+        {
+          title: "Surveys",
+          url: "/after-sales/surveys",
+        },
+        {
+          title: "Pengumuman",
+          url: "/after-sales/pengumuman",
+        },
+      ],
+    },
+    {
       title: "Finance & Accounting",
       url: "#",
       icon: <PieChartIcon />,
@@ -158,6 +181,10 @@ const data = {
         {
           title: "Bank Reconciliation",
           url: "/finance/bank-reconciliation",
+        },
+        {
+          title: "Payment Reconciliation",
+          url: "/finance/payment-reconciliation",
         },
         {
           title: "Journal History",

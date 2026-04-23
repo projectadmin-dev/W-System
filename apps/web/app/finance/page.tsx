@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import {
   TrendingUpIcon, AlertTriangleIcon, DollarSignIcon, FileTextIcon,
   BookOpenIcon, CalendarIcon, WalletIcon, LandmarkIcon, TargetIcon,
-  ReceiptIcon, CalculatorIcon, BarChart3Icon, ClipboardListIcon,
+  ReceiptIcon, CalculatorIcon, BarChart3Icon, ClipboardListIcon, ArrowLeftRightIcon,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
@@ -195,6 +195,12 @@ export default function FinanceDashboard() {
           description="Match bank statements with journal entries"
           href="/finance/bank-reconciliation"
           icon={<LandmarkIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Payment Reconciliation"
+          description="Match receipts with invoices and payments with vendor bills"
+          href="/finance/payment-reconciliation"
+          icon={<ArrowLeftRightIcon className="h-5 w-5" />}
         />
         <ModuleCard
           title="Budget vs Actual"
