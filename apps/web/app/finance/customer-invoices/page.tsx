@@ -74,6 +74,10 @@ export default function CustomerInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [viewDialogOpen, setViewDialogOpen] = useState(false)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('transfer')
+  const [paymentLoading, setPaymentLoading] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null)
 
   // Form state for new invoice
