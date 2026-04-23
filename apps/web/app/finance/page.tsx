@@ -228,6 +228,13 @@ export default function FinanceDashboard() {
                 <div className="mt-3 text-purple-400 text-sm font-medium">View →</div>
               </div>
             </Link>
+            <Link href="/finance/expenses" className="block">
+              <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-emerald-500 transition-colors">
+                <h4 className="font-semibold mb-2">Expense Tracking</h4>
+                <p className="text-sm text-gray-400">Pantau pengeluaran vs budget — Budget vs Actual chart + detail transaksi</p>
+                <div className="mt-3 text-emerald-400 text-sm font-medium">View →</div>
+              </div>
+            </Link>
             <Link href="/finance/ar-aging" className="block">
               <div className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-green-500 transition-colors">
                 <h4 className="font-semibold mb-2">AR Aging (Piutang)</h4>

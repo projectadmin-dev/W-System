@@ -1,7 +1,8 @@
-'use client'
+ 'use client'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Table,
@@ -42,22 +43,48 @@ import {
   DropdownMenuTrigger,
 } from '@workspace/ui/components/dropdown-menu'
 
+// Allow nested customer object from Supabase join
+interface ReceiptCustomer {
+  customer_name?: string
+}
+
+interface ReceiptPaymentMethod {
+  method_name?: string
+}
+
 interface Receipt {
   id: string
   receipt_number: string
-  customer_name: string
-  customer_id: string
+  customer_id?: string
+  customer?: ReceiptCustomer | ReceiptCustomer[] | null
+  customer_name?: string // fallback flat
   invoice_number?: string
   amount: number
-  payment_method: 'bank_transfer' | 'cash' | 'check' | 'credit_card'
+  payment_method_id?: string
+  payment_method?: ReceiptPaymentMethod | ReceiptPaymentMethod[] | null
+  method_name?: string
   status: 'draft' | 'issued' | 'sent' | 'cancelled'
   receipt_date: string
+  reference_number?: string
   notes?: string
   created_at: string
   updated_at: string
 }
 
+function extractCustomerName(r: Receipt): string {
+  if (!r.customer) return r.customer_name || 'Unknown'
+  const c = Array.isArray(r.customer) ? r.customer[0] : r.customer
+  return c?.customer_name || r.customer_name || 'Unknown'
+}
+
+function extractPaymentMethod(r: Receipt): string {
+  if (!r.payment_method) return r.method_name || 'Bank Transfer'
+  const p = Array.isArray(r.payment_method) ? r.payment_method[0] : r.payment_method
+  return p?.method_name || r.method_name || 'Bank Transfer'
+}
+
 export default function ReceiptsPage() {
+  const router = useRouter()
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -85,9 +112,15 @@ export default function ReceiptsPage() {
     try {
       const response = await fetch('/api/finance/receipts')
       if (response.ok) {
-        const data = await response.json()
-        setReceipts(data)
-      }
+          const data = await response.json()
+          // Handle Supabase join response format
+          const formatted = (data.data || data).map((r: any) => ({
+            ...r,
+            customer_name: r.customer?.customer_name || r.customer_name,
+            payment_method: r.payment_method?.method_name || r.method_name,
+          }))
+          setReceipts(formatted)
+        }
     } catch (error) {
       console.error('Error fetching receipts:', error)
       toast.error('Failed to load receipts')
@@ -99,7 +132,7 @@ export default function ReceiptsPage() {
   const filteredReceipts = receipts.filter(receipt => {
     const matchesSearch =
       receipt.receipt_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      extractCustomerName(receipt).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (receipt.invoice_number && receipt.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesStatus = statusFilter === 'all' || receipt.status === statusFilter
     return matchesSearch && matchesStatus
@@ -272,13 +305,13 @@ export default function ReceiptsPage() {
                 {filteredReceipts.map((receipt) => (
                   <TableRow key={receipt.id} className="border-gray-700 hover:bg-gray-750">
                     <TableCell className="font-mono text-white">{receipt.receipt_number}</TableCell>
-                    <TableCell className="text-white">{receipt.customer_name}</TableCell>
+                    <TableCell className="text-white">{extractCustomerName(receipt)}</TableCell>
                     <TableCell className="text-gray-300">
                       {receipt.invoice_number || '-'}
                     </TableCell>
                     <TableCell className="text-gray-300">{receipt.receipt_date}</TableCell>
                     <TableCell className="text-gray-300 capitalize">
-                      {receipt.payment_method.replace('_', ' ')}
+                      {extractPaymentMethod(receipt).replace('_', ' ')}
                     </TableCell>
                     <TableCell className="text-right font-semibold text-white">
                       Rp {receipt.amount.toLocaleString('id-ID')}
@@ -315,7 +348,10 @@ export default function ReceiptsPage() {
                               Send
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="text-gray-300 hover:bg-gray-700">
+                          <DropdownMenuItem
+                            onClick={() => router.push(`/finance/receipts/${receipt.id}/bkm`)}
+                            className="text-gray-300 hover:bg-gray-700"
+                          >
                             <PrinterIcon className="w-4 h-4 mr-2" />
                             Print
                           </DropdownMenuItem>
@@ -445,7 +481,7 @@ export default function ReceiptsPage() {
               </div>
               <div>
                 <p className="text-gray-400 text-sm">Customer</p>
-                <p className="text-white">{selectedReceipt.customer_name}</p>
+                <p className="text-white">{extractCustomerName(selectedReceipt)}</p>
               </div>
               {selectedReceipt.invoice_number && (
                 <div>
@@ -460,7 +496,7 @@ export default function ReceiptsPage() {
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Payment Method</p>
-                  <p className="text-white capitalize">{selectedReceipt.payment_method.replace('_', ' ')}</p>
+                  <p className="text-white capitalize">{extractPaymentMethod(selectedReceipt).replace('_', ' ')}</p>
                 </div>
               </div>
               <div className="border-t border-gray-700 pt-4">
