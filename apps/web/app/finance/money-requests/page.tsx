@@ -104,7 +104,7 @@ export default function MoneyRequestsPage() {
     amount: '', notes: '',
   })
   const [dasarPengajuan, setDasarPengajuan] = useState<DasarPengajuan[]>([
-    { id: crypto.randomUUID(), description: '', amount: '' }
+    { id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }
   ])
 
   // Dropdown data
@@ -188,7 +188,7 @@ export default function MoneyRequestsPage() {
         toast.success('Money request submitted successfully')
         setCreateOpen(false)
         setForm({ employee_nik: '', employee_name: '', department: '', request_type: 'procurement', purpose: '', amount: '', notes: '' })
-        setDasarPengajuan([{ id: crypto.randomUUID(), description: '', amount: '' }])
+        setDasarPengajuan([{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }])
         fetchRequests()
       } else {
         const { error } = await res.json()
@@ -294,7 +294,7 @@ export default function MoneyRequestsPage() {
   }
 
   const addDasarPengajuan = () => {
-    setDasarPengajuan(prev => [...prev, { id: crypto.randomUUID(), description: '', amount: '' }])
+    setDasarPengajuan(prev => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }])
   }
 
   const removeDasarPengajuan = (id: string) => {
