@@ -10,30 +10,51 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@workspace/ui/components/sidebar"
-import { GalleryVerticalEndIcon, AudioLinesIcon, TerminalIcon, TerminalSquareIcon, BotIcon, BookOpenIcon, Settings2Icon, FrameIcon, PieChartIcon, MapIcon, FileTextIcon, HeartHandshakeIcon } from "lucide-react"
+import {
+  GalleryVerticalEndIcon,
+  AudioLinesIcon,
+  TerminalIcon,
+  TerminalSquareIcon,
+  BotIcon,
+  BookOpenIcon,
+  Settings2Icon,
+  FrameIcon,
+  PieChartIcon,
+  MapIcon,
+  FileTextIcon,
+  HeartHandshakeIcon,
+  FileStackIcon,
+  ReceiptIcon,
+  CreditCardIcon,
+  CalculatorIcon,
+  BarChart3Icon,
+  LandmarkIcon,
+  WalletIcon,
+  ArrowLeftRightIcon,
+  TargetIcon,
+  ClipboardListIcon,
+  UsersIcon,
+  BuildingIcon,
+  TruckIcon,
+} from "lucide-react"
 
-// This is sample data.
+// Navigation data — organized by module
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "WIT.ID",
+    email: "admin@wit.id",
     avatar: "/avatars/shadcn.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "PT. Wira Inovasi Teknologi",
       logo: <GalleryVerticalEndIcon />,
       plan: "Enterprise",
     },
     {
-      name: "Acme Corp.",
+      name: "WIT Consulting",
       logo: <AudioLinesIcon />,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: <TerminalIcon />,
-      plan: "Free",
+      plan: "Business",
     },
   ],
   navMain: [
@@ -41,56 +62,19 @@ const data = {
       title: "HR Management",
       url: "#",
       icon: <TerminalSquareIcon />,
-      isActive: true,
       items: [
-        {
-          title: "User Management",
-          url: "/users",
-        },
-        {
-          title: "Shift Kerja",
-          url: "/pengaturan/hc/shift",
-        },
-        {
-          title: "Kalender Kerja",
-          url: "/pengaturan/hc/kalender",
-        },
-        {
-          title: "UMR Kota",
-          url: "/pengaturan/hc/umr",
-        },
-        {
-          title: "BPJS Config",
-          url: "/pengaturan/hc/bpjs",
-        },
-        {
-          title: "PPh21 Config",
-          url: "/pengaturan/hc/pajak",
-        },
-        {
-          title: "Komponen Gaji",
-          url: "/pengaturan/hc/komponen-gaji",
-        },
-        {
-          title: "Grade & Matrix",
-          url: "/pengaturan/hc/grade",
-        },
-        {
-          title: "Departemen",
-          url: "/pengaturan/hc/departemen",
-        },
-        {
-          title: "Jabatan",
-          url: "/pengaturan/hc/jabatan",
-        },
-        {
-          title: "Area Kerja",
-          url: "/pengaturan/hc/area-kerja",
-        },
-        {
-          title: "Aturan Lembur",
-          url: "/pengaturan/hc/lembur",
-        },
+        { title: "User Management", url: "/users" },
+        { title: "Shift Kerja", url: "/pengaturan/hc/shift" },
+        { title: "Kalender Kerja", url: "/pengaturan/hc/kalender" },
+        { title: "UMR Kota", url: "/pengaturan/hc/umr" },
+        { title: "BPJS Config", url: "/pengaturan/hc/bpjs" },
+        { title: "PPh21 Config", url: "/pengaturan/hc/pajak" },
+        { title: "Komponen Gaji", url: "/pengaturan/hc/komponen-gaji" },
+        { title: "Grade & Matrix", url: "/pengaturan/hc/grade" },
+        { title: "Departemen", url: "/pengaturan/hc/departemen" },
+        { title: "Jabatan", url: "/pengaturan/hc/jabatan" },
+        { title: "Area Kerja", url: "/pengaturan/hc/area-kerja" },
+        { title: "Aturan Lembur", url: "/pengaturan/hc/lembur" },
       ],
     },
     {
@@ -98,14 +82,8 @@ const data = {
       url: "#",
       icon: <BotIcon />,
       items: [
-        {
-          title: "Leads",
-          url: "/leads",
-        },
-        {
-          title: "New Lead",
-          url: "/leads/new",
-        },
+        { title: "Leads", url: "/leads" },
+        { title: "New Lead", url: "/leads/new" },
       ],
     },
     {
@@ -113,14 +91,8 @@ const data = {
       url: "#",
       icon: <FrameIcon />,
       items: [
-        {
-          title: "Kanban Board",
-          url: "/projects/kanban",
-        },
-        {
-          title: "New Project Brief",
-          url: "/project-briefs/new",
-        },
+        { title: "Kanban Board", url: "/projects/kanban" },
+        { title: "New Project Brief", url: "/project-briefs/new" },
       ],
     },
     {
@@ -128,14 +100,8 @@ const data = {
       url: "#",
       icon: <FileTextIcon />,
       items: [
-        {
-          title: "Quotation List",
-          url: "/quotations",
-        },
-        {
-          title: "New Quotation",
-          url: "/quotations/new",
-        },
+        { title: "Quotation List", url: "/quotations" },
+        { title: "New Quotation", url: "/quotations/new" },
       ],
     },
     {
@@ -143,61 +109,88 @@ const data = {
       url: "#",
       icon: <HeartHandshakeIcon />,
       items: [
-        {
-          title: "Dashboard",
-          url: "/after-sales",
-        },
-        {
-          title: "Client Relationship",
-          url: "/after-sales/clients",
-        },
-        {
-          title: "Surveys",
-          url: "/after-sales/surveys",
-        },
-        {
-          title: "Pengumuman",
-          url: "/after-sales/pengumuman",
-        },
+        { title: "Dashboard", url: "/after-sales" },
+        { title: "Client Relationship", url: "/after-sales/clients" },
+        { title: "Surveys", url: "/after-sales/surveys" },
+        { title: "Pengumuman", url: "/after-sales/pengumuman" },
       ],
     },
+
+    // ─────────────────────────────────────────────────────
+    // FINANCE & ACCOUNTING — ORGANIZED INTO 4 SUB-CATEGORIES
+    // ─────────────────────────────────────────────────────
     {
       title: "Finance & Accounting",
       url: "#",
       icon: <PieChartIcon />,
       items: [
+        // ── Daily Operations ──────────────────────────────
         {
-          title: "Finance Dashboard",
-          url: "/finance",
+          title: "🏦 Daily Operations",
+          url: "#finance-daily",
+          isCategoryHeader: true,
         },
+        { title: "Finance Dashboard", url: "/finance" },
+        { title: "Chart of Accounts", url: "/finance/coa" },
+        { title: "Journal Entries", url: "/finance/journal" },
+        { title: "Journal (New)", url: "/finance/journal/new" },
+        { title: "Money Requests", url: "/finance/money-requests" },
+        { title: "Petty Cash", url: "/finance/petty-cash" },
+        { title: "Fiscal Periods", url: "/finance/periods" },
+
+        // ── Transactions ──────────────────────────────────
         {
-          title: "Chart of Account",
-          url: "/finance/coa",
+          title: "💳 Transactions",
+          url: "#finance-transactions",
+          isCategoryHeader: true,
         },
+        { title: "Customer Invoices", url: "/finance/customer-invoices" },
+        { title: "Vendor Bills", url: "/finance/vendor-bills" },
+        { title: "Receipts (BKM)", url: "/finance/receipts" },
+        { title: "Payments", url: "/finance/payments" },
+        { title: "Payment Vouchers", url: "/finance/payment-vouchers" },
+        { title: "Expense Tracking", url: "/finance/expenses" },
+
+        // ── Reconciliation ────────────────────────────────
         {
-          title: "Budget vs Actual",
-          url: "/finance/budget-vs-actual",
+          title: "⚖️ Reconciliation",
+          url: "#finance-recon",
+          isCategoryHeader: true,
         },
+        { title: "Bank Reconciliation", url: "/finance/bank-reconciliation" },
+        { title: "Payment Reconciliation", url: "/finance/payment-reconciliation" },
+        { title: "Cash Register", url: "/finance/cash-register" },
+
+        // ── Aging Analysis ────────────────────────────────
         {
-          title: "Bank Reconciliation",
-          url: "/finance/bank-reconciliation",
+          title: "📊 Aging Analysis",
+          url: "#finance-aging",
+          isCategoryHeader: true,
         },
+        { title: "AR Aging (Piutang)", url: "/finance/ar-aging" },
+        { title: "AP Aging (Hutang)", url: "/finance/ap-aging" },
+        { title: "Budget vs Actual", url: "/finance/budget-vs-actual" },
+
+        // ── Master Data ─────────────────────────────────
         {
-          title: "Payment Reconciliation",
-          url: "/finance/payment-reconciliation",
+          title: "👥 Master Data",
+          url: "#finance-master",
+          isCategoryHeader: true,
         },
+        { title: "Customers", url: "/finance/customers" },
+        { title: "Vendors", url: "/finance/vendors" },
+
+        // ── Reporting ────────────────────────────────────
         {
-          title: "Petty Cash",
-          url: "/finance/petty-cash",
+          title: "📈 Financial Reports",
+          url: "#finance-reports",
+          isCategoryHeader: true,
         },
-        {
-          title: "Journal History",
-          url: "/finance/journal",
-        },
-        {
-          title: "Periods",
-          url: "/finance/periods",
-        },
+        { title: "Trial Balance", url: "/finance/reports/trial-balance" },
+        { title: "Income Statement", url: "/finance/reports/profit-loss" },
+        { title: "Balance Sheet", url: "/finance/reports/balance-sheet" },
+        { title: "All Reports", url: "/finance/reports" },
+        { title: "BI Dashboard", url: "/dashboard/bi" },
       ],
     },
   ],

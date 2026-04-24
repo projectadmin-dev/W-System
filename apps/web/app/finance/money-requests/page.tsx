@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import {
   PlusIcon, SearchIcon, RefreshCwIcon, EyeIcon, CheckCircleIcon, XCircleIcon,
   Trash2Icon, MoreVerticalIcon, Loader2Icon, FilterIcon, FileTextIcon,
-  DollarSignIcon, AlertTriangleIcon
+  DollarSignIcon, AlertTriangleIcon, MinusCircleIcon,
 } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
@@ -41,6 +41,29 @@ interface MoneyRequest {
   status: 'draft' | 'submitted' | 'approved' | 'paid' | 'rejected' | 'closed'
   notes?: string
   created_at: string
+  items?: { id: string; description: string; amount: number }[]
+  petty_cash_entry_id?: string | null
+}
+
+interface EmployeeOption {
+  id: string
+  full_name: string
+  nik: string
+  employee_number: string
+  department: string
+  department_id: string | null
+}
+
+interface DepartmentOption {
+  id: string
+  name: string
+  code: string | null
+}
+
+interface DasarPengajuan {
+  id: string
+  description: string
+  amount: string
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -80,8 +103,18 @@ export default function MoneyRequestsPage() {
     request_type: 'procurement' as const, purpose: '',
     amount: '', notes: '',
   })
+  const [dasarPengajuan, setDasarPengajuan] = useState<DasarPengajuan[]>([
+    { id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }
+  ])
+
+  // Dropdown data
+  const [employees, setEmployees] = useState<EmployeeOption[]>([])
+  const [departments, setDepartments] = useState<DepartmentOption[]>([])
+  const [empLoading, setEmpLoading] = useState(false)
+  const [deptLoading, setDeptLoading] = useState(false)
 
   useEffect(() => { fetchRequests() }, [statusFilter, typeFilter])
+  useEffect(() => { fetchEmployees(); fetchDepartments() }, [])
 
   const fetchRequests = async () => {
     setLoading(true)
@@ -101,27 +134,61 @@ export default function MoneyRequestsPage() {
     }
   }
 
+  const fetchEmployees = async () => {
+    setEmpLoading(true)
+    try {
+      const res = await fetch('/api/hc/employees?limit=1000')
+      if (res.ok) {
+        const { data } = await res.json()
+        setEmployees(data || [])
+      }
+    } catch {
+      toast.error('Failed to load employees')
+    } finally {
+      setEmpLoading(false)
+    }
+  }
+
+  const fetchDepartments = async () => {
+    setDeptLoading(true)
+    try {
+      const res = await fetch('/api/hc/departments')
+      if (res.ok) {
+        const { data } = await res.json()
+        setDepartments(data || [])
+      }
+    } catch {
+      toast.error('Failed to load departments')
+    } finally {
+      setDeptLoading(false)
+    }
+  }
+
   const handleCreate = async () => {
-    if (!form.employee_nik || !form.purpose || !form.amount) {
-      toast.error('Please fill all required fields')
+    const filledItems = dasarPengajuan.filter(i => i.description.trim() !== '')
+    if (!form.employee_nik || filledItems.length === 0) {
+      toast.error('Please select NIK and fill at least one Dasar Pengajuan')
       return
     }
     setActionLoading(true)
     try {
+      const totalAmount = filledItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
       const res = await fetch('/api/finance/money-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
-          amount: parseFloat(form.amount),
+          amount: totalAmount,
           status: 'submitted',
           approval_status: 'pending',
+          items: filledItems.map(i => ({ description: i.description, amount: parseFloat(i.amount) || 0 })),
         }),
       })
       if (res.ok) {
         toast.success('Money request submitted successfully')
         setCreateOpen(false)
         setForm({ employee_nik: '', employee_name: '', department: '', request_type: 'procurement', purpose: '', amount: '', notes: '' })
+        setDasarPengajuan([{ id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }])
         fetchRequests()
       } else {
         const { error } = await res.json()
@@ -187,7 +254,8 @@ export default function MoneyRequestsPage() {
   }
 
   const handlePay = async (req: MoneyRequest) => {
-    if (!confirm(`Pay ${formatCurrency(req.amount)} for request ${req.request_number}?`)) return
+    const custodian = req.petty_cash_entry_id ? 'auto' : undefined
+    if (!confirm(`Settle ${formatCurrency(req.amount)} from petty cash for request ${req.request_number}?`)) return
     setActionLoading(true)
     try {
       const res = await fetch(`/api/finance/money-requests/${req.id}/pay`, {
@@ -195,13 +263,15 @@ export default function MoneyRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       })
+      const data = await res.json()
       if (res.ok) {
-        toast.success('Payment recorded and cash register updated')
+        toast.success(data.data?.petty_cash_entry
+          ? 'Payment settled from petty cash'
+          : 'Payment recorded and cash register updated')
         fetchRequests()
         setViewOpen(false)
       } else {
-        const { error } = await res.json()
-        toast.error(error || 'Failed to pay')
+        toast.error(data.error || 'Failed to pay')
       }
     } catch {
       toast.error('Error processing payment')
@@ -220,6 +290,42 @@ export default function MoneyRequestsPage() {
       }
     } catch {
       toast.error('Error deleting')
+    }
+  }
+
+  const addDasarPengajuan = () => {
+    setDasarPengajuan(prev => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }])
+  }
+
+  const removeDasarPengajuan = (id: string) => {
+    setDasarPengajuan(prev => prev.filter(i => i.id !== id))
+  }
+
+  const updateDasarPengajuan = (id: string, field: 'description' | 'amount', value: string) => {
+    setDasarPengajuan(prev =>
+      prev.map(i => i.id === id ? { ...i, [field]: value } : i)
+    )
+    // Recompute total into purpose if needed; user can see live total
+  }
+
+  const computedAmount = dasarPengajuan
+    .filter(i => i.description.trim() !== '')
+    .reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
+
+  // When NIK dropdown changes, auto-fill name & dept
+  const onSelectEmployee = (nik: string) => {
+    const emp = employees.find(e => e.nik === nik)
+    if (emp) {
+      // Try to find dept by ID first, then fallback to string dept
+      const deptOption = departments.find(d => d.id === emp.department_id)
+      setForm({
+        ...form,
+        employee_nik: emp.nik,
+        employee_name: emp.full_name,
+        department: deptOption?.name || emp.department || '',
+      })
+    } else {
+      setForm({ ...form, employee_nik: nik })
     }
   }
 
@@ -287,14 +393,14 @@ export default function MoneyRequestsPage() {
                 className="pl-9"
               />
             </div>
-            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm">
               <option value="all">All Types</option>
               <option value="procurement">Procurement</option>
               <option value="reimbursement">Reimbursement</option>
               <option value="cash_in_advance">Cash in Advance</option>
               <option value="other">Other</option>
             </select>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-background border border-border rounded-lg px-3 py-2 text-sm">
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
@@ -375,23 +481,65 @@ export default function MoneyRequestsPage() {
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>New Money Request</DialogTitle><DialogDescription>Submit a new money request via NIK</DialogDescription></DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* NIK Dropdown */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">NIK (Employee ID)</label>
-                <Input value={form.employee_nik} onChange={e => setForm({ ...form, employee_nik: e.target.value })} placeholder="e.g. 12345" className="bg-background border-border" />
+                {empLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <Loader2Icon className="h-3 w-3 animate-spin" /> Loading...
+                  </div>
+                ) : (
+                  <select
+                    value={form.employee_nik}
+                    onChange={e => onSelectEmployee(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground text-sm"
+                  >
+                    <option value="">-- Pilih Karyawan --</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.nik}>
+                        {emp.nik} — {emp.full_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Employee Name</label>
-                <Input value={form.employee_name} onChange={e => setForm({ ...form, employee_name: e.target.value })} placeholder="e.g. Budi Santoso" className="bg-background border-border" />
+                <Input
+                  value={form.employee_name}
+                  readOnly
+                  placeholder="Auto-filled from NIK"
+                  className="bg-muted/50 border-border cursor-not-allowed"
+                />
               </div>
             </div>
+
+            {/* Department Dropdown */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Department</label>
-                <Input value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder="e.g. IT" className="bg-background border-border" />
+                {deptLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <Loader2Icon className="h-3 w-3 animate-spin" /> Loading...
+                  </div>
+                ) : (
+                  <select
+                    value={form.department}
+                    onChange={e => setForm({ ...form, department: e.target.value })}
+                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground text-sm"
+                  >
+                    <option value="">-- Pilih Departemen --</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.code ? `${dept.code} — ` : ''}{dept.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Request Type</label>
@@ -403,14 +551,55 @@ export default function MoneyRequestsPage() {
                 </select>
               </div>
             </div>
+
+            {/* Purpose */}
             <div>
               <label className="text-sm font-medium mb-1 block">Purpose</label>
-              <Input value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="Detail of the request" className="bg-background border-border" />
+              <Input value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="Overall purpose (optional) — auto-built from dasar pengajuan below" className="bg-background border-border" />
             </div>
+
+            {/* Dasar Pengajuan Dinamis */}
+            <div className="border border-border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Dasar Pengajuan (Items)</label>
+                <span className="text-sm text-muted-foreground">Total: <span className="font-semibold text-foreground">{formatCurrency(computedAmount)}</span></span>
+              </div>
+              {dasarPengajuan.map((item, idx) => (
+                <div key={item.id} className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+                  <Input
+                    placeholder={`Item ${idx + 1}: Deskripsi dasar pengajuan...`}
+                    value={item.description}
+                    onChange={e => updateDasarPengajuan(item.id, 'description', e.target.value)}
+                    className="bg-background border-border text-sm"
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Jumlah (IDR)"
+                    value={item.amount}
+                    onChange={e => updateDasarPengajuan(item.id, 'amount', e.target.value)}
+                    className="bg-background border-border text-sm w-36"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeDasarPengajuan(item.id)}
+                    disabled={dasarPengajuan.length === 1}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <MinusCircleIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addDasarPengajuan} className="w-full">
+                <PlusIcon className="h-3 w-3 mr-1" /> Tambah Item
+              </Button>
+            </div>
+
+            {/* Total amount display */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-1 block">Amount (IDR)</label>
-                <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="1000000" className="bg-background border-border" />
+                <label className="text-sm font-medium mb-1 block">Total Amount (IDR)</label>
+                <Input value={formatCurrency(computedAmount)} readOnly className="bg-muted/50 border-border cursor-not-allowed font-semibold" />
               </div>
             </div>
             <div>
@@ -430,7 +619,7 @@ export default function MoneyRequestsPage() {
 
       {/* View Dialog */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Money Request Details</DialogTitle></DialogHeader>
           {selected && (
             <div className="space-y-4">
@@ -446,10 +635,37 @@ export default function MoneyRequestsPage() {
                 <div className="text-sm text-muted-foreground">Purpose</div>
                 <div className="bg-background p-3 rounded-lg mt-1">{selected.purpose}</div>
               </div>
+              {/* Show items if present */}
+              {selected.items && selected.items.length > 0 && (
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Dasar Pengajuan (Items)</div>
+                  <div className="bg-muted/50 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-muted-foreground w-12">#</TableHead>
+                          <TableHead className="text-muted-foreground">Description</TableHead>
+                          <TableHead className="text-muted-foreground text-right">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selected.items.map((item, idx) => (
+                          <TableRow key={item.id} className="border-border">
+                            <TableCell className="text-sm text-muted-foreground">{idx + 1}</TableCell>
+                            <TableCell className="text-sm">{item.description}</TableCell>
+                            <TableCell className="text-sm text-right font-medium">{formatCurrency(item.amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
               <div className="bg-muted p-4 rounded-lg">
                 <div className="flex justify-between mb-2"><span className="text-muted-foreground">Amount:</span><span className="font-semibold">{formatCurrency(selected.amount)}</span></div>
                 {selected.approved_by && <div className="flex justify-between mb-2"><span className="text-muted-foreground">Approved By:</span><span>{selected.approved_by} at {formatDate(selected.approved_at)}</span></div>}
                 {selected.paid_by && <div className="flex justify-between mb-2"><span className="text-muted-foreground">Paid By:</span><span>{selected.paid_by} at {formatDate(selected.paid_at)}</span></div>}
+                {selected.petty_cash_entry_id && <div className="flex justify-between"><span className="text-muted-foreground">Petty Cash:</span><span className="text-emerald-600 font-medium">✓ Settled</span></div>}
               </div>
               {selected.approval_status === 'pending' && (
                 <div className="flex gap-3">

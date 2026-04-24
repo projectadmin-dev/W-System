@@ -7,7 +7,7 @@ import {
 } from '@/lib/repositories/finance-transactions'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // Helper untuk ambil user + tenant
 async function getAuth(supabase: ReturnType<typeof createClient>) {

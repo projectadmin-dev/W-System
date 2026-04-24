@@ -11,7 +11,7 @@ import {
 } from '@/lib/repositories/petty-cash'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 async function getAuth(supabase: ReturnType<typeof createClient>) {
   const { data: { user } } = await supabase.auth.getUser();
