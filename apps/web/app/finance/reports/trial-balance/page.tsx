@@ -23,7 +23,7 @@ export default function TrialBalancePage() {
   async function loadData() {
     setLoading(true)
     try {
-      const res = await fetch('/api/finance/reports?type=trial_balance')
+      const res = await fetch('/api/finance/reports?type=trial-balance')
       if (!res.ok) throw new Error()
       const json = await res.json()
       setRows(json.data || [])

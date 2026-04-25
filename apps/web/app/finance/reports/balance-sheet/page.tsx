@@ -23,7 +23,7 @@ export default function BalanceSheetPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const res = await fetch('/api/finance/reports?type=balance_sheet')
+      const res = await fetch('/api/finance/reports?type=balance-sheet')
       if (!res.ok) throw new Error()
       const json = await res.json()
       setData(json.data)

@@ -29,7 +29,7 @@ export default function ProfitLossPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const res = await fetch('/api/finance/reports?type=profit_loss')
+      const res = await fetch('/api/finance/reports?type=profit-loss')
       if (!res.ok) throw new Error()
       const json = await res.json()
       setData(json.data)
