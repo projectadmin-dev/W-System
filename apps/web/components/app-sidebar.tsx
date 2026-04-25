@@ -189,6 +189,7 @@ const data = {
         { title: "Trial Balance", url: "/finance/reports/trial-balance" },
         { title: "Income Statement", url: "/finance/reports/profit-loss" },
         { title: "Balance Sheet", url: "/finance/reports/balance-sheet" },
+        { title: "Cash Flow Statement", url: "/finance/reports/cash-flow-statement" },
         { title: "All Reports", url: "/finance/reports" },
         { title: "BI Dashboard", url: "/dashboard/bi" },
       ],
