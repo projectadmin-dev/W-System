@@ -44,7 +44,10 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 import { Badge } from '@workspace/ui/components/badge'
-import { Plus, Wallet, Eye, Trash2, FileText, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import {
+  Plus, Wallet, Eye, Trash2, FileText, Loader2,
+  AlertCircle, CheckCircle2, Pencil, X
+} from 'lucide-react'
 
 interface PayrollPeriod {
   id: string
@@ -54,9 +57,9 @@ interface PayrollPeriod {
   start_date: string
   end_date: string
   status: 'draft' | 'generating' | 'locked' | 'approved' | 'paid'
-  attendance_cutoff_date: string
-  overtime_cutoff_date: string
-  payroll_cutoff_date: string
+  attendance_cutoff_date: string | null
+  overtime_cutoff_date: string | null
+  payroll_cutoff_date: string | null
   total_employees: number
   total_thp: number
   created_at: string
@@ -66,6 +69,9 @@ interface PayrollPeriod {
     employee_name: string
     status: string
     thp: number
+    basic_salary?: number
+    allowances_total?: number
+    total_deductions?: number
   }>
 }
 
@@ -85,14 +91,20 @@ export default function PayrollPage() {
   const [periods, setPeriods] = useState<PayrollPeriod[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState<PayrollPeriod | null>(null)
   const [slips, setSlips] = useState<PayrollSlip[]>([])
   const [generating, setGenerating] = useState(false)
   const [generateSuccess, setGenerateSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
-  // Form state untuk buat periode baru
+  // Form state: create new period
   const [formData, setFormData] = useState({
     entity_id: '',
     month: new Date().getMonth() + 1,
@@ -102,6 +114,16 @@ export default function PayrollPage() {
     attendance_cutoff_date: '',
     overtime_cutoff_date: '',
     payroll_cutoff_date: '',
+  })
+
+  // Form state: edit existing period
+  const [editData, setEditData] = useState({
+    start_date: '',
+    end_date: '',
+    attendance_cutoff_date: '',
+    overtime_cutoff_date: '',
+    payroll_cutoff_date: '',
+    status: '' as '' | 'draft' | 'locked' | 'approved' | 'paid',
   })
 
   const monthNames = [
@@ -134,6 +156,7 @@ export default function PayrollPage() {
   async function handleCreatePeriod(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setSaving(true)
     try {
       const res = await fetch('/api/payroll-periods', {
         method: 'POST',
@@ -144,11 +167,23 @@ export default function PayrollPage() {
       if (result.success) {
         await fetchPeriods()
         setDialogOpen(false)
+        setFormData({
+          entity_id: '',
+          month: new Date().getMonth() + 1,
+          year: new Date().getFullYear(),
+          start_date: '',
+          end_date: '',
+          attendance_cutoff_date: '',
+          overtime_cutoff_date: '',
+          payroll_cutoff_date: '',
+        })
       } else {
         setError(result.error || 'Gagal membuat periode')
       }
     } catch (err) {
       setError('Gagal membuat periode')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -171,6 +206,81 @@ export default function PayrollPage() {
       setError('Gagal generate payroll')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  function openEditDialog(period: PayrollPeriod) {
+    setSelectedPeriod(period)
+    setEditData({
+      start_date: period.start_date || '',
+      end_date: period.end_date || '',
+      attendance_cutoff_date: period.attendance_cutoff_date || '',
+      overtime_cutoff_date: period.overtime_cutoff_date || '',
+      payroll_cutoff_date: period.payroll_cutoff_date || '',
+      status: period.status,
+    })
+    setEditError(null)
+    setEditDialogOpen(true)
+  }
+
+  async function handleUpdatePeriod(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedPeriod) return
+    setEditError(null)
+    setSaving(true)
+    try {
+      const payload: Record<string, any> = {}
+      if (editData.start_date) payload.start_date = editData.start_date
+      if (editData.end_date) payload.end_date = editData.end_date
+      if (editData.attendance_cutoff_date !== undefined) payload.attendance_cutoff_date = editData.attendance_cutoff_date || null
+      if (editData.overtime_cutoff_date !== undefined) payload.overtime_cutoff_date = editData.overtime_cutoff_date || null
+      if (editData.payroll_cutoff_date !== undefined) payload.payroll_cutoff_date = editData.payroll_cutoff_date || null
+      if (editData.status) payload.status = editData.status
+
+      const res = await fetch(`/api/payroll-periods/${selectedPeriod.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const result = await res.json()
+      if (result.success) {
+        await fetchPeriods()
+        setEditDialogOpen(false)
+      } else {
+        setEditError(result.error || 'Gagal update periode')
+      }
+    } catch (err) {
+      setEditError('Gagal update periode')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function openDeleteDialog(period: PayrollPeriod) {
+    setSelectedPeriod(period)
+    setDeleteError(null)
+    setDeleteDialogOpen(true)
+  }
+
+  async function handleDeletePeriod() {
+    if (!selectedPeriod) return
+    setDeleteError(null)
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/payroll-periods/${selectedPeriod.id}`, {
+        method: 'DELETE',
+      })
+      const result = await res.json()
+      if (result.success) {
+        await fetchPeriods()
+        setDeleteDialogOpen(false)
+      } else {
+        setDeleteError(result.error || 'Gagal hapus periode')
+      }
+    } catch (err) {
+      setDeleteError('Gagal hapus periode')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -305,7 +415,7 @@ export default function PayrollPage() {
                       {periods.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                            Belum ada periode payroll. Klik "Buat Periode" untuk mulai.
+                            Belum ada periode payroll. Klik &quot;Buat Periode&quot; untuk mulai.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -326,23 +436,53 @@ export default function PayrollPage() {
                                 {formatRupiah(totalTHP)}
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="flex items-center justify-end gap-1">
+                                  {/* Generate Button */}
                                   {period.status === 'draft' && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleGenerate(period.id)}
                                       disabled={generating}
+                                      title="Generate Slip Gaji"
                                     >
                                       {generating ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                       ) : (
-                                        <FileText className="h-4 w-4 mr-1" />
+                                        <FileText className="h-4 w-4" />
                                       )}
-                                      Generate
                                     </Button>
                                   )}
-                                  <Button size="icon" variant="ghost" onClick={() => viewDetail(period)}>
+                                  {/* Edit Button — only for draft */}
+                                  {period.status === 'draft' && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => openEditDialog(period)}
+                                      title="Edit Periode"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {/* Delete Button — only for draft */}
+                                  {period.status === 'draft' && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => openDeleteDialog(period)}
+                                      title="Hapus Periode"
+                                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {/* View Detail Button */}
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => viewDetail(period)}
+                                    title="Lihat Detail"
+                                  >
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                 </div>
@@ -445,9 +585,138 @@ export default function PayrollPage() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Batal
               </Button>
-              <Button type="submit">Simpan Periode</Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Simpan Periode
+              </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Edit Periode */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Periode Payroll</DialogTitle>
+            <DialogDescription>
+              {selectedPeriod ? `${monthNames[selectedPeriod.month - 1]} ${selectedPeriod.year}` : ''} — Hanya periode <strong>Draft</strong> yang bisa diedit.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdatePeriod} className="space-y-4">
+            {editError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                {editError}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tanggal Mulai</Label>
+                <Input
+                  type="date"
+                  value={editData.start_date}
+                  onChange={(e) => setEditData({ ...editData, start_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tanggal Selesai</Label>
+                <Input
+                  type="date"
+                  value={editData.end_date}
+                  onChange={(e) => setEditData({ ...editData, end_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Attendance Cut-off</Label>
+                <Input
+                  type="date"
+                  value={editData.attendance_cutoff_date}
+                  onChange={(e) => setEditData({ ...editData, attendance_cutoff_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Overtime Cut-off</Label>
+                <Input
+                  type="date"
+                  value={editData.overtime_cutoff_date}
+                  onChange={(e) => setEditData({ ...editData, overtime_cutoff_date: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Payroll Cut-off</Label>
+              <Input
+                type="date"
+                value={editData.payroll_cutoff_date}
+                onChange={(e) => setEditData({ ...editData, payroll_cutoff_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={editData.status}
+                onValueChange={(v) => setEditData({ ...editData, status: v as any })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="locked">Terkunci</SelectItem>
+                  <SelectItem value="approved">Disetujui</SelectItem>
+                  <SelectItem value="paid">Dibayar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Simpan Perubahan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Konfirmasi Hapus */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Hapus Periode Payroll?
+            </DialogTitle>
+            <DialogDescription>
+              {selectedPeriod
+                ? `Hapus periode ${monthNames[selectedPeriod.month - 1]} ${selectedPeriod.year}? Semua slip gaji yang sudah terbentuk juga akan ikut dihapus.`
+                : 'Konfirmasi penghapusan periode payroll.'}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              {deleteError}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeletePeriod}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Ya, Hapus
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -478,7 +747,7 @@ export default function PayrollPage() {
                 {slips.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Belum ada slip gaji. Klik "Generate" untuk membuat slip.
+                      Belum ada slip gaji. Klik &quot;Generate&quot; untuk membuat slip.
                     </TableCell>
                   </TableRow>
                 ) : (
