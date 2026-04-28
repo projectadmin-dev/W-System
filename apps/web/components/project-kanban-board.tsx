@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useRef } from "react"
 import {
   DndContext,
   closestCenter,
@@ -9,7 +9,6 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core"
-import { arrayMove } from "@dnd-kit/sortable"
 import { ProjectKanbanColumn, type Project } from "./project-kanban-column"
 
 export type ProjectStatus =
@@ -36,6 +35,7 @@ export function ProjectKanbanBoard({
 }: ProjectKanbanBoardProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [error, setError] = useState<string | null>(null)
+  const previousProjectsRef = useRef<Project[]>(initialProjects)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -69,6 +69,10 @@ export function ProjectKanbanBoard({
       const project = projects[projectIndex]
       if (project.status === targetStatus) return
 
+      // Capture snapshot BEFORE mutation for revert
+      const previousProjects = [...projects]
+      previousProjectsRef.current = previousProjects
+
       const updated = [...projects]
       updated[projectIndex] = { ...project, status: targetStatus }
       setProjects(updated)
@@ -82,11 +86,13 @@ export function ProjectKanbanBoard({
         })
 
         if (!res.ok) {
-          throw new Error(`Failed to move project: ${res.status}`)
+          const detail = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+          throw new Error(detail.error || `HTTP ${res.status}`)
         }
       } catch (err: any) {
-        setError("Failed to update project status. Reverting…")
-        setProjects(projects)
+        setError(err.message || "Failed to update project status. Reverting…")
+        // Revert using ref snapshot — not closure `projects`
+        setProjects(previousProjectsRef.current)
         console.error(err)
       }
     },
