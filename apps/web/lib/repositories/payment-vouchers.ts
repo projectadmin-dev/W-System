@@ -108,6 +108,22 @@ export async function deletePaymentVoucher(id: string) {
   return { success: true }
 }
 
+// Wrapper for helpers/route.ts compatibility
+export async function getSenderAccounts(_tenantId?: string) {
+  const opts = await getPaymentVoucherOptions()
+  return [...opts.bankAccounts, ...opts.pettyCash]
+}
+
+export async function getVendorOptions(_tenantId?: string) {
+  const opts = await getPaymentVoucherOptions()
+  return opts.vendors
+}
+
+export async function getCoaOptionsForVoucher() {
+  const opts = await getPaymentVoucherOptions()
+  return opts.coa
+}
+
 export async function getPaymentVoucherOptions() {
   const supabase = await createAdminClient()
   

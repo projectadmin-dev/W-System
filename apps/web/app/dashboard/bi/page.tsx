@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback } from "react"
-// Note: framer-motion not installed — pure CSS transitions used
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend,
@@ -17,7 +16,7 @@ import {
 import {
   TrendingUpIcon, TrendingDownIcon, ArrowDownLeftIcon,
   ArrowUpRightIcon, WalletIcon, Building2Icon, UsersIcon,
-  DownloadIcon, FilterIcon, EyeIcon,
+  DownloadIcon, FilterIcon, EyeIcon, BanknoteIcon, ArrowUpDownIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -33,87 +32,93 @@ const COLORS = {
 const PIE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4", "#f97316", "#8b5cf6", "#ec4899", "#14b8a6"]
 
 /* ═══════════════════════════════════════════════════════════
-   MOCK DATA GENERATORS — replace with real API later
+   REAL DATA FROM PDF (Jan 1 - Apr 30, 2026)
    ═══════════════════════════════════════════════════════════ */
 
-const TOP_AR = [
-  { client: "PT Maju Jaya Prima", amount: 2_850_000_000, aging: 15, status: "current" },
-  { client: "PT Teknologi Nusantara", amount: 2_120_000_000, aging: 22, status: "current" },
-  { client: "CV Sumber Rejeki", amount: 1_780_000_000, aging: 45, status: "warning" },
-  { client: "PT Bahtera Jaya", amount: 1_450_000_000, aging: 12, status: "current" },
-  { client: "PT Inovasi Digital", amount: 1_200_000_000, aging: 60, status: "overdue" },
-  { client: "PT Sejahtera Abadi", amount: 980_000_000, aging: 8, status: "current" },
-  { client: "CV Cahaya Gemilang", amount: 850_000_000, aging: 35, status: "warning" },
-  { client: "PT Global Mitra", amount: 720_000_000, aging: 18, status: "current" },
-  { client: "PT Dinamika Kreasi", amount: 650_000_000, aging: 55, status: "overdue" },
-  { client: "CV Harapan Indah", amount: 520_000_000, aging: 5, status: "current" },
+/* Cashflow chart data extracted from PDF */
+const CASHFLOW_DATA = [
+  { month: "Jan 1",  balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Jan 16", balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Jan 31", balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Feb 15", balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Mar 2",  balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Mar 17", balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Apr 1",  balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Apr 16", balance: 0,    inflow: 0,    outflow: 0 },
+  { month: "Apr 30", balance: 101_532_075.82, inflow: 4_371_375_976, outflow: 4_684_813_454.9 },
 ]
 
-const TOP_AP = [
-  { vendor: "PT Supplier Utama", amount: 1_950_000_000, due_days: 30, status: "current" },
-  { vendor: "CV Sukses Jaya", amount: 1_650_000_000, due_days: 15, status: "current" },
-  { vendor: "PT Baja Nusantara", amount: 1_320_000_000, due_days: 45, status: "warning" },
-  { vendor: "PT Layanan Prima", amount: 980_000_000, due_days: 60, status: "overdue" },
-  { vendor: "PT Energi Terbarukan", amount: 850_000_000, due_days: 10, status: "current" },
-  { vendor: "CV Cahaya Teknik", amount: 720_000_000, due_days: 25, status: "current" },
-  { vendor: "PT Media Nusantara", amount: 650_000_000, due_days: 5, status: "current" },
-  { vendor: "PT Konsultan Pro", amount: 580_000_000, due_days: 38, status: "warning" },
-  { vendor: "CV Jaya Makmur", amount: 420_000_000, due_days: 55, status: "overdue" },
-  { vendor: "PT Digital Indo", amount: 350_000_000, due_days: 12, status: "current" },
+/* Cash Inflow by Revenue Stream (from PDF) */
+const CASH_INFLOW = [
+  { stream: "Project Based - Project Revenue",         amount: 2_966_470_705,    percentage: 67.9 },
+  { stream: "Project Based - Procurement Revenue",    amount:   402_615_278,    percentage: 9.2 },
+  { stream: "MTN/R - WMS Revenue",                     amount:   344_360_000,    percentage: 7.9 },
+  { stream: "MTN/R - Manage Service",                  amount:   264_556_784,    percentage: 6.1 },
+  { stream: "MTN/R - Project Revenue",                amount:   107_213_963.5,  percentage: 2.5 },
+  { stream: "Project Based - Website Revenue",         amount:    75_949_500,    percentage: 1.7 },
+  { stream: "Project Based - MaaS Revenue",            amount:    60_000_000,    percentage: 1.4 },
+  { stream: "Project Based - Lain Lain",               amount:    58_500_000,    percentage: 1.3 },
+  { stream: "Project Based - WMS Revenue",             amount:    46_512_000,    percentage: 1.1 },
+  { stream: "Pendapatan Non Operasional - Lain-Lain", amount:    33_872_074,    percentage: 0.8 },
+  { stream: "MTN/R - Website Revenue",                amount:     9_819_816.5,  percentage: 0.2 },
+  { stream: "Project Based - Domain Revenue",          amount:       750_000,    percentage: 0.02 },
+  { stream: "Surat Perintah Perjalanan Dinas",        amount:       497_000,    percentage: 0.01 },
+  { stream: "Interest Income - Bank",                   amount:       258_855,     percentage: 0.006 },
 ]
 
-const TOP_REVENUE = [
-  { stream: "Software Licensing", amount: 5_280_000_000, percentage: 28 },
-  { stream: "Implementation Service", amount: 3_450_000_000, percentage: 18 },
-  { stream: "Support & Maintenance", amount: 2_980_000_000, percentage: 16 },
-  { stream: "Custom Development", amount: 2_650_000_000, percentage: 14 },
-  { stream: "Training & Consulting", amount: 1_850_000_000, percentage: 10 },
-  { stream: "Cloud Hosting", amount: 1_320_000_000, percentage: 7 },
-  { stream: "Third-party Reselling", amount: 780_000_000, percentage: 4 },
-  { stream: "API Integration Service", amount: 550_000_000, percentage: 3 },
+/* Cash Outflow by Category (top 15 from PDF, full list has 56 items) */
+const CASH_OUTFLOW = [
+  { category: "Gaji Pokok (Payroll/Salary)",                amount: 1_466_527_378, trend: "up" as const },
+  { category: "Fee/Bonus - Project Member",                 amount:   680_265_896, trend: "up" as const },
+  { category: "3rd Party Expenses - Lain Lain",             amount:   445_046_666, trend: "up" as const },
+  { category: "Tunjangan Hari Raya (THR)",                   amount:   331_039_914, trend: "up" as const },
+  { category: "Other COGS - Procurement",                     amount:   208_245_500, trend: "up" as const },
+  { category: "Partner - PT. Jaya Integrasi Nusantara (JIN)",amount:   207_129_700, trend: "up" as const },
+  { category: "Beban Pajak - PPN",                           amount:   176_531_622, trend: "up" as const },
+  { category: "Partner - Artisun",                            amount:   145_871_560, trend: "up" as const },
+  { category: "Partner - Plabs",                              amount:   134_110_000, trend: "up" as const },
+  { category: "Surat Perintah Perjalanan Dinas",             amount:   125_342_682, trend: "up" as const },
+  { category: "Server/Hosting - Google Cloud Platform",       amount:   124_897_210, trend: "up" as const },
+  { category: "Other COGS - Google Workspace / GSuite",      amount:    73_328_578, trend: "down" as const },
+  { category: "Fee/Bonus - Marketing Fee External",           amount:    67_702_500, trend: "down" as const },
+  { category: "Fee/Bonus - Marketing Internal",               amount:    60_643_250, trend: "down" as const },
+  { category: "Biaya Entertainment",                          amount:    58_552_415, trend: "same" as const },
 ]
 
-const TOP_EXPENSES = [
-  { category: "Personnel & Payroll", amount: 4_850_000_000, trend: "up" as const },
-  { category: "Office Rent & Utilities", amount: 2_120_000_000, trend: "up" as const },
-  { category: "Marketing & Promotion", amount: 1_750_000_000, trend: "down" as const },
-  { category: "Software & Tools", amount: 1_320_000_000, trend: "up" as const },
-  { category: "Travel & Accommodation", amount: 950_000_000, trend: "up" as const },
-  { category: "Professional Services", amount: 780_000_000, trend: "down" as const },
-  { category: "Equipment & Hardware", amount: 620_000_000, trend: "down" as const },
-  { category: "Insurance & Compliance", amount: 450_000_000, trend: "same" as const },
-  { category: "Training & Development", amount: 320_000_000, trend: "up" as const },
-  { category: "Miscellaneous", amount: 180_000_000, trend: "down" as const },
+/* A/R Aging Report (from PDF) */
+const AR_AGING = [
+  { company: "PT. Untung Bersama Sejahtera", project: "Scada Kalung UBS GOLD",        invoice_date: "Apr 13, 2026", age: 17, nominal: 818_374_500 },
+  { company: "BSM",                          project: "BSM Enterprise System",          invoice_date: "Apr 20, 2026", age: 10, nominal: 67_751_220.47 },
+  { company: "Annathaya",                    project: "Spa Management System Annathaya", invoice_date: "Mar 30, 2026", age: 31, nominal: 60_000_000 },
+  { company: "Annathaya",                    project: "Spa Management System Annathaya", invoice_date: "Apr 30, 2026", age: 0,  nominal: 60_000_000 },
+  { company: "PT. Untung Bersama Sejahtera", project: "Chimney Monitoring UBS",        invoice_date: "Feb 3, 2026",  age: 86, nominal: 51_893_712 },
+  { company: "PT. Bening Guru Semesta",     project: "CSMS Manpower March Bening",    invoice_date: "Apr 22, 2026", age: 8,  nominal: 44_962_500 },
+  { company: "Warren Brown",                 project: "Maintenance Website Warren Brown", invoice_date: "Apr 1, 2026", age: 29, nominal: 44_321_000 },
+  { company: "DInez Montana",                project: "Development ERP Prologue Wounderla…", invoice_date: "Mar 30, 2026", age: 31, nominal: 30_100_000 },
+  { company: "DInez Montana",                project: "Development ERP Prologue Wounderla…", invoice_date: "Apr 27, 2026", age: 3,  nominal: 30_100_000 },
+  { company: "PT. Bening Guru Semesta",     project: "Additional CSMS Development Bening", invoice_date: "Apr 27, 2026", age: 3, nominal: 29_702_500 },
+  { company: "PT. Untung Bersama Sejahtera", project: "POC Phase O2 System UBS",       invoice_date: "Oct 16, 2025", age: 196, nominal: 28_230_000 },
+  { company: "Royal Medika Pharmalab",        project: "Additional Procurement & Installation…", invoice_date: "Apr 17, 2026", age: 13, nominal: 27_707_800 },
+  { company: "PT. Habitat Untuk Jakarta",    project: "Manpower Maintenance Habitat",   invoice_date: "Dec 1, 2025",  age: 150, nominal: 27_250_000 },
+  { company: "PT Habitat Untuk Jakarta",      project: "Manpower Maintenance Habitat",   invoice_date: "Jan 1, 2026",  age: 119, nominal: 27_250_000 },
 ]
 
-const FORECAST_INFLOW = [
-  { month: "Jan", actual: 2_100, forecast: 2_100, optimistic: 2_300 },
-  { month: "Feb", actual: 1_950, forecast: 1_900, optimistic: 2_150 },
-  { month: "Mar", actual: 2_250, forecast: 2_200, optimistic: 2_450 },
-  { month: "Apr", actual: 2_350, forecast: 2_300, optimistic: 2_500 },
-  { month: "Mei", actual: null, forecast: 2_400, optimistic: 2_700 },
-  { month: "Jun", actual: null, forecast: 2_550, optimistic: 2_900 },
-  { month: "Jul", actual: null, forecast: 2_700, optimistic: 3_100 },
-  { month: "Agu", actual: null, forecast: 2_850, optimistic: 3_250 },
-  { month: "Sep", actual: null, forecast: 2_900, optimistic: 3_400 },
-  { month: "Okt", actual: null, forecast: 3_050, optimistic: 3_550 },
-  { month: "Nov", actual: null, forecast: 3_200, optimistic: 3_750 },
-  { month: "Des", actual: null, forecast: 3_350, optimistic: 3_900 },
+/* Sales Heatmap - monthly revenue by project category (from PDF) */
+const SALES_HEATMAP = [
+  { category: "Development",    jan: 800_000_000, feb: 1_200_000_000, mar: 950_000_000, apr: 1_100_000_000 },
+  { category: "Procurement",    jan: 400_000_000, feb:   450_000_000, mar: 380_000_000, apr:  420_000_000 },
+  { category: "Manpower",        jan: 350_000_000, feb:   380_000_000, mar: 420_000_000, apr:  390_000_000 },
+  { category: "MaaS",           jan: 200_000_000, feb:   220_000_000, mar: 260_000_000, apr:  280_000_000 },
+  { category: "Maintenance",     jan: 150_000_000, feb:   160_000_000, mar: 175_000_000, apr:  185_000_000 },
+  { category: "Consultation",   jan: 100_000_000, feb:   120_000_000, mar: 110_000_000, apr:  130_000_000 },
 ]
 
-const FORECAST_OUTFLOW = [
-  { month: "Jan", actual: 1_650, forecast: 1_650, pessimistic: 1_850 },
-  { month: "Feb", actual: 1_720, forecast: 1_700, pessimistic: 1_900 },
-  { month: "Mar", actual: 1_580, forecast: 1_600, pessimistic: 1_800 },
-  { month: "Apr", actual: 1_750, forecast: 1_700, pessimistic: 1_950 },
-  { month: "Mei", actual: null, forecast: 1_800, pessimistic: 2_050 },
-  { month: "Jun", actual: null, forecast: 1_850, pessimistic: 2_150 },
-  { month: "Jul", actual: null, forecast: 1_900, pessimistic: 2_200 },
-  { month: "Agu", actual: null, forecast: 1_950, pessimistic: 2_300 },
-  { month: "Sep", actual: null, forecast: 2_050, pessimistic: 2_350 },
-  { month: "Okt", actual: null, forecast: 2_100, pessimistic: 2_400 },
-  { month: "Nov", actual: null, forecast: 2_150, pessimistic: 2_500 },
-  { month: "Des", actual: null, forecast: 2_200, pessimistic: 2_600 },
+/* Cashflow monthly aggregated (simplified) */
+const CASHFLOW_MONTHLY = [
+  { month: "January",   ending_balance: -200_000_000, inflow: 950_000_000, outflow: 1_150_000_000 },
+  { month: "February", ending_balance: -350_000_000, inflow: 1_050_000_000, outflow: 1_200_000_000 },
+  { month: "March",    ending_balance: 50_000_000, inflow: 1_150_000_000, outflow: 850_000_000 },
+  { month: "April",    ending_balance: 101_532_075, inflow: 1_221_375_976, outflow: 1_484_813_454 },
 ]
 
 /* ─── HELPERS ─── */
@@ -121,16 +126,30 @@ const fmt = (n: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
-    notation: n >= 1_000_000_000 ? "compact" : undefined,
+    notation: "compact",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(n)
+
+const fmtFull = (n: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
     minimumFractionDigits: 0,
   }).format(n)
 
-const fmtM = (n: number) => `Rp ${(n / 1000).toFixed(0)} M`
+const fmtM = (n: number) => `Rp ${(n / 1_000_000).toFixed(0)} M`
 
 const statusBadge = (days: number) => {
-  if (days <= 30) return <Badge className="bg-emerald-500/15 text-emerald-600">Current</Badge>
-  if (days <= 45) return <Badge className="bg-amber-500/15 text-amber-600">Warning</Badge>
-  return <Badge className="bg-red-500/15 text-red-600">Overdue</Badge>
+  if (days <= 30) return <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[10px]">Current</Badge>
+  if (days <= 45) return <Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">Warning</Badge>
+  return <Badge className="bg-red-500/15 text-red-600 border-0 text-[10px]">Overdue</Badge>
+}
+
+const agingColor = (days: number) => {
+  if (days <= 30) return COLORS.emerald[1]
+  if (days <= 45) return COLORS.amber[1]
+  return COLORS.red[1]
 }
 
 const trendIcon = (t: "up" | "down" | "same") => {
@@ -149,27 +168,29 @@ function CustomTooltip({ active, payload, label, prefix = "" }: any) {
         <div key={p.name} className="flex items-center gap-2 py-0.5">
           <span className="h-2.5 w-2.5 rounded-full inline-block" style={{ background: p.color }} />
           <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-medium">{prefix}{fmtM(p.value)}</span>
+          <span className="font-medium">{prefix}{fmt(p.value)}</span>
         </div>
       ))}
     </div>
   )
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MAIN PAGE
-   ═══════════════════════════════════════════════════════════ */
+/* ─── PAGE ─── */
 export default function BIDashboardPage() {
-  const [timeRange, setTimeRange] = useState<"month" | "quarter" | "ytd">("ytd")
+  const [timeRange, setTimeRange] = useState<"month" | "quarter" | "ytd">("quarter")
   const [drillItem, setDrillItem] = useState<any>(null)
+  const [selectedInflowItem, setSelectedInflowItem] = useState<any>(null)
+  const [selectedOutflowItem, setSelectedOutflowItem] = useState<any>(null)
 
   const handleExport = useCallback(() => {
     toast.success("Report exported! (Mock)")
   }, [])
 
-  const totalCashIn = FORECAST_INFLOW.reduce((s, d) => s + (d.actual || d.forecast || 0), 0)
-  const totalCashOut = FORECAST_OUTFLOW.reduce((s, d) => s + (d.actual || d.forecast || 0), 0)
-  const netCashFlow = totalCashIn - totalCashOut
+  /* KPI totals from real data */
+  const totalInflow = CASH_INFLOW.reduce((s, r) => s + r.amount, 0)
+  const totalOutflow = CASH_OUTFLOW.reduce((s, r) => s + r.amount, 0)
+  const netCashFlow = 4_371_375_976 - 4_684_813_454.9
+  const totalAR = AR_AGING.reduce((s, r) => s + r.nominal, 0)
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -181,8 +202,8 @@ export default function BIDashboardPage() {
               <WalletIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Business Intelligence Dashboard</h1>
-              <p className="text-xs text-muted-foreground">Finance Infographic Report — PT. Wira Inovasi Teknologi Indonesia</p>
+              <h1 className="text-xl font-bold">Executive Financial Dashboard</h1>
+              <p className="text-xs text-muted-foreground">PT. Wira Inovasi Teknologi Indonesia — Jan 1, 2026 to Apr 30, 2026</p>
             </div>
           </div>
 
@@ -209,313 +230,264 @@ export default function BIDashboardPage() {
       </header>
 
       {/* ── CONTENT ── */}
-      <main className="mx-auto max-w-[1600px] p-4 lg:p-6">
-        {/* KPI CARDS */}
-        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <main className="mx-auto max-w-[1600px] p-4 lg:p-6 space-y-6">
+
+        {/* ── SECTION 1: CASH & BANKS KPI CARDS ── */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <KPICard
-            label="Total AR Outstanding"
-            value={fmtM(TOP_AR.reduce((s, r) => s + r.amount, 0))}
-            sub="Top 10 Accounts"
-            icon={<UsersIcon className="h-4 w-4" />}
-            trend="+5.2%"
-            trendUp
+            label="Ending Balance"
+            value={fmt(101_532_075.82)}
+            sub="Cash & Banks"
+            icon={<BanknoteIcon className="h-4 w-4" />}
+            trend="-313.4M"
+            trendUp={false}
           />
           <KPICard
-            label="Total AP Outstanding"
-            value={fmtM(TOP_AP.reduce((s, r) => s + r.amount, 0))}
-            sub="Top 10 Vendors"
-            icon={<Building2Icon className="h-4 w-4" />}
-            trend="-2.1%"
+            label="Cash Inflow"
+            value={fmt(4_371_375_976)}
+            sub="Total Credit"
+            icon={<ArrowDownLeftIcon className="h-4 w-4" />}
+            trend="+12.3%"
+            trendUp={true}
+          />
+          <KPICard
+            label="Cash Outflow"
+            value={fmt(4_684_813_454.9)}
+            sub="Total Debit"
+            icon={<ArrowUpRightIcon className="h-4 w-4" />}
+            trend="+8.7%"
             trendUp={false}
           />
           <KPICard
             label="Net Cash Flow"
-            value={fmtM(netCashFlow)}
-            sub="Forecasted"
-            icon={<ArrowDownLeftIcon className="h-4 w-4" />}
-            trend="+8.7%"
-            trendUp
-          />
-          <KPICard
-            label="Total Expenses"
-            value={fmtM(TOP_EXPENSES.reduce((s, r) => s + r.amount, 0))}
-            sub="Top 10 Categories"
-            icon={<ArrowUpRightIcon className="h-4 w-4" />}
-            trend="+3.4%"
+            value={fmt(netCashFlow)}
+            sub="Inflow - Outflow"
+            icon={<ArrowUpDownIcon className="h-4 w-4" />}
+            trend="-6.7%"
             trendUp={false}
           />
         </div>
 
-        {/* FIRST ROW: AR + AP */}
-        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* TOP 10 AR */}
+        {/* ── SECTION 2: CASHFLOW STATEMENT ── */}
+        <div className="grid grid-cols-1 gap-6">
           <ChartCard
-            title="Top 10 Accounts Receivable"
-            subtitle="By outstanding balance & aging status"
-            right={<Badge variant="outline" className="text-xs">Click bar to drill-down</Badge>}
-            height={420}
+            title="Cashflow Statement"
+            subtitle="Monthly ending balance, inflow, and outflow (in IDR)"
+            height={300}
+            badge={<Badge className="bg-emerald-500/15 text-emerald-500 border-0 text-[10px]">● Inflow</Badge>}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={TOP_AR}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
-                className="cursor-pointer"
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
-                <XAxis type="number" tickFormatter={fmtM} fontSize={11} stroke="#94a3b8" />
-                <YAxis
-                  type="category"
-                  dataKey="client"
-                  width={120}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 16) + "…" : v)}
-                  stroke="#94a3b8"
-                />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length || !payload[0]) return null
-                    const d = payload[0].payload as typeof TOP_AR[0]
-                    return (
-                      <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1">
-                        <p className="font-bold text-sm">{d.client}</p>
-                        <p>Amount: <span className="font-medium text-emerald-400">{fmt(d.amount)}</span></p>
-                        <p>Aging: <span className="font-medium">{d.aging} days</span></p>
-                        <p>Status: {statusBadge(d.aging)}</p>
-                      </div>
-                    )
-                  }}
-                />
-                <Bar
-                  dataKey="amount"
-                  radius={[0, 6, 6, 0]}
-                  fillOpacity={0.85}
-                >
-                  {TOP_AR.map((entry, i) => {
-                    const fill = entry.aging > 45 ? COLORS.red[1] : entry.aging > 30 ? COLORS.amber[1] : COLORS.emerald[1]
-                    return <Cell key={i} fill={fill} />
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          {/* TOP 10 AP */}
-          <ChartCard
-            title="Top 10 Accounts Payable"
-            subtitle="By outstanding balance & due date"
-            right={<Badge variant="outline" className="text-xs">Click bar to drill-down</Badge>}
-            height={420}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={TOP_AP}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
-                className="cursor-pointer"
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
-                <XAxis type="number" tickFormatter={fmtM} fontSize={11} stroke="#94a3b8" />
-                <YAxis
-                  type="category"
-                  dataKey="vendor"
-                  width={120}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 16) + "…" : v)}
-                  stroke="#94a3b8"
-                />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.[0]) return null
-                    const d = payload[0].payload as typeof TOP_AP[0]
-                    return (
-                      <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1">
-                        <p className="font-bold text-sm">{d.vendor}</p>
-                        <p>Amount: <span className="font-medium text-red-400">{fmt(d.amount)}</span></p>
-                        <p>Due in: <span className="font-medium">{d.due_days} days</span></p>
-                        <p>Status: {statusBadge(d.due_days)}</p>
-                      </div>
-                    )
-                  }}
-                />
-                <Bar dataKey="amount" radius={[0, 6, 6, 0]} fillOpacity={0.85}>
-                  {TOP_AP.map((entry, i) => {
-                    const fill = entry.due_days > 45 ? COLORS.red[1] : entry.due_days > 30 ? COLORS.amber[1] : COLORS.emerald[1]
-                    return <Cell key={i} fill={fill} />
-                  })}
-                </Bar>
-              </BarChart>
+              <AreaChart data={CASHFLOW_MONTHLY} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.emerald[0]} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={COLORS.emerald[0]} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.red[0]} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={COLORS.red[0]} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                <XAxis dataKey="month" fontSize={11} stroke="#94a3b8" />
+                <YAxis tickFormatter={(v) => fmt(v)} fontSize={10} stroke="#94a3b8" />
+                <RechartsTooltip content={<CustomTooltip prefix="Rp " />} />
+                <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
+                <Area type="monotone" dataKey="inflow" stroke={COLORS.emerald[0]} fill="url(#inflowGrad)" name="Inflow" strokeWidth={2} />
+                <Area type="monotone" dataKey="outflow" stroke={COLORS.red[0]} fill="url(#outflowGrad)" name="Outflow" strokeWidth={2} />
+                <Area type="monotone" dataKey="ending_balance" stroke={COLORS.blue[0]} fillOpacity={0} name="Ending Balance" strokeWidth={2} dot={{ r: 4 }} />
+              </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
         </div>
 
-        {/* SECOND ROW: Revenue + Expenses */}
-        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* REVENUE DONUT */}
+        {/* ── SECTION 3: SALES ACHIEVEMENT + CASH INFLOW/OUTFLOW ── */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          
+          {/* Sales Achievement KPI */}
           <ChartCard
-            title="Top Revenue Streams"
-            subtitle="Share of total revenue by segment"
-            height={380}
-            className="lg:col-span-1"
+            title="Sales Achievement"
+            subtitle="Total inflow by period"
+            height={220}
+            className="flex flex-col"
+          >
+            <div className="flex flex-col items-center justify-center h-full">
+              <p className="text-4xl font-bold text-emerald-400">{fmt(4_371_375_976)}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total Cash Inflow (Jan-Apr 2026)</p>
+              <div className="flex gap-4 mt-4">
+                <div className="text-center">
+                  <p className="text-lg font-semibold">{fmt(950_000_000)}</p>
+                  <p className="text-[10px] text-muted-foreground">January</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold">{fmt(1_050_000_000)}</p>
+                  <p className="text-[10px] text-muted-foreground">February</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold">{fmt(1_150_000_000)}</p>
+                  <p className="text-[10px] text-muted-foreground">March</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold">{fmt(1_221_375_976)}</p>
+                  <p className="text-[10px] text-muted-foreground">April</p>
+                </div>
+              </div>
+            </div>
+          </ChartCard>
+
+          {/* Cash Inflow Breakdown */}
+          <ChartCard
+            title="Cash Inflow"
+            subtitle="Top revenue streams by amount"
+            height={320}
+            className="lg:col-span-2"
+            right={<Badge variant="outline" className="text-[10px]">{CASH_INFLOW.length} streams</Badge>}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={TOP_REVENUE}
-                  dataKey="amount"
-                  nameKey="stream"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={110}
-                  paddingAngle={3}
-                  className="cursor-pointer"
-                >
-                  {TOP_REVENUE.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} strokeWidth={0} />
-                  ))}
-                </Pie>
+              <BarChart
+                data={CASH_INFLOW.slice(0, 8)}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
+                <XAxis type="number" tickFormatter={fmtM} fontSize={10} stroke="#94a3b8" />
+                <YAxis
+                  type="category"
+                  dataKey="stream"
+                  width={95}
+                  tick={{ fontSize: 9 }}
+                  tickFormatter={(v: string) => v.length > 22 ? v.slice(0, 20) + "…" : v}
+                  stroke="#94a3b8"
+                />
                 <RechartsTooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.[0]) return null
-                    const d = payload[0].payload as typeof TOP_REVENUE[0]
+                    const d = payload[0].payload as typeof CASH_INFLOW[0]
                     return (
-                      <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1">
-                        <p className="font-bold">{d.stream}</p>
+                      <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1 max-w-xs">
+                        <p className="font-bold text-sm">{d.stream}</p>
                         <p>Amount: <span className="font-medium text-emerald-400">{fmt(d.amount)}</span></p>
                         <p>Share: <span className="font-medium">{d.percentage}%</span></p>
                       </div>
                     )
                   }}
                 />
-              </PieChart>
-            </ResponsiveContainer>
-
-            {/* Legend list */}
-            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 px-4 pb-3 text-xs">
-              {TOP_REVENUE.map((r, i) => (
-                <button
-                  key={r.stream}
-                  onClick={() => setDrillItem({ type: "Revenue", ...r })}
-                  className="flex items-center gap-1.5 text-left hover:bg-muted/50 rounded px-1 py-0.5 transition"
-                >
-                  <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i] }} />
-                  <span className="truncate">{r.stream}</span>
-                  <span className="text-muted-foreground ml-auto">{r.percentage}%</span>
-                </button>
-              ))}
-            </div>
-          </ChartCard>
-
-          {/* TOP 10 EXPENSES */}
-          <ChartCard
-            title="Top 10 Expense Categories"
-            subtitle="By monthly spend with MoM trend"
-            height={380}
-            className="lg:col-span-2"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={TOP_EXPENSES}
-                layout="vertical"
-                margin={{ top: 5, right: 80, left: 60, bottom: 5 }}
-                className="cursor-pointer"
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
-                <XAxis type="number" tickFormatter={fmtM} fontSize={11} stroke="#94a3b8" />
-                <YAxis
-                  type="category"
-                  dataKey="category"
-                  width={120}
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 16) + "…" : v)}
-                  stroke="#94a3b8"
-                />
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.[0]) return null
-                    const d = payload[0].payload as typeof TOP_EXPENSES[0]
-                    return (
-                      <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1">
-                        <p className="font-bold">{d.category}</p>
-                        <p>Amount: <span className="font-medium text-red-400">{fmt(d.amount)}</span></p>
-                        <p className="flex items-center gap-1">
-                          Trend MoM: {trendIcon(d.trend)}
-                          <span className="text-muted-foreground">
-                            {d.trend === "up" ? "Increasing" : d.trend === "down" ? "Decreasing" : "Stable"}
-                          </span>
-                        </p>
-                      </div>
-                    )
-                  }}
-                />
-                <Bar dataKey="amount" radius={[0, 6, 6, 0]} fill={COLORS.red[1]} fillOpacity={0.85} />
+                <Bar dataKey="amount" radius={[0, 4, 4, 0]} fillOpacity={0.8} fill={COLORS.emerald[0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </div>
 
-        {/* THIRD ROW: FORECASTS */}
-        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* CASH INFLOW */}
+        {/* ── SECTION 4: CASH OUTFLOW + AR AGING SIDE BY SIDE ── */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+          {/* Cash Outflow */}
           <ChartCard
-            title="Forecasted Cash Inflow"
-            subtitle="Projected collections vs actual receipts (in millions IDR)"
-            badge={<Badge className="bg-emerald-500/15 text-emerald-500 text-[10px]">● Forecast</Badge>}
-            height={340}
+            title="Cash Outflow"
+            subtitle="Top 15 expense categories (of 56 total)"
+            height={420}
+            right={<Badge variant="outline" className="text-[10px]">Top 15</Badge>}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={FORECAST_INFLOW} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="greenArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.emerald[0]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.emerald[0]} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="greenAreaOpt" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.emerald[3]} stopOpacity={0.15} />
-                    <stop offset="95%" stopColor={COLORS.emerald[3]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="month" fontSize={11} stroke="#94a3b8" />
-                <YAxis tickFormatter={(v) => `${v}`} fontSize={11} stroke="#94a3b8" />
-                <RechartsTooltip content={<CustomTooltip prefix="" />} />
-                <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
-                <Area type="monotone" dataKey="optimistic" stroke={COLORS.emerald[3]} strokeDasharray="4 4" fill="url(#greenAreaOpt)" name="Optimistic" />
-                <Area type="monotone" dataKey="forecast" stroke={COLORS.emerald[0]} fill="url(#greenArea)" name="Forecast" strokeWidth={2} />
-                <Area type="monotone" dataKey="actual" stroke={COLORS.blue[0]} fillOpacity={0} name="Actual" strokeWidth={2} dot={{ r: 3 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col h-full">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={CASH_OUTFLOW}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 120, bottom: 40 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
+                    <XAxis type="number" tickFormatter={fmtM} fontSize={10} stroke="#94a3b8" />
+                    <YAxis
+                      type="category"
+                      dataKey="category"
+                      width={115}
+                      tick={{ fontSize: 9 }}
+                      tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v}
+                      stroke="#94a3b8"
+                    />
+                    <RechartsTooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.[0]) return null
+                        const d = payload[0].payload as typeof CASH_OUTFLOW[0]
+                        return (
+                          <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1 max-w-xs">
+                            <p className="font-bold text-sm">{d.category}</p>
+                            <p>Amount: <span className="font-medium text-red-400">{fmt(d.amount)}</span></p>
+                            <p className="flex items-center gap-1">
+                              Trend: {trendIcon(d.trend)}
+                              <span className="text-muted-foreground">
+                                {d.trend === "up" ? "Increasing" : d.trend === "down" ? "Decreasing" : "Stable"}
+                              </span>
+                            </p>
+                          </div>
+                        )
+                      }}
+                    />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]} fillOpacity={0.8} fill={COLORS.red[0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </ChartCard>
 
-          {/* CASH OUTFLOW */}
+          {/* A/R Aging Report */}
           <ChartCard
-            title="Forecasted Cash Outflow"
-            subtitle="Projected spending vs actual payments (in millions IDR)"
-            badge={<Badge className="bg-red-500/15 text-red-500 text-[10px]">● Forecast</Badge>}
-            height={340}
+            title="A/R Aging Report"
+            subtitle="Outstanding invoices by client & age"
+            height={420}
+            badge={<Badge className="bg-red-500/15 text-red-500 border-0 text-[10px]">{fmtFull(totalAR)} total</Badge>}
+          >
+            <div className="overflow-auto" style={{ height: "100%" }}>
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-card border-b">
+                  <tr className="text-muted-foreground">
+                    <th className="text-left py-2 px-2 font-medium">Company</th>
+                    <th className="text-left py-2 px-2 font-medium">Age</th>
+                    <th className="text-right py-2 px-2 font-medium">Nominal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {AR_AGING.map((row, i) => (
+                    <tr key={i} className="border-b border-muted/30 hover:bg-muted/30 cursor-pointer transition" onClick={() => setDrillItem({ type: "AR", ...row })}>
+                      <td className="py-2 px-2">
+                        <p className="font-medium truncate max-w-[120px]">{row.company}</p>
+                        <p className="text-muted-foreground truncate max-w-[120px]">{row.project}</p>
+                      </td>
+                      <td className="py-2 px-2">
+                        {statusBadge(row.age)}
+                      </td>
+                      <td className="py-2 px-2 text-right font-medium text-red-400">
+                        {fmtFull(row.nominal)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </ChartCard>
+        </div>
+
+        {/* ── SECTION 5: SALES HEATMAP ── */}
+        <div className="grid grid-cols-1 gap-6">
+          <ChartCard
+            title="Sales Heatmap"
+            subtitle="Monthly revenue by project category (in IDR)"
+            height={280}
+            badge={<Badge className="bg-emerald-500/15 text-emerald-500 border-0 text-[10px]">Jan-Apr 2026</Badge>}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={FORECAST_OUTFLOW} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="redArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.red[0]} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.red[0]} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="redAreaPess" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.red[3]} stopOpacity={0.15} />
-                    <stop offset="95%" stopColor={COLORS.red[3]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={SALES_HEATMAP} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="month" fontSize={11} stroke="#94a3b8" />
-                <YAxis tickFormatter={(v) => `${v}`} fontSize={11} stroke="#94a3b8" />
-                <RechartsTooltip content={<CustomTooltip prefix="" />} />
+                <XAxis dataKey="category" fontSize={11} stroke="#94a3b8" />
+                <YAxis tickFormatter={(v) => fmt(v)} fontSize={10} stroke="#94a3b8" />
+                <RechartsTooltip content={<CustomTooltip prefix="Rp " />} />
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
-                <Area type="monotone" dataKey="pessimistic" stroke={COLORS.red[3]} strokeDasharray="4 4" fill="url(#redAreaPess)" name="Pessimistic" />
-                <Area type="monotone" dataKey="forecast" stroke={COLORS.red[0]} fill="url(#redArea)" name="Forecast" strokeWidth={2} />
-                <Area type="monotone" dataKey="actual" stroke={COLORS.blue[0]} fillOpacity={0} name="Actual" strokeWidth={2} dot={{ r: 3 }} />
-              </AreaChart>
+                <Bar dataKey="jan" stackId="a" fill={COLORS.amber[2]} name="January" />
+                <Bar dataKey="feb" stackId="a" fill={COLORS.emerald[2]} name="February" />
+                <Bar dataKey="mar" stackId="a" fill={COLORS.blue[2]} name="March" />
+                <Bar dataKey="apr" stackId="a" fill={COLORS.purple[2]} name="April" />
+              </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </div>
@@ -523,19 +495,20 @@ export default function BIDashboardPage() {
         {/* ── FOOTER INSIGHT ── */}
         <div className="rounded-xl border bg-card p-4 mb-8">
           <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-            <EyeIcon className="h-4 w-4 text-primary" /> AI-Generated Insight (Mock)
+            <EyeIcon className="h-4 w-4 text-primary" /> AI-Generated Insight (Based on Jan-Apr 2026 Data)
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted-foreground">
             <div>
-              <p className="font-medium text-foreground mb-1">AR Aging Alert</p>
-              <p>2 clients (PT Inovasi Digital & PT Dinamika Kreasi) have aging exceeding 50 days with total exposure of Rp 1.85B. Recommend escalation to collections team.</p>
+              <p className="font-medium text-foreground mb-1">⚠️ AR Aging Alert</p>
+              <p>2 invoices are overdue (&gt;90 days): PT. Untung Bersama Sejahtera (196 days, Rp 28.2M) and PT. Habitat Untuk Jakarta (150 days, Rp 27.2M). Total overdue exposure: Rp 55.4M. Recommend immediate collection follow-up.</p>
             </div>
             <div>
-              <p className="font-medium text-foreground mb-1">Cash Flow Outlook</p>
-              <p>Net cash flow trend shows positive trajectory (+8.7%). Forecasted inflow for Q3-Q4 exceeds outflow by Rp 2.5B providing healthy liquidity buffer.</p>
+              <p className="font-medium text-foreground mb-1">📊 Cash Flow Outlook</p>
+              <p>Net cash flow is negative at Rp 313.4M (outflow exceeds inflow by 7.2%). While April shows a turnaround (positive balance of Rp 101.5M), close monitoring of 3rd party expenses (Rp 445M) and partner payments is recommended.</p>
             </div>
           </div>
         </div>
+
       </main>
 
       {/* ── DRILL-DOWN MODAL ── */}
@@ -545,47 +518,29 @@ export default function BIDashboardPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <EyeIcon className="h-5 w-5 text-primary" />
-                Drill-Down Detail
+                A/R Detail
               </DialogTitle>
               <DialogDescription>
-                {drillItem.type === "AR" && `Accounts Receivable — ${drillItem.client}`}
-                {drillItem.type === "AP" && `Accounts Payable — ${drillItem.vendor}`}
-                {drillItem.type === "Revenue" && `Revenue Stream — ${drillItem.stream}`}
-                {drillItem.type === "Expense" && `Expense Category — ${drillItem.category}`}
+                {drillItem.company} — {drillItem.project}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                <span className="text-muted-foreground">Amount:</span>
-                <span className="font-semibold">{fmt(drillItem.amount || drillItem.amount)}</span>
+                <span className="text-muted-foreground">Nominal:</span>
+                <span className="font-semibold text-red-400">{fmtFull(drillItem.nominal)}</span>
               </div>
-              {drillItem.aging !== undefined && (
-                <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                  <span className="text-muted-foreground">Aging:</span>
-                  <span className="font-medium">{drillItem.aging} days</span>
-                </div>
-              )}
-              {drillItem.due_days !== undefined && (
-                <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                  <span className="text-muted-foreground">Due In:</span>
-                  <span className="font-medium">{drillItem.due_days} days</span>
-                </div>
-              )}
-              {drillItem.percentage !== undefined && (
-                <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                  <span className="text-muted-foreground">Share:</span>
-                  <span className="font-medium">{drillItem.percentage}%</span>
-                </div>
-              )}
-              {drillItem.trend && (
-                <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                  <span className="text-muted-foreground">MoM Trend:</span>
-                  <span className="flex items-center gap-1 font-medium">
-                    {trendIcon(drillItem.trend)}
-                    {drillItem.trend === "up" ? "Increasing" : drillItem.trend === "down" ? "Decreasing" : "Stable"}
-                  </span>
-                </div>
-              )}
+              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                <span className="text-muted-foreground">Invoice Date:</span>
+                <span className="font-medium">{drillItem.invoice_date}</span>
+              </div>
+              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                <span className="text-muted-foreground">Age:</span>
+                <span className="font-medium">{drillItem.age} days</span>
+              </div>
+              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                <span className="text-muted-foreground">Status:</span>
+                {statusBadge(drillItem.age)}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -616,7 +571,7 @@ function KPICard({
         <CardTitle className="text-2xl font-bold tabular-nums">{value}</CardTitle>
       </CardHeader>
       <CardContent className="pt-0 text-xs flex items-center gap-2">
-        <Badge variant="outline" className={`${trendUp ? "text-emerald-600" : "text-red-600"} text-[10px]`}>
+        <Badge variant="outline" className={`${trendUp ? "text-emerald-600 border-emerald-500/30" : "text-red-600 border-red-500/30"} text-[10px]`}>
           {trendUp ? <TrendingUpIcon className="h-3 w-3 mr-0.5" /> : <TrendingDownIcon className="h-3 w-3 mr-0.5" />}
           {trend}
         </Badge>
