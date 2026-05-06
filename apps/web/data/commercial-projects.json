@@ -1,0 +1,585 @@
+[
+  {
+    "projectName": "Consultant Project 01 — Client A Audit",
+    "pic": "Gita",
+    "status": "Lost",
+    "type": "Consultant",
+    "quotationPublish": 53460731,
+    "actualDeal": 0,
+    "manpower": [
+      {
+        "group": "FM",
+        "role": "Consultant OT",
+        "nama": "Dewi",
+        "qty": 1,
+        "months": 2
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 2,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 25,
+      "opexPct": 75
+    },
+    "summary": {
+      "totalHPP": 25584156,
+      "totalPublish": 46563164,
+      "totalSpecial": 42725540,
+      "salesProject": 39113058,
+      "profitPublish": 20979008,
+      "marginPublish": 45.1,
+      "profitActual": -25584156,
+      "marginActual": 0.0,
+      "variance": 53460731,
+      "variancePct": 100.0,
+      "maxMonths": 2,
+      "cogsAmount": 9778264,
+      "opexAmount": 29334793,
+      "statusMargin": "UNDER BUDGET",
+      "opexHPP": 16118018,
+      "opexActualVal": 0,
+      "deductionDetails": {
+        "pajakVal": 5121948,
+        "founderVal": 1396895,
+        "mgmtVal": 931263,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-03-15T00:00:00Z"
+  },
+  {
+    "projectName": "Consultant Project 02 — BUMN Revamp",
+    "pic": "Hana",
+    "status": "On Hold",
+    "type": "Consultant",
+    "quotationPublish": 191235592,
+    "actualDeal": 174100403,
+    "manpower": [
+      {
+        "group": "BN",
+        "role": "Consultant IT & Data",
+        "nama": "Dewi",
+        "qty": 1,
+        "months": 9
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 2,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 25,
+      "opexPct": 75
+    },
+    "summary": {
+      "totalHPP": 101055762,
+      "totalPublish": 183921489,
+      "totalSpecial": 168763122,
+      "salesProject": 154494051,
+      "profitPublish": 82865727,
+      "marginPublish": 45.1,
+      "profitActual": 73044641,
+      "marginActual": 42.0,
+      "variance": 17135189,
+      "variancePct": 9.0,
+      "maxMonths": 9,
+      "cogsAmount": 38623513,
+      "opexAmount": 115870538,
+      "statusMargin": "IDEAL",
+      "opexHPP": 63665130,
+      "opexActualVal": 109683254,
+      "deductionDetails": {
+        "pajakVal": 20231364,
+        "founderVal": 5517645,
+        "mgmtVal": 3678430,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-03-22T00:00:00Z"
+  },
+  {
+    "projectName": "WMS Project 03 — Client A Migration",
+    "pic": "Indra",
+    "status": "Negotiation",
+    "type": "WMS",
+    "quotationPublish": 120773830,
+    "actualDeal": 106415973,
+    "manpower": [
+      {
+        "group": "JUN-WMS",
+        "role": "Faza",
+        "nama": "Gita",
+        "qty": 2,
+        "months": 3
+      },
+      {
+        "group": "SENIOR-WMS",
+        "role": "Agus",
+        "nama": "Citra",
+        "qty": 1,
+        "months": 3
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 0,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 20,
+      "opexPct": 80
+    },
+    "summary": {
+      "totalHPP": 65100000,
+      "totalPublish": 118482000,
+      "totalSpecial": 108717000,
+      "salesProject": 101894520,
+      "profitPublish": 53382000,
+      "marginPublish": 45.1,
+      "profitActual": 41315973,
+      "marginActual": 38.8,
+      "variance": 14357857,
+      "variancePct": 11.9,
+      "maxMonths": 3,
+      "cogsAmount": 20378904,
+      "opexAmount": 81515616,
+      "statusMargin": "IDEAL",
+      "opexHPP": 44788800,
+      "opexActualVal": 73214189,
+      "deductionDetails": {
+        "pajakVal": 13033020,
+        "founderVal": 3554460,
+        "mgmtVal": 0,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-03-29T00:00:00Z"
+  },
+  {
+    "projectName": "Consultant Project 04 — Client B Build",
+    "pic": "Gita",
+    "status": "Negotiation",
+    "type": "Consultant",
+    "quotationPublish": 698921982,
+    "actualDeal": 695823281,
+    "manpower": [
+      {
+        "group": "BN",
+        "role": "Consultant IT & Data",
+        "nama": "Eka",
+        "qty": 3,
+        "months": 9
+      },
+      {
+        "group": "Support",
+        "role": "Technical Writer",
+        "nama": "Fajar",
+        "qty": 3,
+        "months": 2
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 2,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 15,
+      "opexPct": 85
+    },
+    "summary": {
+      "totalHPP": 339167286,
+      "totalPublish": 617284467,
+      "totalSpecial": 566409366,
+      "salesProject": 518518952,
+      "profitPublish": 278117181,
+      "marginPublish": 45.1,
+      "profitActual": 356655995,
+      "marginActual": 51.3,
+      "variance": 3098701,
+      "variancePct": 0.4,
+      "maxMonths": 9,
+      "cogsAmount": 77777843,
+      "opexAmount": 440741109,
+      "statusMargin": "IDEAL",
+      "opexHPP": 242165442,
+      "opexActualVal": 496817823,
+      "deductionDetails": {
+        "pajakVal": 67901291,
+        "founderVal": 18518534,
+        "mgmtVal": 12345689,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-04-05T00:00:00Z"
+  },
+  {
+    "projectName": "Project Project 05 — Client B Revamp",
+    "pic": "Hana",
+    "status": "Lost",
+    "type": "Project",
+    "quotationPublish": 797817830,
+    "actualDeal": 0,
+    "manpower": [
+      {
+        "group": "SENIOR-PROJ",
+        "role": "Frontend",
+        "nama": "Fajar",
+        "qty": 2,
+        "months": 2
+      },
+      {
+        "group": "MED-PROJ",
+        "role": "PM / SA",
+        "nama": "Eka",
+        "qty": 3,
+        "months": 12
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 2,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 25,
+      "opexPct": 75
+    },
+    "summary": {
+      "totalHPP": 388964632,
+      "totalPublish": 707915620,
+      "totalSpecial": 649570948,
+      "salesProject": 594649121,
+      "profitPublish": 318950988,
+      "marginPublish": 45.1,
+      "profitActual": -388964632,
+      "marginActual": 0.0,
+      "variance": 797817830,
+      "variancePct": 100.0,
+      "maxMonths": 12,
+      "cogsAmount": 148662280,
+      "opexAmount": 445986841,
+      "statusMargin": "UNDER BUDGET",
+      "opexHPP": 245047718,
+      "opexActualVal": 0,
+      "deductionDetails": {
+        "pajakVal": 77870718,
+        "founderVal": 21237469,
+        "mgmtVal": 14158312,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-04-12T00:00:00Z"
+  },
+  {
+    "projectName": "Web Project 06 — Gov Revamp",
+    "pic": "Hana",
+    "status": "Lost",
+    "type": "Web",
+    "quotationPublish": 104820981,
+    "actualDeal": 0,
+    "manpower": [
+      {
+        "group": "MED-WEB",
+        "role": "Holis",
+        "nama": "Fajar",
+        "qty": 1,
+        "months": 2
+      },
+      {
+        "group": "SENIOR-WEB",
+        "role": "Randy",
+        "nama": "Andi",
+        "qty": 2,
+        "months": 6
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 1,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 15,
+      "opexPct": 85
+    },
+    "summary": {
+      "totalHPP": 48700000,
+      "totalPublish": 88634000,
+      "totalSpecial": 81329000,
+      "salesProject": 75338900,
+      "profitPublish": 39934000,
+      "marginPublish": 45.1,
+      "profitActual": -48700000,
+      "marginActual": 0.0,
+      "variance": 104820981,
+      "variancePct": 100.0,
+      "maxMonths": 6,
+      "cogsAmount": 11300835,
+      "opexAmount": 64038065,
+      "statusMargin": "UNDER BUDGET",
+      "opexHPP": 35185750,
+      "opexActualVal": 0,
+      "deductionDetails": {
+        "pajakVal": 9749740,
+        "founderVal": 2659020,
+        "mgmtVal": 886340,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-04-19T00:00:00Z"
+  },
+  {
+    "projectName": "Web Project 07 — Client A Build",
+    "pic": "Budi",
+    "status": "Submitted",
+    "type": "Web",
+    "quotationPublish": 451931853,
+    "actualDeal": 385433646,
+    "manpower": [
+      {
+        "group": "SENIOR-WEB",
+        "role": "Ramzi",
+        "nama": "Citra",
+        "qty": 1,
+        "months": 12
+      },
+      {
+        "group": "FOUNDER-WEB",
+        "role": "Rendy",
+        "nama": "Indra",
+        "qty": 3,
+        "months": 3
+      },
+      {
+        "group": "MED-WEB",
+        "role": "Holis",
+        "nama": "Joko",
+        "qty": 2,
+        "months": 9
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 1,
+      "seFee": 1
+    },
+    "topp": {
+      "cogsPct": 15,
+      "opexPct": 85
+    },
+    "summary": {
+      "totalHPP": 207020772,
+      "totalPublish": 376777809,
+      "totalSpecial": 345724686,
+      "salesProject": 316493360,
+      "profitPublish": 169757037,
+      "marginPublish": 45.1,
+      "profitActual": 178412874,
+      "marginActual": 46.3,
+      "variance": 66498207,
+      "variancePct": 14.7,
+      "maxMonths": 12,
+      "cogsAmount": 47474004,
+      "opexAmount": 269019356,
+      "statusMargin": "IDEAL",
+      "opexHPP": 147812831,
+      "opexActualVal": 275199623,
+      "deductionDetails": {
+        "pajakVal": 41445559,
+        "founderVal": 11303334,
+        "mgmtVal": 3767778,
+        "seVal": 3767778
+      }
+    },
+    "createdAt": "2025-04-26T00:00:00Z"
+  },
+  {
+    "projectName": "Networking Project 08 — Gov Build",
+    "pic": "Eka",
+    "status": "Negotiation",
+    "type": "Networking",
+    "quotationPublish": 431602131,
+    "actualDeal": 401640147,
+    "manpower": [
+      {
+        "group": "MED-NET",
+        "role": "Jefry",
+        "nama": "Budi",
+        "qty": 2,
+        "months": 6
+      },
+      {
+        "group": "SENIOR-NET",
+        "role": "Yana",
+        "nama": "Joko",
+        "qty": 2,
+        "months": 9
+      },
+      {
+        "group": "SENIOR-NET",
+        "role": "Chris",
+        "nama": "Eka",
+        "qty": 3,
+        "months": 1
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 2,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 25,
+      "opexPct": 75
+    },
+    "summary": {
+      "totalHPP": 201489000,
+      "totalPublish": 366709980,
+      "totalSpecial": 336486630,
+      "salesProject": 308036383,
+      "profitPublish": 165220980,
+      "marginPublish": 45.1,
+      "profitActual": 200151147,
+      "marginActual": 49.8,
+      "variance": 29961984,
+      "variancePct": 6.9,
+      "maxMonths": 9,
+      "cogsAmount": 77009096,
+      "opexAmount": 231027287,
+      "statusMargin": "IDEAL",
+      "opexHPP": 126938070,
+      "opexActualVal": 253033293,
+      "deductionDetails": {
+        "pajakVal": 40338098,
+        "founderVal": 11001299,
+        "mgmtVal": 7334200,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-05-03T00:00:00Z"
+  },
+  {
+    "projectName": "Web Project 09 — Retail Audit",
+    "pic": "Dewi",
+    "status": "On Hold",
+    "type": "Web",
+    "quotationPublish": 348655838,
+    "actualDeal": 275275442,
+    "manpower": [
+      {
+        "group": "SENIOR-WEB",
+        "role": "Ramzi",
+        "nama": "Andi",
+        "qty": 3,
+        "months": 12
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 1,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 25,
+      "opexPct": 75
+    },
+    "summary": {
+      "totalHPP": 162000000,
+      "totalPublish": 294840000,
+      "totalSpecial": 270540000,
+      "salesProject": 250614000,
+      "profitPublish": 132840000,
+      "marginPublish": 45.1,
+      "profitActual": 113275442,
+      "marginActual": 41.1,
+      "variance": 73380396,
+      "variancePct": 21.0,
+      "maxMonths": 12,
+      "cogsAmount": 62653500,
+      "opexAmount": 187960500,
+      "statusMargin": "IDEAL",
+      "opexHPP": 103275000,
+      "opexActualVal": 175488094,
+      "deductionDetails": {
+        "pajakVal": 32432400,
+        "founderVal": 8845200,
+        "mgmtVal": 2948400,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-05-10T00:00:00Z"
+  },
+  {
+    "projectName": "Networking Project 10 — Client A Build",
+    "pic": "Hana",
+    "status": "Lost",
+    "type": "Networking",
+    "quotationPublish": 134662938,
+    "actualDeal": 0,
+    "manpower": [
+      {
+        "group": "MED-NET",
+        "role": "Jefry",
+        "nama": "Joko",
+        "qty": 2,
+        "months": 6
+      },
+      {
+        "group": "JUN-NET",
+        "role": "Wildan",
+        "nama": "Andi",
+        "qty": 1,
+        "months": 3
+      }
+    ],
+    "deductions": {
+      "pajak": 11,
+      "founderFee": 3,
+      "managementFee": 1,
+      "seFee": 0
+    },
+    "topp": {
+      "cogsPct": 15,
+      "opexPct": 85
+    },
+    "summary": {
+      "totalHPP": 70590000,
+      "totalPublish": 128473800,
+      "totalSpecial": 117885300,
+      "salesProject": 109202730,
+      "profitPublish": 57883800,
+      "marginPublish": 45.1,
+      "profitActual": -70590000,
+      "marginActual": 0.0,
+      "variance": 134662938,
+      "variancePct": 100.0,
+      "maxMonths": 6,
+      "cogsAmount": 16380410,
+      "opexAmount": 92822320,
+      "statusMargin": "UNDER BUDGET",
+      "opexHPP": 51001275,
+      "opexActualVal": 0,
+      "deductionDetails": {
+        "pajakVal": 14132118,
+        "founderVal": 3854214,
+        "mgmtVal": 1284738,
+        "seVal": 0
+      }
+    },
+    "createdAt": "2025-05-17T00:00:00Z"
+  }
+]

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commercial Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --bg:#0b0f19; --card:#131827; --border:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --blue:#60a5fa; --green:#34d399; --red:#f87171; --yellow:#fbbf24; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .card-header { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .card-title { font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; }
+    input, select { background: #1e293b; border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 13px; width: 100%; box-sizing: border-box; }
+    input:focus, select:focus { outline: none; border-color: var(--blue); }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .btn { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .btn:hover { background: #3b82f6; }
+    .row-grid { display: grid; grid-template-columns: 28px 1fr 1fr 1fr 60px 90px 100px 32px; gap: 8px; align-items: center; padding: 6px; background: #1a2332; border-radius: 6px; margin-bottom: 6px; }
+    .row-header { background: transparent; font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+    .summary-box { background: #1a2332; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+    .summary-label { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .summary-value { font-size: 24px; font-weight: 700; }
+    .text-right { text-align: right; }
+    .text-blue { color: var(--blue); }
+    .text-green { color: var(--green); }
+    .text-red { color: var(--red); }
+    .text-yellow { color: var(--yellow); }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-Draft { background: #374151; }
+    .status-Submitted { background: #1e40af; }
+    .status-Negotiation { background: #a16207; }
+    .status-Won { background: #065f46; }
+    .status-Lost { background: #7f1d1d; }
+    .status-OnHold { background: #7c2d12; }
+    .deduction-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; color: var(--muted); }
+    .deduction-value { color: var(--red); font-variant-numeric: tabular-nums; }
+    .layout { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 20px; }
+    @media (max-width: 1200px) { .layout { grid-template-columns: 1fr; } }
+    .type-btn { border: 1px solid var(--border); padding: 10px; text-align: center; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--muted); }
+    .type-btn.active { border-color: var(--blue); background: #1e3a5f; color: var(--text); }
+    .remove-btn { background: transparent; border: none; color: var(--red); font-size: 16px; cursor: pointer; }
+    .small-input { font-size: 12px; padding: 6px; }
+    .notes { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<h1 style="font-size: 22px; margin: 0 0 16px 0;">Commercial Calculator</h1>
+<p style="font-size: 13px; color: var(--muted); margin: -8px 0 20px 0;">Rate Card & Pricing Simulator — WIT Indonesia</p>
+
+<!-- Project Info -->
+<div class="card">
+  <div class="card-header">
+    <div style="flex:1;">
+      <div class="card-title">Project Info</div>
+      <input type="text" id="projectName" placeholder="Nama Project" style="margin-top:6px;">
+    </div>
+    <div style="flex:1;">
+      <div class="card-title">PIC</div>
+      <input type="text" id="projectPIC" placeholder="Nama PIC" style="margin-top:6px;">
+    </div>
+    <div style="flex:1;">
+      <div class="card-title">Status</div>
+      <select id="projectStatus" style="margin-top:6px;" onchange="updateStatusBadge()">
+        <option value="Draft">Draft</option>
+        <option value="Submitted">Submitted</option>
+        <option value="Negotiation">Negotiation</option>
+        <option value="Won">Won</option>
+        <option value="Lost">Lost</option>
+        <option value="On Hold">On Hold</option>
+      </select>
+    </div>
+    <div>
+      <div class="card-title" style="opacity:0;">.</div>
+      <div id="statusBadge" class="badge status-Draft" style="margin-top:6px;">Draft</div>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- LEFT COLUMN -->
+  <div>
+
+    <!-- Project Type -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px;">Tipe Project</div>
+      <div class="grid-5" id="typeButtons">
+        <div class="type-btn active" onclick="selectType('Consultant')">Consultant</div>
+        <div class="type-btn" onclick="selectType('Networking')">Networking</div>
+        <div class="type-btn" onclick="selectType('Project')">Project</div>
+        <div class="type-btn" onclick="selectType('Web')">Web</div>
+        <div class="type-btn" onclick="selectType('WMS')">WMS</div>
+      </div>
+    </div>
+
+    <!-- Manpower -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div class="card-title">Manpower Calculator</div>
+        <button class="btn" onclick="addRow()">+ Tambah Manpower</button>
+      </div>
+      <div class="row-grid row-header">
+        <div style="text-align:center;">No</div>
+        <div>Group</div>
+        <div>Role</div>
+        <div>Nama <span style="color:#6b7280;">(opsional)</span></div>
+        <div style="text-align:center;">Qty</div>
+        <div style="text-align:right;">Months</div>
+        <div style="text-align:right;">Rate</div>
+        <div></div>
+      </div>
+      <div id="rows"></div>
+      <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:grid; grid-template-columns: 28px 1fr 1fr 1fr 60px 90px 100px 32px; gap:8px; font-weight:700; font-size:14px;">
+        <div></div><div></div><div></div><div></div><div></div>
+        <div style="text-align:right; color:var(--red);">Total HPP:</div>
+        <div style="text-align:right; color:var(--red);" id="totHPP">IDR 0</div>
+        <div></div>
+      </div>
+      <div style="display:grid; grid-template-columns: 28px 1fr 1fr 1fr 60px 90px 100px 32px; gap:8px; font-weight:700; font-size:14px; margin-top:6px;">
+        <div></div><div></div><div></div><div></div><div></div>
+        <div style="text-align:right; color:var(--blue);">Total Publish:</div>
+        <div style="text-align:right; color:var(--blue);" id="totPublish">IDR 0</div>
+        <div></div>
+      </div>
+      <div style="display:grid; grid-template-columns: 28px 1fr 1fr 1fr 60px 90px 100px 32px; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-weight:700; font-size:14px;">
+        <div></div><div></div><div></div><div></div><div></div>
+        <div style="text-align:right; color:var(--text);">Timeline:</div>
+        <div style="text-align:right; color:var(--text);" id="timelineText">0 Month(s)</div>
+        <div></div>
+      </div>
+    </div>
+
+    <!-- Deductions -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">Cost Deductions (% dari Publish Rate)</div>
+      <div class="grid-4">
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Pajak (%)</div>
+          <input type="number" id="pajak" value="11" min="0" max="100" step="0.1" oninput="calculate()">
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Founder Fee (%)</div>
+          <input type="number" id="founderFee" value="3" min="0" max="100" step="0.1" oninput="calculate()">
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Management Fee (%)</div>
+          <input type="number" id="managementFee" value="0" min="0" max="100" step="0.1" oninput="calculate()">
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">SE / Marketing Fee (%)</div>
+          <input type="number" id="seFee" value="0" min="0" max="100" step="0.1" oninput="calculate()">
+        </div>
+      </div>
+    </div>
+
+    <!-- TOPP -->
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">Alokasi TOPP (% dari Sales Project)</div>
+      <div class="grid-4">
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">COGS TOPP (%)</div>
+          <input type="number" id="cogsTopp" value="20" min="0" max="100" step="0.1" oninput="syncCogs(); calculate()">
+        </div>
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">OPEX Allocation (%)</div>
+          <input type="number" id="opexAlloc" value="80" min="0" max="100" step="0.1" oninput="syncOpex(); calculate()">
+        </div>
+      </div>
+      <div class="notes">💡 COGS TOPP + OPEX Allocation harus = 100%</div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div>
+
+    <!-- Quotation Publish -->
+    <div class="card" style="border:1px solid #2563eb;">
+      <div class="card-title" style="margin-bottom:8px;">Quotation Publish <span style="color:var(--blue);">(Rencana Awal)</span></div>
+      <input type="text" inputmode="decimal" id="quotationPublish" class="text-lg" value="" placeholder="IDR 0" data-raw="" oninput="currencyInput(this)" onfocus="currencyFocus(this)" onblur="currencyBlur(this); calculateActual();">
+      <div style="display:flex; justify-content:space-between; margin-top:8px;">
+        <span style="font-size:12px; color:var(--muted);">vs Publish Rate:</span>
+        <span id="quotVsPublish" class="text-right" style="font-size:13px; font-weight:600;">0%</span>
+      </div>
+    </div>
+
+    <!-- Actual Deal -->
+    <div class="card" style="border:1px solid var(--green);">
+      <div class="card-title" style="margin-bottom:8px;">Actual Deal <span style="color:var(--green);">(Realisasi)</span></div>
+      <input type="text" inputmode="decimal" id="actualDeal" class="text-lg" value="" placeholder="IDR 0" data-raw="" oninput="currencyInput(this)" onfocus="currencyFocus(this)" onblur="currencyBlur(this); calculateActual();">
+      <div style="margin-top:8px;">
+        <div class="deduction-item">
+          <span>Discount dari Publish:</span>
+          <span id="discPublish" style="color:var(--text); font-weight:700;">0%</span>
+        </div>
+        <div class="deduction-item">
+          <span>Discount dari Special Rate:</span>
+          <span id="discSpecial" style="color:var(--yellow); font-weight:700;">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Publish Button -->
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <button onclick="publishProject()" style="flex:1; background: linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:8px; padding:14px 20px; font-size:16px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+        ✓ Publish Project
+      </button>
+      <button onclick="resetForm()" style="background:transparent; color:var(--muted); border:1px solid var(--border); border-radius:8px; padding:14px 20px; font-size:14px; font-weight:500; cursor:pointer;">
+        Reset
+      </button>
+    </div>
+    <div id="publishMsg" style="font-size:13px; font-weight:600; margin-bottom:8px;"></div>
+
+    <!-- Summary Cards -->
+    <div class="summary-box">
+      <div class="summary-label">Publish Rate (Rekomendasi)</div>
+      <div class="summary-value text-blue" id="sumPublish">IDR 0</div>
+    </div>
+
+    <div class="summary-box">
+      <div class="summary-label">HPP Total (Batas Bawah)</div>
+      <div class="summary-value text-red" id="sumHPP">IDR 0</div>
+    </div>
+
+    <div class="summary-box">
+      <div class="summary-label">Special Rate Total (Batas Atas)</div>
+      <div class="summary-value text-yellow" id="sumSpecial">IDR 0</div>
+    </div>
+
+    <div class="summary-box">
+      <div class="summary-label">Sales Project (setelah deduction)</div>
+      <div class="summary-value text-blue" id="sumSales">IDR 0</div>
+    </div>
+
+    <!-- Deductions Breakdown -->
+    <div class="summary-box" style="background:var(--bg);">
+      <div class="deduction-item"><span style="color:var(--red);">− Pajak (<span id="dispPajak">11</span>%)</span><span id="valPajak" style="color:var(--red);">IDR 0</span></div>
+      <div class="deduction-item"><span>− Founder Fee (<span id="dispFounder">3</span>%)</span><span id="valFounder">IDR 0</span></div>
+      <div class="deduction-item"><span>− Mgmt Fee (<span id="dispMgmt">0</span>%)</span><span id="valMgmt">IDR 0</span></div>
+      <div class="deduction-item"><span>− SE/Marketing (<span id="dispSE">0</span>%)</span><span id="valSE">IDR 0</span></div>
+    </div>
+
+    <!-- TOPP Allocation -->
+    <div class="summary-box">
+      <div class="summary-label">Alokasi TOPP</div>
+      <div style="display:flex; justify-content:space-between; margin-top:8px;">
+        <span style="font-size:12px; color:#67e8f9;">COGS TOPP (<span id="dispCOGS">20</span>%)</span>
+        <span id="valCOGS" style="font-weight:700; color:#67e8f9;">IDR 0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:4px;">
+        <span style="font-size:12px; color:#c084fc;">OPEX Allocation (<span id="dispOPEX">80</span>%)</span>
+        <span id="valOPEX" style="font-weight:700; color:#c084fc;">IDR 0</span>
+      </div>
+    </div>
+
+    <!-- Gross Profit dari Publish Rate -->
+    <div class="summary-box" style="border:1px solid #065f46;">
+      <div class="summary-label">Gross Profit (Publish Rate)</div>
+      <div style="display:flex; align-items:end; gap:8px; margin-top:4px;">
+        <div class="summary-value text-green" id="profitPublishDisplay" style="font-size:22px;">IDR 0</div>
+        <div style="font-size:13px; color:#34d399; font-weight:600; padding-bottom:4px;" id="marginPublish">0%</div>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">Profit = Publish Rate - HPP</div>
+    </div>
+
+    <!-- Gross Profit dari Actual Deal -->
+    <div class="summary-box" style="border:1px solid #78350f;">
+      <div class="summary-label">Gross Profit (Actual Deal)</div>
+      <div style="display:flex; align-items:end; gap:8px; margin-top:4px;">
+        <div class="summary-value text-yellow" id="profitActualDisplay" style="font-size:22px;">IDR 0</div>
+        <div style="font-size:13px; color:#fbbf24; font-weight:600; padding-bottom:4px;" id="marginActual">0%</div>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">Profit = Actual Deal - HPP</div>
+    </div>
+
+    <!-- Variance -->
+    <div class="summary-box" style="border:1px solid #581c87;">
+      <div class="summary-label">Variance (Quotation vs Actual)</div>
+      <div style="display:flex; align-items:end; gap:8px; margin-top:4px;">
+        <div class="summary-value" id="varianceVal" style="color:#c084fc;">IDR 0</div>
+        <div style="font-size:12px; color:#c084fc; padding-bottom:6px;" id="variancePct">(0%)</div>
+      </div>
+    </div>
+
+    <!-- STATUS Margin Kotor -->
+    <div class="summary-box" id="statusMarginBox" style="border:1px solid #065f46;">
+      <div class="summary-label">STATUS Margin Kotor (OPEX)</div>
+      <div style="margin-top:4px;">
+        <div class="badge status-Draft" id="statusMargin" style="font-size:14px; padding:6px 14px;">IDEAL</div>
+      </div>
+      <div style="margin-top:8px; display:flex; justify-content:space-between; font-size:12px; color:var(--muted);">
+        <span>OPEX (HPP):</span>
+        <span id="opexHPP" style="font-weight:600;">IDR 0</span>
+      </div>
+      <div style="margin-top:4px; display:flex; justify-content:space-between; font-size:12px; color:var(--muted);">
+        <span>OPEX (Actual):</span>
+        <span id="opexActualVal" style="font-weight:600;">IDR 0</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// === RATE CARD DATA ===
+const rateCard = [
+  {type:"Consultant",group:"AA",role:"Consultant Finance",hpp:16775016,specialRate:28014277,publishRate:30530529},
+  {type:"Consultant",group:"BN",role:"Consultant IT & Data",hpp:11228418,specialRate:18751458,publishRate:20435721},
+  {type:"Consultant",group:"CH",role:"Consultant Networking",hpp:8163000,specialRate:13632210,publishRate:14856660},
+  {type:"Consultant",group:"DM",role:"Creative",hpp:16000000,specialRate:26720000,publishRate:29120000},
+  {type:"Consultant",group:"FM",role:"Consultant OT",hpp:12792078,specialRate:21362770,publishRate:23281582},
+  {type:"Consultant",group:"IL",role:"Consultant Digital Transformation",hpp:21784875,specialRate:36380741,publishRate:39648472},
+  {type:"Consultant",group:"IP",role:"Consultant Digital Transformation",hpp:30482408,specialRate:50905621,publishRate:55477983},
+  {type:"Consultant",group:"PR",role:"Consultant Digital Transformation",hpp:15597398,specialRate:26047655,publishRate:28387264},
+  {type:"Consultant",group:"Support",role:"Technical Writer",hpp:6000000,specialRate:10020000,publishRate:10920000},
+  {type:"Consultant",group:"Support",role:"Design",hpp:8000000,specialRate:13360000,publishRate:14560000},
+  {type:"Networking",group:"JUN-NET",role:"Wildan",hpp:3530000,specialRate:5895100,publishRate:6424600},
+  {type:"Networking",group:"MED-NET",role:"Jefry",hpp:5000000,specialRate:8350000,publishRate:9100000},
+  {type:"Networking",group:"SENIOR-NET",role:"Chris",hpp:8163000,specialRate:13632210,publishRate:14856660},
+  {type:"Networking",group:"SENIOR-NET",role:"Yana",hpp:6500000,specialRate:10855000,publishRate:11830000},
+  {type:"Networking",group:"SENIOR-NET",role:"Aji",hpp:7500000,specialRate:12525000,publishRate:13650000},
+  {type:"Project",group:"Founder-PROJ",role:"PM / BA Founder",hpp:16780305,specialRate:28023109,publishRate:30540155},
+  {type:"Project",group:"Founder-PROJ",role:"Dev Founder",hpp:13905665,specialRate:23222461,publishRate:25308310},
+  {type:"Project",group:"JUN-PROJ",role:"Backend",hpp:6000000,specialRate:10020000,publishRate:11500000},
+  {type:"Project",group:"JUN-PROJ",role:"Frontend",hpp:5575614,specialRate:9311275,publishRate:11500000},
+  {type:"Project",group:"JUN-PROJ",role:"Mobile",hpp:5375614,specialRate:8977275,publishRate:11500000},
+  {type:"Project",group:"MED-PROJ",role:"PM / SA ",hpp:9451304,specialRate:15783678,publishRate:17201373},
+  {type:"Project",group:"MED-PROJ",role:"Backend",hpp:8451304,specialRate:14113678,publishRate:15381373},
+  {type:"Project",group:"MED-PROJ",role:"Frontend",hpp:8451304,specialRate:14113678,publishRate:15381373},
+  {type:"Project",group:"MED-PROJ",role:"Mobile",hpp:8451304,specialRate:14113678,publishRate:15381373},
+  {type:"Project",group:"SENIOR-PROJ",role:"PM / SA ",hpp:12179422,specialRate:20339635,publishRate:22166548},
+  {type:"Project",group:"SENIOR-PROJ",role:"Backend",hpp:12179422,specialRate:20339635,publishRate:22166548},
+  {type:"Project",group:"SENIOR-PROJ",role:"Frontend",hpp:12179422,specialRate:20339635,publishRate:22166548},
+  {type:"Project",group:"SENIOR-PROJ",role:"Mobile",hpp:12179422,specialRate:20339635,publishRate:22166548},
+  {type:"Project",group:"Support-PROJ",role:"DevOps",hpp:11000000,specialRate:18370000,publishRate:20020000},
+  {type:"Project",group:"Support-PROJ",role:"UI/UX",hpp:8000000,specialRate:13360000,publishRate:14560000},
+  {type:"Project",group:"Support-PROJ",role:"QA/QC",hpp:10000000,specialRate:16700000,publishRate:18200000},
+  {type:"Project",group:"Support-PROJ",role:"Technical Writer",hpp:6000000,specialRate:10020000,publishRate:10920000},
+  {type:"Project",group:"Support-PROJ",role:"Dev Surabaya",hpp:8000000,specialRate:13360000,publishRate:14560000},
+  {type:"Web",group:"FOUNDER-WEB",role:"Rendy",hpp:10302308,specialRate:17204854,publishRate:18750201},
+  {type:"Web",group:"MED-WEB",role:"Holis",hpp:3350000,specialRate:5594500,publishRate:6097000},
+  {type:"Web",group:"SENIOR-WEB",role:"Randy",hpp:3500000,specialRate:5845000,publishRate:6370000},
+  {type:"Web",group:"SENIOR-WEB",role:"Ramzi",hpp:4500000,specialRate:7515000,publishRate:8190000},
+  {type:"WMS",group:"JUN-WMS",role:"Faza",hpp:5850000,specialRate:9769500,publishRate:10647000},
+  {type:"WMS",group:"MED-WMS",role:"Ryhman",hpp:4737678,specialRate:7911922,publishRate:8622574},
+  {type:"WMS",group:"MED-WMS",role:"Diesha",hpp:4000000,specialRate:6680000,publishRate:7280000},
+  {type:"WMS",group:"SENIOR-WMS",role:"Agus",hpp:10000000,specialRate:16700000,publishRate:18200000},
+];
+
+let selected = 'Consultant';
+let rows = [];
+let uid = 0;
+
+function fmt(n, withDecimal=false) {
+  if (isNaN(n)) return 'IDR 0';
+  return 'IDR ' + new Intl.NumberFormat('id-ID', {maximumFractionDigits:0}).format(Math.round(n));
+}
+const pct = n => isNaN(n) ? '0%' : n.toFixed(1) + '%';
+const parseNum = s => { if(!s) return 0; return +(s.toString().replace(',', '.')) || 0; };
+
+// ----- Currency Input Helpers -----
+let editingCurr = false;
+function currencyInput(el) {
+  let val = el.value;
+  // allow digits, one dot, commas as thousands (typed), limit 14 chars numeric portion
+  val = val.replace(/[^\d.,]/g, '');
+  const parts = val.split(/[.,]/);
+  if(parts.length > 2) { val = parts[0] + '.' + parts.slice(1).join(''); }
+  // ensure single dot/comma
+  val = val.replace(/,/g, ''); // strip comma thousands
+  el.value = val;
+  el.dataset.raw = val;
+}
+function currencyFocus(el) {
+  editingCurr = true;
+  el.value = el.dataset.raw || '';
+}
+function currencyBlur(el) {
+  editingCurr = false;
+  const raw = el.dataset.raw || '';
+  const num = parseNum(raw);
+  el.value = num > 0 ? fmt(num) : '';
+}
+function parseIDR(text) {
+  if(!text) return 0;
+  const cleaned = text.toString().replace(/IDR\s?/gi, '').replace(/\./g, '').replace(',', '.');
+  return parseNum(cleaned);
+}
+
+// Initialize currency fields
+document.addEventListener('DOMContentLoaded', () => {
+  ['quotationPublish','actualDeal'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+});
+
+function getGroups(type) { return [...new Set(rateCard.filter(r=>r.type===type).map(r=>r.group))].sort(); }
+function getRoles(type, group) { return rateCard.filter(r=>r.type===type && r.group===group); }
+
+function selectType(type) {
+  selected = type;
+  document.querySelectorAll('.type-btn').forEach(b=>{ b.classList.remove('active'); if(b.textContent===type) b.classList.add('active'); });
+  rebuildRows();
+}
+
+function rebuildRows() {
+  const data = rows.map(r=>{
+    const id = r.id;
+    return {
+      g: document.getElementById('g-'+id)?.value||'',
+      r: document.getElementById('r-'+id)?.value||'',
+      n: document.getElementById('n-'+id)?.value||'',
+      q: document.getElementById('q-'+id)?.value||1,
+      m: document.getElementById('m-'+id)?.value||1
+    };
+  });
+  document.getElementById('rows').innerHTML = '';
+  rows = [];
+  data.forEach(d=> addRow(d));
+  if(rows.length===0){ addRow(); addRow(); }
+  calculate();
+}
+
+function addRow(d) {
+  const id = ++uid;
+  const groups = getGroups(selected);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'row-grid';
+  wrapper.id = 'row-'+id;
+  wrapper.innerHTML = `
+    <div style="text-align:center;color:var(--muted);font-weight:700;">${rows.length+1}</div>
+    <div><select id="g-${id}" class="small-input" onchange="buildRole(${id});calculate()">
+      <option value="">-- Group --</option>${groups.map(g=>`<option value="${g}">${g}</option>`).join('')}
+    </select></div>
+    <div><select id="r-${id}" class="small-input" onchange="calculate()">
+      <option value="">-- Role --</option>
+    </select></div>
+    <div><input type="text" id="n-${id}" class="small-input" placeholder="Nama" value="${d?.n||''}" oninput="calculate()"></div>
+    <div><input type="number" id="q-${id}" class="small-input" style="text-align:center;" value="${d?.q||1}" min="1" oninput="calculate()"></div>
+    <div><input type="number" id="m-${id}" class="small-input" style="text-align:right;" value="${d?.m||1}" min="0.1" step="0.1" placeholder="0.5" oninput="calculate()"></div>
+    <div id="rate-${id}" style="text-align:right;font-size:13px;font-weight:700;color:var(--blue);">IDR 0</div>
+    <div><button class="remove-btn" onclick="delRow(${id})">✕</button></div>`;
+  document.getElementById('rows').appendChild(wrapper);
+  rows.push({id});
+  if(d?.g){ document.getElementById('g-'+id).value=d.g; buildRole(id); if(d.r){ document.getElementById('r-'+id).value=d.r; } }
+}
+
+function buildRole(id) {
+  const g = document.getElementById('g-'+id).value;
+  const sel = document.getElementById('r-'+id);
+  const roles = getRoles(selected, g);
+  sel.innerHTML = '<option value="">-- Role --</option>' + roles.map((r,i) => { const idx = rateCard.indexOf(r); return `<option data-role="${r.role}" value="${idx}">${r.role}</option>`; }).join('');
+}
+
+function delRow(id) {
+  const el = document.getElementById('row-'+id);
+  if(el) el.remove();
+  rows = rows.filter(r=>r.id!==id);
+  rows.forEach((r,i)=>{const el=document.getElementById('row-'+r.id);if(el)el.children[0].textContent=i+1;});
+  calculate();
+}
+
+function calcRow(id) {
+  const idx = +(document.getElementById('r-'+id).value);
+  const qty = +(document.getElementById('q-'+id).value)||0;
+  const months = parseNum(document.getElementById('m-'+id).value);
+  if(idx>=0 && rateCard[idx]){
+    const rc = rateCard[idx];
+    return {hpp: rc.hpp * qty * months, pub: rc.publishRate * qty * months, spe: rc.specialRate * qty * months, months};
+  }
+  return {hpp:0, pub:0, spe:0, months:0};
+}
+
+function getDeductions(total) {
+  const pajak = parseNum(document.getElementById('pajak').value);
+  const founderFee = parseNum(document.getElementById('founderFee').value);
+  const managementFee = parseNum(document.getElementById('managementFee').value);
+  const seFee = parseNum(document.getElementById('seFee').value);
+  return {
+    pajak, founderFee, managementFee, seFee,
+    totalDeduction: total * (pajak + founderFee + managementFee + seFee) / 100,
+    pajakVal: total * pajak / 100,
+    founderVal: total * founderFee / 100,
+    mgmtVal: total * managementFee / 100,
+    seVal: total * seFee / 100
+  };
+}
+
+function calculate() {
+  let totalHPP = 0, totalPub = 0, totalSpe = 0, maxMonths = 0;
+  rows.forEach(({id})=>{
+    const c = calcRow(id);
+    document.getElementById('rate-'+id).textContent = fmt(c.pub);
+    totalHPP += c.hpp; totalPub += c.pub; totalSpe += c.spe;
+    if(c.months > maxMonths) maxMonths = c.months;
+  });
+  const dPub = getDeductions(totalPub);
+  const salesProject = totalPub - dPub.totalDeduction;
+  const cogsPct = parseNum(document.getElementById('cogsTopp').value);
+  const opexPct = parseNum(document.getElementById('opexAlloc').value);
+  const cogsAmount = salesProject * cogsPct / 100;
+  const opexAmount = salesProject * opexPct / 100;
+
+  document.getElementById('totHPP').textContent = fmt(totalHPP);
+  document.getElementById('totPublish').textContent = fmt(totalPub);
+  document.getElementById('timelineText').textContent = maxMonths + ' Month(s)';
+
+  document.getElementById('sumPublish').textContent = fmt(totalPub);
+  document.getElementById('sumHPP').textContent = fmt(totalHPP);
+  document.getElementById('sumSpecial').textContent = fmt(totalSpe);
+  document.getElementById('sumSales').textContent = fmt(salesProject);
+
+  document.getElementById('dispPajak').textContent = dPub.pajak.toFixed(1);
+  document.getElementById('dispFounder').textContent = dPub.founderFee.toFixed(1);
+  document.getElementById('dispMgmt').textContent = dPub.managementFee.toFixed(1);
+  document.getElementById('dispSE').textContent = dPub.seFee.toFixed(1);
+
+  document.getElementById('valPajak').textContent = fmt(dPub.pajakVal);
+  document.getElementById('valFounder').textContent = fmt(dPub.founderVal);
+  document.getElementById('valMgmt').textContent = fmt(dPub.mgmtVal);
+  document.getElementById('valSE').textContent = fmt(dPub.seVal);
+  document.getElementById('dispCOGS').textContent = cogsPct.toFixed(1);
+  document.getElementById('dispOPEX').textContent = opexPct.toFixed(1);
+  document.getElementById('valCOGS').textContent = fmt(cogsAmount);
+  document.getElementById('valOPEX').textContent = fmt(opexAmount);
+
+  const profitPub = totalPub - totalHPP;
+  const marginPub = totalPub > 0 ? ((totalPub - totalHPP) / totalPub) * 100 : 0;
+  document.getElementById('marginPublish').textContent = (marginPub < 0 ? 'LOSS ' : '') + pct(Math.max(marginPub, -100));
+  document.getElementById('marginPublish').style.color = marginPub >= 0 ? '#34d399' : '#f87171';
+  document.getElementById('profitPublishDisplay').textContent = (profitPub < 0 ? '− ' : '') + fmt(Math.abs(profitPub));
+  document.getElementById('profitPublishDisplay').style.color = profitPub >= 0 ? '#34d399' : '#f87171';
+
+  window._totalHPP = totalHPP;
+  window._totalPub = totalPub;
+  window._totalSpe = totalSpe;
+  calculateActual();
+}
+
+function calculateActual() {
+  const totalHPP = window._totalHPP || 0;
+  const totalPub = window._totalPub || 0;
+  const totalSpe = window._totalSpe || 0;
+  const actualDeal = parseIDR(document.getElementById('actualDeal').value);
+  const quotationPublish = parseIDR(document.getElementById('quotationPublish').value);
+
+  const profitAct = actualDeal - totalHPP;
+  const marginAct = actualDeal > 0 ? ((actualDeal - totalHPP) / actualDeal) * 100 : 0;
+  document.getElementById('marginActual').textContent = (marginAct < 0 ? 'UNVIABLE ' : '') + pct(Math.max(marginAct, -100));
+  document.getElementById('marginActual').style.color = marginAct >= 0 ? '#fbbf24' : '#f87171';
+  document.getElementById('profitActualDisplay').textContent = (profitAct < 0 ? '− ' : '') + fmt(Math.abs(profitAct));
+  document.getElementById('profitActualDisplay').style.color = profitAct >= 0 ? '#fbbf24' : '#f87171';
+
+  const discPub = totalPub > 0 ? ((totalPub - actualDeal) / totalPub) * 100 : 0;
+  const discSpe = totalSpe > 0 ? ((totalSpe - actualDeal) / totalSpe) * 100 : 0;
+  document.getElementById('discPublish').textContent = pct(discPub);
+  document.getElementById('discSpecial').textContent = pct(discSpe);
+
+  const quotVsPub = totalPub > 0 ? ((quotationPublish - totalPub) / totalPub) * 100 : 0;
+  document.getElementById('quotVsPublish').textContent = pct(quotVsPub);
+
+  const variance = quotationPublish - actualDeal;
+  const variancePct = quotationPublish > 0 ? ((quotationPublish - actualDeal) / quotationPublish) * 100 : 0;
+  // STATUS Margin Kotor
+  const dHPP = getDeductions(totalHPP);
+  const dActualForStatus = getDeductions(actualDeal);
+  const opexHPP = (totalHPP - dHPP.totalDeduction) * opexPct / 100;
+  const opexActualVal = (actualDeal - dActualForStatus.totalDeduction) * opexPct / 100;
+  const statusMargin = (opexActualVal < opexHPP) ? "UNDER BUDGET" : "IDEAL";
+
+  // Update display
+  const statusEl = document.getElementById('statusMargin');
+  if (statusEl) {
+    statusEl.textContent = statusMargin;
+    statusEl.className = 'badge ' + (statusMargin === 'UNDER BUDGET' ? 'status-Negotiation' : 'status-Won');
+    statusEl.style.fontSize = '14px';
+    statusEl.style.padding = '6px 14px';
+  }
+  const opexHPPEl = document.getElementById('opexHPP');
+  if (opexHPPEl) opexHPPEl.textContent = fmt(opexHPP);
+  const opexActualEl = document.getElementById('opexActualVal');
+  if (opexActualEl) opexActualEl.textContent = fmt(opexActualVal);
+
+  document.getElementById('varianceVal').textContent = fmt(variance);
+  document.getElementById('variancePct').textContent = '(' + pct(variancePct) + ')';
+}
+
+function updateStatusBadge() {
+  const status = document.getElementById('projectStatus').value;
+  const badge = document.getElementById('statusBadge');
+  badge.textContent = status;
+  const cmap = {Draft:'status-Draft',Submitted:'status-Submitted',Negotiation:'status-Negotiation',Won:'status-Won',Lost:'status-Lost','On Hold':'status-OnHold'};
+  for(const k in cmap){if(k!==status) badge.classList.remove(cmap[k]);}
+  if(cmap[status]) badge.classList.add(cmap[status]);
+}
+
+function resetForm() {
+  document.getElementById('projectName').value = '';
+  document.getElementById('projectPIC').value = '';
+  document.getElementById('projectStatus').value = 'Draft';
+  updateStatusBadge();
+  document.getElementById('quotationPublish').value = '';
+  document.getElementById('quotationPublish').dataset.raw = '';
+  document.getElementById('actualDeal').value = '';
+  document.getElementById('actualDeal').dataset.raw = '';
+  document.getElementById('pajak').value = 11;
+  document.getElementById('founderFee').value = 3;
+  document.getElementById('managementFee').value = 0;
+  document.getElementById('seFee').value = 0;
+  document.getElementById('cogsTopp').value = 20;
+  document.getElementById('opexAlloc').value = 80;
+  rows = []; uid = 0;
+  rebuildRows();
+  calculate();
+  document.getElementById('publishMsg').textContent = '';
+}
+
+function publishProject() {
+  const name = document.getElementById('projectName').value.trim();
+  if(!name) { alert('Nama Project wajib diisi!'); document.getElementById('projectName').focus(); return; }
+  
+  // Re-calculate latest totals
+  calculate();
+  
+  const totalHPP = window._totalHPP || 0;
+  const totalPub = window._totalPub || 0;
+  const totalSpe = window._totalSpe || 0;
+  const actualDeal = parseIDR(document.getElementById('actualDeal').value);
+  const quotationPublish = parseIDR(document.getElementById('quotationPublish').value);
+  const dPub = getDeductions(totalPub);
+  const salesProject = totalPub - dPub.totalDeduction;
+  const cogsPct = parseNum(document.getElementById('cogsTopp').value);
+  const cogsAmount = salesProject * cogsPct / 100;
+  const maxMonths = getMaxMonths();
+  
+  const rowData = rows.map(({id})=>({
+    group: document.getElementById('g-'+id)?.value||'',
+    role: document.getElementById('r-'+id)?.dataset.role||'',
+    roleLabel: ((sel)=>sel?.options[sel?.selectedIndex]?.text||'')(document.getElementById('r-'+id)),
+    nama: document.getElementById('n-'+id)?.value||'',
+    qty: +(document.getElementById('q-'+id)?.value)||1,
+    months: parseNum(document.getElementById('m-'+id)?.value)||1,
+    rate: calcRow(id)
+  }));
+  
+  const project = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    createdAt: new Date().toISOString(),
+    projectName: name,
+    PIC: document.getElementById('projectPIC').value.trim(),
+    status: document.getElementById('projectStatus').value,
+    projectType: selected,
+    rows: rowData,
+    deductions: {
+      pajak: parseNum(document.getElementById('pajak').value),
+      founderFee: parseNum(document.getElementById('founderFee').value),
+      managementFee: parseNum(document.getElementById('managementFee').value),
+      seFee: parseNum(document.getElementById('seFee').value)
+    },
+    topp: {
+      cogsPct: parseNum(document.getElementById('cogsTopp').value),
+      opexPct: parseNum(document.getElementById('opexAlloc').value)
+    },
+    quotationPublish,
+    actualDeal,
+    totals: { HPP: totalHPP, publishRate: totalPub, specialRate: totalSpe, salesProject },
+    cogsTotal: cogsAmount,
+    timelineMonths: maxMonths,
+    cogsPerMonth: maxMonths > 0 ? cogsAmount / maxMonths : 0,
+    profitPublish: totalPub - totalHPP,
+    profitActual: actualDeal - totalHPP,
+    marginPublish: totalPub > 0 ? ((totalPub - totalHPP)/totalPub)*100 : 0,
+    marginActual: actualDeal > 0 ? ((actualDeal - totalHPP)/actualDeal)*100 : 0,
+    variance: quotationPublish - actualDeal,
+    variancePct: quotationPublish > 0 ? ((quotationPublish - actualDeal)/quotationPublish)*100 : 0
+  };
+  
+  const ls = JSON.parse(localStorage.getItem('wsystem-commercial-projects')||'[]');
+  ls.push(project);
+  localStorage.setItem('wsystem-commercial-projects', JSON.stringify(ls));
+  
+  const msg = document.getElementById('publishMsg');
+  msg.innerHTML = '<span style="color:#34d399;">✓ Project "' + name + '" berhasil dipublish! <a href="commercial-projects.html" style="color:#67e8f9; text-decoration:underline;">Lihat List →</a></span>';
+}
+
+function syncCogs() {
+  const cogs = Math.min(100, Math.max(0, parseNum(document.getElementById('cogsTopp').value) || 0));
+  document.getElementById('cogsTopp').value = cogs;
+  document.getElementById('opexAlloc').value = Math.round((100 - cogs) * 10) / 10;
+}
+
+function syncOpex() {
+  const opex = Math.min(100, Math.max(0, parseNum(document.getElementById('opexAlloc').value) || 0));
+  document.getElementById('opexAlloc').value = opex;
+  document.getElementById('cogsTopp').value = Math.round((100 - opex) * 10) / 10;
+}
+}function getMaxMonths() {
+  rows.forEach(({id})=>{
+    const m = parseNum(document.getElementById('m-'+id)?.value)||0;
+    if(m > maxMonths) maxMonths = m;
+  });
+  return maxMonths;
+}
+
+// Init
+(function initEdit() {
+  const editData = localStorage.getItem('wsystem-commercial-edit');
+  if(editData) {
+    try {
+      const p = JSON.parse(editData);
+      document.getElementById('projectName').value = p.projectName || '';
+      document.getElementById('projectPIC').value = p.PIC || '';
+      document.getElementById('projectStatus').value = p.status || 'Draft';
+      updateStatusBadge();
+      document.getElementById('pajak').value = p.deductions?.pajak ?? 11;
+      document.getElementById('founderFee').value = p.deductions?.founderFee ?? 3;
+      document.getElementById('managementFee').value = p.deductions?.managementFee ?? 0;
+      document.getElementById('seFee').value = p.deductions?.seFee ?? 0;
+      document.getElementById('cogsTopp').value = p.topp?.cogsPct ?? 20;
+      document.getElementById('opexAlloc').value = p.topp?.opexPct ?? 80;
+      if(p.quotationPublish > 0) {
+        document.getElementById('quotationPublish').dataset.raw = p.quotationPublish + '';
+        document.getElementById('quotationPublish').value = fmt(p.quotationPublish);
+      }
+      if(p.actualDeal > 0) {
+        document.getElementById('actualDeal').dataset.raw = p.actualDeal + '';
+        document.getElementById('actualDeal').value = fmt(p.actualDeal);
+      }
+      selectType(p.projectType || 'Consultant');
+      // Populate rows
+      rows = []; uid = 0;
+      (p.rows || []).forEach((r, i) => { addRow({g:r.group, r:r.role, n:r.nama, q:r.qty, m:r.months}); });
+      calculate();
+      localStorage.removeItem('wsystem-commercial-edit'); // consume once
+    } catch(e) { console.error('Edit load error:', e); }
+  } else {
+    selectType('Consultant');
+  }
+})();
+</script>
+
+</body>
+</html>

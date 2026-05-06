@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Commercial Projects - WSystem</title>
+<style>
+:root{--bg:#0b111a;--card:#161b22;--border:#30363d;--muted:#8b949e;--text:#e6edf3;--blue:#58a6ff;--green:#34d399;--red:#f87171;--yellow:#fbbf24;--purple:#c084fc;--cyan:#67e8f9;--orange:#fb923c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;padding:18px}
+.container{max-width:1400px;margin:0 auto}
+.header{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.header h1{font-size:24px;font-weight:700}
+.header .badge{background:#1d4ed8;color:#fff;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:700}
+.breadcrumbs{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.breadcrumbs a{color:var(--blue);text-decoration:none}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat-value{font-size:20px;font-weight:700;margin-top:4px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.toolbar input,.toolbar select{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:9px 12px;font-size:13px}
+.toolbar input{min-width:220px}
+.toolbar button{background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer}
+.toolbar button:hover{background:#1e40af}
+.toolbar .btn-success{background:#059669}
+.toolbar .btn-success:hover{background:#047857}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#111827;color:var(--muted);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th.sortable::after{content:" \u2194";margin-left:4px;font-size:10px}
+thead th.sort-asc::after{content:" \u2191";}
+thead th.sort-desc::after{content:" \u2193";}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr:hover{background:rgba(88,166,255,.06)}
+tbody tr:last-child td{border-bottom:none}
+.cell-name{font-weight:700;color:var(--text)}
+.cell-pic{color:var(--muted);font-size:12px}
+.cell-idr{font-family:"SF Mono",Menlo,Consolas,monospace}
+.cell-idr.pos{color:var(--green)}
+.cell-idr.neg{color:var(--red)}
+.status-badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px}
+.status-Draft{background:#374151;color:#d1d5db}
+.status-Submitted{background:#1e3a5f;color:#7dd3fc}
+.status-Negotiation{background:#4d2500;color:#fbbf24}
+.status-Won{background:#064e3b;color:#34d399}
+.status-Lost{background:#4a0c0c;color:#f87171}
+.status-OnHold{background:#4a1c00;color:#fb923c}
+.actions{display:flex;gap:6px}
+.btn-icon{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer}
+.btn-icon:hover{border-color:var(--blue);color:var(--blue)}
+.btn-icon.danger:hover{border-color:var(--red);color:var(--red)}
+.pagination{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:14px}
+.pagination button{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+.pagination button:hover:not(:disabled){background:#1d4ed8;border-color:#1d4ed8}
+.pagination span{font-size:13px;color:var(--muted)}
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty .icon{font-size:48px;margin-bottom:12px;opacity:.5}
+.empty h3{font-size:16px;color:var(--text);margin-bottom:6px}
+.empty p{font-size:13px}
+.empty a{color:var(--blue)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg);border:1px solid var(--border);border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:18px}
+.modal-close{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:18px}
+.detail-row{display:grid;grid-template-columns:140px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--muted)}
+.detail-value{color:var(--text);font-weight:600}
+.detail-section{margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+.detail-section-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--blue)}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.detail-item{display:flex;justify-content:space-between;font-size:13px}
+.detail-item span:nth-child(2){font-weight:600}
+.manpower-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.manpower-table th{background:#111827;color:var(--muted);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+.manpower-table td{padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
+@media(max-width:768px){.toolbar input{min-width:100%;width:100%}table{font-size:12px}td,th{padding:8px 10px}.detail-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>📊 Commercial Projects</h1>
+  <div class="badge">W-System</div>
+</div>
+<div class="breadcrumbs">
+  <a href="/dashboard">Dashboard</a> <span>›</span>
+  <a href="commercial-calculator.html">Commercial Calculator</a> <span>›</span>
+  <span>Projects</span>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-box">
+    <div class="stat-label">Total Projects</div>
+    <div class="stat-value" style="color:var(--blue);" id="statTotal">0</div>
+    <div class="stat-sub">data aktif</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Total Publish Rate</div>
+    <div class="stat-value" style="color:var(--green);" id="statPub">IDR 0</div>
+    <div class="stat-sub">rata-rata</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Rata-rata Margin</div>
+    <div class="stat-value" style="color:var(--yellow);" id="statMargin">0%</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Won Projects</div>
+    <div class="stat-value" style="color:var(--green);" id="statWon">0</div>
+    <div class="stat-sub">terselesaikan</div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <input type="text" id="search" placeholder="Cari nama project, PIC...">
+  <select id="filterStatus">
+    <option value="">Semua Status</option>
+    <option value="Draft">Draft</option>
+    <option value="Submitted">Submitted</option>
+    <option value="Negotiation">Negotiation</option>
+    <option value="Won">Won</option>
+    <option value="Lost">Lost</option>
+    <option value="On Hold">On Hold</option>
+  </select>
+  <select id="filterType">
+    <option value="">Semua Tipe</option>
+    <option value="Consultant">Consultant</option>
+    <option value="Project">Project</option>
+    <option value="Networking">Networking</option>
+    <option value="Web">Web</option>
+    <option value="WMS">WMS</option>
+  </select>
+  <button onclick="window.location.href='commercial-calculator.html'" class="btn-success">+ Buat Project Baru</button>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="sortable" onclick="sortBy('projectName')">Nama Project</th>
+        <th class="sortable" onclick="sortBy('PIC')">PIC</th>
+        <th>Status</th>
+        <th class="sortable" onclick="sortBy('totals.publishRate')">Publish Rate</th>
+        <th class="sortable" onclick="sortBy('actualDeal')">Actual Deal</th>
+        <th class="sortable" onclick="sortBy('cogsTotal')">Total COGS TOPP</th>
+        <th class="sortable" onclick="sortBy('cogsPerMonth')">COGS/Bulan</th>
+        <th>Tindakan</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="8">
+        <div class="empty">
+          <div class="icon">📭</div>
+          <h3>Belum Ada Project</h3>
+          <p>Belum ada project yang dipublish dari Commercial Calculator.<br>
+          <a href="commercial-calculator.html">Buat Project Pertama →</a></p>
+        </div>
+      </td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+<div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modalTitle">Detail Project</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const fmt = n => isNaN(n) ? 'IDR 0' : 'IDR ' + Math.round(n).toLocaleString('id-ID') + ',00';
+const pct = n => isNaN(n) ? '0%' : n.toFixed(1) + '%';
+const ITEMS_PER_PAGE = 10;
+
+let projects = [];
+let filtered = [];
+let sortKey = 'createdAt';
+let sortAsc = false;
+let currentPage = 1;
+
+function loadProjects() {
+  const raw = localStorage.getItem('wsystem-commercial-projects');
+  try { projects = raw ? JSON.parse(raw) : []; } catch(e) { projects = []; }
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const st = document.getElementById('filterStatus').value;
+  const tp = document.getElementById('filterType').value;
+
+  filtered = projects.filter(p => {
+    if(st && p.status !== st) return false;
+    if(tp && p.projectType !== tp) return false;
+    if(q) return (p.projectName||'').toLowerCase().includes(q) || (p.PIC||'').toLowerCase().includes(q);
+    return true;
+  });
+
+  filtered.sort((a,b) => {
+    let av, bv;
+    if(sortKey.includes('.')) {
+      const [a1,a2] = sortKey.split('.');
+      av = (a[a1]?.[a2] ?? a[sortKey]) || 0;
+      bv = (b[a1]?.[a2] ?? b[sortKey]) || 0;
+    } else {
+      av = a[sortKey] || 0; bv = b[sortKey] || 0;
+    }
+    if(typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    if(!sortAsc) { const t = av; av = bv; bv = t; }
+    return av > bv ? 1 : av < bv ? -1 : 0;
+  });
+
+  updateStats();
+  render();
+}
+
+function updateStats() {
+  const total = projects.length;
+  const avgPub = total > 0 ? projects.reduce((s,p) => s + (p.totals?.publishRate||0),0) / total : 0;
+  const avgMargin = total > 0 ? projects.reduce((s,p) => s + (p.marginPublish||0),0) / total : 0;
+  const won = projects.filter(p => p.status === 'Won').length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPub').textContent = fmt(avgPub);
+  document.getElementById('statMargin').textContent = pct(avgMargin);
+  document.getElementById('statWon').textContent = won;
+}
+
+function sortBy(key) {
+  if(sortKey === key) sortAsc = !sortAsc;
+  else { sortKey = key; sortAsc = true; }
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+    if(th.getAttribute('onclick').includes("'"+key+"'")) { th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc'); }
+  });
+  applyFilters();
+}
+
+function render() {
+  const start = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageItems = filtered.slice(start, start + ITEMS_PER_PAGE);
+  const tbody = document.getElementById('tbody');
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="icon">📭</div><h3>Belum Ada Project</h3><p>Belum ada project yang dipublish dari Commercial Calculator.<br><a href="commercial-calculator.html">Buat Project Pertama \u2192</a></p></div></td></tr>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pageItems.map(p => {
+    const pubCls = (p.totals?.publishRate||0) >= (p.totals?.HPP||0) ? 'pos' : 'neg';
+    const actCls = (p.actualDeal||0) >= (p.totals?.HPP||0) ? 'pos' : 'neg';
+    const cpmCls = (p.cogsPerMonth||0) >= 0 ? 'pos' : 'neg';
+    return '<tr>'+
+      '<td><div class="cell-name">'+(p.projectName || '(no name)')+'</div><div style="font-size:11px;color:var(--muted);">'+(p.projectType || '')+'</div></td>'+
+      '<td><div class="cell-pic">'+(p.PIC || '-')+'</div></td>'+
+      '<td><span class="status-badge status-'+(p.status || 'Draft')+'">'+(p.status || 'Draft')+'</span></td>'+
+      '<td class="cell-idr '+pubCls+'">'+fmt(p.totals?.publishRate || 0)+'</td>'+
+      '<td class="cell-idr '+actCls+'">'+fmt(p.actualDeal || 0)+'</td>'+
+      '<td class="cell-idr">'+fmt(p.cogsTotal || 0)+'</td>'+
+      '<td class="cell-idr '+cpmCls+'">'+fmt(p.cogsPerMonth || 0)+'</td>'+
+      '<td><div class="actions"'+
+        '<button class="btn-icon" onclick="showDetail(\''+p.id+'\')">👁 Detail</button>'+
+        '<button class="btn-icon" onclick="editProject(\''+p.id+'\')">✎ Edit</button>'+
+        '<button class="btn-icon danger" onclick="deleteProject(\''+p.id+'\')">🗑 Hapus</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = filtered.length;
+  const pages = Math.ceil(total / ITEMS_PER_PAGE);
+  if(pages <= 1) { document.getElementById('pagination').innerHTML = '<span>'+total+' total</span>'; return; }
+  let html = '<button onclick="setPage('+(currentPage-1)+')" '+(currentPage===1?'disabled':'')+'>\u2190 Prev</button>';
+  for(let i=1; i<=pages; i++) {
+    html += '<button '+(i===currentPage?'style="background:#1d4ed8;border-color:#1d4ed8;"':'')+' onclick="setPage('+i+')">'+i+'</button>';
+  }
+  html += '<button onclick="setPage('+(currentPage+1)+')" '+(currentPage===pages?'disabled':'')+'>Next →</button>';
+  html += '<span>'+total+' items, halaman '+currentPage+'/'+pages+'</span>';
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function setPage(p) {
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  if(p < 1 || p > totalPages) return;
+  currentPage = p;
+  render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showDetail(id) {
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+  document.getElementById('modalTitle').textContent = p.projectName;
+  const body = document.getElementById('modalBody');
+
+  let rowsHtml = '<p style="color:var(--muted);font-size:13px;">Tidak ada manpower</p>';
+  if(p.rows && p.rows.length) {
+    rowsHtml = '<table class="manpower-table"><thead><tr>'+
+      '<th>Group</th><th>Role</th><th>Nama</th><th>Qty</th><th>Months</th><th>Rate</th>'+
+      '</tr></thead><tbody>'+
+      p.rows.map(r => '<tr>'+
+        '<td>'+(r.group||'')+'</td>'+
+        '<td>'+(r.roleLabel||r.role||'')+'</td>'+
+        '<td>'+(r.nama||'-')+'</td>'+
+        '<td>'+(r.qty||1)+'</td>'+
+        '<td>'+(r.months||1)+'</td>'+
+        '<td>'+fmt(r.rate?.pub||0)+'</td>'+
+      '</tr>').join('')+
+      '</tbody></table>';
+  }
+
+  body.innerHTML =
+    '<div class="detail-row"><div class="detail-label">Nama Project</div><div class="detail-value">'+p.projectName+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">PIC</div><div class="detail-value">'+(p.PIC||'-')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="status-badge status-'+(p.status||'Draft')+'">'+(p.status||'Draft')+'</span></div></div>'+
+    '<div class="detail-row"><div class="detail-label">Tipe</div><div class="detail-value">'+(p.projectType||'')+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">Tanggal</div><div class="detail-value">'+formatDate(p.createdAt)+'</div></div>'+
+    '<div class="detail-section"><div class="detail-section-title">💰 Total &amp; Margin</div><div class="detail-grid">'+
+      '<div class="detail-item"><span>Publish Rate</span><span style="color:var(--blue);">'+fmt(p.totals?.publishRate||0)+'</span></div>'+
+      '<div class="detail-item"><span>HPP</span><span style="color:var(--red);">'+fmt(p.totals?.HPP||0)+'</span></div>'+
+      '<div class="detail-item"><span>Sales Project</span><span style="color:var(--blue);">'+fmt(p.totals?.salesProject||0)+'</span></div>'+
+      '<div class="detail-item"><span>COGS TOPP</span><span>'+fmt(p.cogsTotal||0)+'</span></div>'+
+      '<div class="detail-item"><span>Timeline</span><span>'+(p.timelineMonths||0)+' Bulan</span></div>'+
+      '<div class="detail-item"><span>COGS / Bulan</span><span>'+fmt(p.cogsPerMonth||0)+'</span></div>'+
+      '<div class="detail-item"><span>Quotation Publish</span><span>'+fmt(p.quotationPublish||0)+'</span></div>'+
+      '<div class="detail-item"><span>Actual Deal</span><span>'+fmt(p.actualDeal||0)+'</span></div>'+
+      '<div class="detail-item"><span>Margin (Publish)</span><span style="color:var(--green);">'+pct(p.marginPublish||0)+'</span></div>'+
+      '<div class="detail-item"><span>Margin (Actual)</span><span style="color:'+(p.marginActual<=0?'var(--red)':'var(--green)')+';">'+(p.marginActual<0?'UNVIABLE ':'')+pct(Math.max(p.marginActual||0,-100))+'</span></div>'+
+      '<div class="detail-item"><span>Variance</span><span style="color:'+(p.variance>=0?'var(--green)':'var(--red)')+';">'+fmt(p.variance||0)+' ('+pct(p.variancePct||0)+')</span></div>'+
+    '</div></div>'+
+    '<div class="detail-section"><div class="detail-section-title">📋 Manpower ('+(p.rows?.length||0)+')</div>'+rowsHtml+'</div>';
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if(!e || e.target === document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function formatDate(iso) {
+  try { return new Date(iso).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  catch(e) { return '-'; }
+}
+
+function editProject(id) {
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+  localStorage.setItem('wsystem-commercial-edit', JSON.stringify(p));
+  window.location.href = 'commercial-calculator.html?edit=' + id;
+}
+
+function deleteProject(id) {
+  if(!confirm('Yakin hapus project ini? Data tidak bisa dikembalikan.')) return;
+  projects = projects.filter(x => x.id !== id);
+  localStorage.setItem('wsystem-commercial-projects', JSON.stringify(projects));
+  applyFilters();
+}
+
+// Event listeners for filters
+['search','filterStatus','filterType'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { currentPage = 1; applyFilters(); });
+});
+
+// Init
+loadProjects();
+</script>
+</body>
+</html>
