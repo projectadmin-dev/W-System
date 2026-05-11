@@ -62,11 +62,11 @@ const data = {
   ],
   navMain: [
     // ─────────────────────────────────────────────────────────────────
-    // HR MANAGEMENT (Mockup - No Database)
+    // HR MANAGEMENT
     // ─────────────────────────────────────────────────────────────────
     {
       title: "HR Management",
-      url: "#",
+      url: "/hr",
       icon: <UsersIcon2 />,
       items: [
         {
@@ -77,6 +77,7 @@ const data = {
         { title: "Entity Management", url: "/hr/master/entity" },
         { title: "User Management", url: "/hr/master/users" },
         { title: "Organization Structure", url: "/hr/master/org-structure" },
+        { title: "Employee Contracts", url: "/hr/master/contracts" },
 
         {
           title: "⚙️ Configuration",
@@ -84,17 +85,23 @@ const data = {
           isCategoryHeader: true,
         },
         { title: "Work Shifts", url: "/hr/config/shifts" },
+        { title: "Work Calendars", url: "/hr/config/calendars" },
         { title: "BPJS Config", url: "/hr/config/bpjs" },
         { title: "PPh21 Config", url: "/hr/config/pph21" },
-        { title: "Allowance Types", url: "/hr/config/allowances" },
+        { title: "City UMR", url: "/hr/config/city-umr" },
+        { title: "Overtime Rules", url: "/hr/config/overtime" },
 
         {
-          title: "📊 Reports",
-          url: "#hr-reports",
+          title: "💰 Salary & Benefits",
+          url: "#hr-salary",
           isCategoryHeader: true,
         },
-        { title: "Payroll Reports", url: "/hr/reports/payroll" },
-        { title: "Attendance Reports", url: "/hr/reports/attendance" },
+        { title: "Job Grades", url: "/hr/config/job-grades" },
+        { title: "Salary Matrix", url: "/hr/config/salary-matrix" },
+        { title: "Salary Components", url: "/hr/config/salary-components" },
+        { title: "Allowance Types", url: "/hr/config/allowances" },
+        { title: "THR Settings", url: "/hr/config/thr" },
+        { title: "Pro-Rate Config", url: "/hr/config/pro-rate" },
 
         {
           title: "⏰ Attendance",
@@ -105,6 +112,14 @@ const data = {
         { title: "Attendance Logs", url: "/hr/attendance/logs" },
         { title: "Settings", url: "/hr/attendance/settings" },
         { title: "Approvals", url: "/hr/attendance/approvals" },
+
+        {
+          title: "📊 Reports",
+          url: "#hr-reports",
+          isCategoryHeader: true,
+        },
+        { title: "Payroll Reports", url: "/hr/reports/payroll" },
+        { title: "Attendance Reports", url: "/hr/reports/attendance" },
       ],
     },
 
