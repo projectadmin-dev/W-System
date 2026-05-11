@@ -62,7 +62,7 @@ const data = {
   ],
   navMain: [
     // ─────────────────────────────────────────────────────────────────
-    // HR MANAGEMENT
+    // HR MANAGEMENT — 3 sections: Master Data, Time, Compensation
     // ─────────────────────────────────────────────────────────────────
     {
       title: "HR Management",
@@ -70,7 +70,7 @@ const data = {
       icon: <UsersIcon2 />,
       items: [
         {
-          title: "👥 Master Data",
+          title: "📋 MASTER DATA",
           url: "#hr-master",
           isCategoryHeader: true,
         },
@@ -80,46 +80,30 @@ const data = {
         { title: "Employee Contracts", url: "/hr/master/contracts" },
 
         {
-          title: "⚙️ Configuration",
-          url: "#hr-config",
-          isCategoryHeader: true,
-        },
-        { title: "Work Shifts", url: "/hr/config/shifts" },
-        { title: "Work Calendars", url: "/hr/config/calendars" },
-        { title: "BPJS Config", url: "/hr/config/bpjs" },
-        { title: "PPh21 Config", url: "/hr/config/pph21" },
-        { title: "City UMR", url: "/hr/config/city-umr" },
-        { title: "Overtime Rules", url: "/hr/config/overtime" },
-
-        {
-          title: "💰 Salary & Benefits",
-          url: "#hr-salary",
-          isCategoryHeader: true,
-        },
-        { title: "Job Grades", url: "/hr/config/job-grades" },
-        { title: "Salary Matrix", url: "/hr/config/salary-matrix" },
-        { title: "Salary Components", url: "/hr/config/salary-components" },
-        { title: "Allowance Types", url: "/hr/config/allowances" },
-        { title: "THR Settings", url: "/hr/config/thr" },
-        { title: "Pro-Rate Config", url: "/hr/config/pro-rate" },
-
-        {
-          title: "⏰ Attendance",
+          title: "⏰ TIME & ATTENDANCE",
           url: "#hr-attendance",
           isCategoryHeader: true,
         },
         { title: "Attendance Dashboard", url: "/hr/attendance" },
         { title: "Attendance Logs", url: "/hr/attendance/logs" },
-        { title: "Settings", url: "/hr/attendance/settings" },
-        { title: "Approvals", url: "/hr/attendance/approvals" },
+        { title: "Work Shifts", url: "/hr/config/shifts" },
+        { title: "Work Calendars", url: "/hr/config/calendars" },
+        { title: "Overtime Rules", url: "/hr/config/overtime" },
 
         {
-          title: "📊 Reports",
-          url: "#hr-reports",
+          title: "💰 COMPENSATION & PAYROLL",
+          url: "#hr-compensation",
           isCategoryHeader: true,
         },
-        { title: "Payroll Reports", url: "/hr/reports/payroll" },
-        { title: "Attendance Reports", url: "/hr/reports/attendance" },
+        { title: "Job Grades", url: "/hr/compensation" },
+        { title: "Salary Matrix", url: "/hr/compensation" },
+        { title: "Salary Components", url: "/hr/compensation" },
+        { title: "Allowance Types", url: "/hr/compensation" },
+        { title: "THR Settings", url: "/hr/compensation" },
+        { title: "Pro-Rate Config", url: "/hr/compensation" },
+        { title: "BPJS Config", url: "/hr/compensation" },
+        { title: "PPh21 Config", url: "/hr/compensation" },
+        { title: "City UMR", url: "/hr/compensation" },
       ],
     },
 
