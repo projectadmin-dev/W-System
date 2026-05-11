@@ -6,6 +6,7 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
+    "start": "cd apps/web/ && next start -p 3001",
     "format": "turbo format",
     "typecheck": "turbo typecheck",
     "sla-monitor": "node --loader ts-node/esm apps/web/scripts/sla-monitor-cron.ts"

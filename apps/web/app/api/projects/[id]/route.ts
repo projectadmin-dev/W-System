@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,9 +51,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    console.log('[PATCH /projects/:id] Starting...')
+    console.log('[PATCH] service role key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+    console.log('[PATCH] anon key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
     const supabase = createClient(supabaseUrl, supabaseKey)
     const { id } = await params
+    console.log('[PATCH] project id:', id)
     const body = await request.json()
+    console.log('[PATCH] body:', JSON.stringify(body))
 
     // Check if project exists
     const { data: existing } = await supabase

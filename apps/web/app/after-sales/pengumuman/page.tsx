@@ -8,57 +8,143 @@ import {
 } from "@workspace/ui/components/breadcrumb"
 import { Separator } from "@workspace/ui/components/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@workspace/ui/components/sidebar"
-import { Button } from "@workspace/ui/components/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
-import { Badge } from "@workspace/ui/components/badge"
-import { Input } from "@workspace/ui/components/input"
-import { Textarea } from "@workspace/ui/components/textarea"
-import { Label } from "@workspace/ui/components/label"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@workspace/ui/components/table"
+} from "@/components/ui/table"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@workspace/ui/components/select"
+} from "@/components/ui/select"
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@workspace/ui/components/dialog"
-import { ArrowLeft, Megaphone, Eye, Plus, Search, Send, PenLine, Archive } from "lucide-react"
+  BreadcrumbEllipsis,
+} from "@workspace/ui/components/breadcrumb"
+import {
+  ArrowLeft, Plus, Search, Eye, FileText, CalendarClock, Send, Archive, Megaphone
+} from "lucide-react"
 import Link from "next/link"
 
 /* ═════════════════ DUMMY DATA ═════════════════ */
 
 const dummyAnnouncements = [
-  { id: 1, title: "Fitur Baru: Auto-Report Dashboard", slug: "auto-report-dashboard", content: "Senang mengumumkan fitur baru Auto-Report Dashboard yang memudahkan client melihat performa project secara real-time tanpa request manual.", category: "feature_update", priority: "high", status: "published", target: "all", sent: "2026-04-20", read: 12, total: 15, publisher: "Aziz" },
-  { id: 2, title: "Maintenance Sistem 25 April 2026", slug: "maintenance-25-april", content: "Akan ada maintenance sistem pada tanggal 25 April 2026 pukul 02:00-05:00 WIB. Mohon simpan pekerjaan sebelum waktu tersebut.", category: "maintenance_notice", priority: "urgent", status: "published", target: "all", sent: "2026-04-22", read: 14, total: 15, publisher: "Aziz" },
-  { id: 3, title: "Program Retainer Diskon 20%", slug: "retainer-diskon-20", content: "Khusus client yang melanjutkan retainer tahun ini, dapatkan diskon 20% untuk semua request support.", category: "new_offering", priority: "normal", status: "draft", target: "at_risk", sent: null, read: 0, total: 3, publisher: "Aziz" },
-  { id: 4, title: "Undangan Gathering Client 15 Mei", slug: "gathering-15-mei", content: "Kami mengundang semua client untuk hadir dalam acara gathering bertema Networking & Tech Updates.", category: "event_invitation", priority: "normal", status: "scheduled", target: "all", sent: null, read: 0, total: 15, publisher: "Aziz" },
-  { id: 5, title: "Perubahan SLA Support", slug: "perubahan-sla-support", content: "Mulai 1 Mei 2026, SLA response untuk support level enterprise berubah menjadi 2 jam.", category: "service_change", priority: "high", status: "published", target: "enterprise", sent: "2026-04-18", read: 4, total: 4, publisher: "Aziz" },
+  {
+    id: 1,
+    title: "Fitur Baru: Auto-Report Dashboard",
+    jenis: "fitur_baru",
+    content: "Senang mengumumkan fitur baru Auto-Report Dashboard...",
+    target: "all",
+    targetLabel: "Semua Client",
+    scheduledAt: "2026-04-20 09:00",
+    sentAt: "2026-04-20",
+    status: "terkirim",
+    totalClient: 15,
+    readCount: 12,
+    clickedCount: 8,
+  },
+  {
+    id: 2,
+    title: "Maintenance Sistem 25 April 2026",
+    jenis: "info_pemeliharaan",
+    content: "Akan ada maintenance sistem pada tanggal 25 April...",
+    target: "all",
+    targetLabel: "Semua Client",
+    scheduledAt: "2026-04-22 08:00",
+    sentAt: "2026-04-22",
+    status: "terkirim",
+    totalClient: 15,
+    readCount: 14,
+    clickedCount: 5,
+  },
+  {
+    id: 3,
+    title: "Program Retainer Diskon 20%",
+    jenis: "pelayanan_baru",
+    content: "Khusus client yang melanjutkan retainer tahun ini...",
+    target: "at_risk",
+    targetLabel: "At Risk",
+    scheduledAt: null,
+    sentAt: null,
+    status: "draft",
+    totalClient: 3,
+    readCount: 0,
+    clickedCount: 0,
+  },
+  {
+    id: 4,
+    title: "Undangan Gathering Client 15 Mei 2026",
+    jenis: "undangan_event",
+    content: "Kami mengundang semua client untuk hadir dalam acara gathering...",
+    target: "all",
+    targetLabel: "Semua Client",
+    scheduledAt: "2026-04-28 10:00",
+    sentAt: null,
+    status: "terjadwal",
+    totalClient: 15,
+    readCount: 0,
+    clickedCount: 0,
+  },
+  {
+    id: 5,
+    title: "Perubahan SLA Support Mei 2026",
+    jenis: "fitur_baru",
+    content: "Mulai 1 Mei 2026, SLA response untuk support level enterprise...",
+    target: "enterprise",
+    targetLabel: "Enterprise",
+    scheduledAt: "2026-04-18 09:00",
+    sentAt: "2026-04-18",
+    status: "terkirim",
+    totalClient: 4,
+    readCount: 4,
+    clickedCount: 3,
+  },
+  {
+    id: 6,
+    title: "Rilis Mobile App v2.0",
+    jenis: "fitur_baru",
+    content: "Mobile app WIT sekarang hadir dengan versi 2.0 yang membawa banyak peningkatan...",
+    target: "retainer",
+    targetLabel: "Retainer",
+    scheduledAt: null,
+    sentAt: "2026-03-15",
+    status: "archived",
+    totalClient: 8,
+    readCount: 7,
+    clickedCount: 6,
+  },
 ]
 
-const catLabels: Record<string, string> = {
-  feature_update: "Fitur Baru",
-  service_change: "Perubahan Layanan",
-  maintenance_notice: "Pemeliharaan",
-  new_offering: "Penawaran Baru",
-  announcement: "Pengumuman",
-  event_invitation: "Undangan Event",
+const jenisConfig: Record<string, { label: string; color: string; icon: string }> = {
+  fitur_baru:        { label: "Fitur Baru",         color: "bg-blue-100 text-blue-800 border-blue-300",   icon: "🔵" },
+  pelayanan_baru:     { label: "Pelayanan Baru",      color: "bg-green-100 text-green-800 border-green-300", icon: "🟢" },
+  info_pemeliharaan: { label: "Info Pemeliharaan",  color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "🟡" },
+  undangan_event:    { label: "Undangan Event",      color: "bg-purple-100 text-purple-800 border-purple-300", icon: "🟣" },
 }
 
-export default function AfterSalesPengumumanPage() {
+const statusConfig: Record<string, { label: string; color: string }> = {
+  draft:      { label: "Draft",      color: "bg-zinc-100 text-zinc-600 border-zinc-300" },
+  terjadwal:  { label: "Terjadwal",  color: "bg-blue-100 text-blue-700 border-blue-300" },
+  terkirim:   { label: "Terkirim",  color: "bg-green-100 text-green-700 border-green-300" },
+  archived:   { label: "Archived",  color: "bg-zinc-100 text-zinc-500 border-zinc-300 opacity-70" },
+}
+
+export default function PengumumanListPage() {
   const [search, setSearch] = useState("")
+  const [jenisFilter, setJenisFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [showCreate, setShowCreate] = useState(false)
 
   const filtered = dummyAnnouncements.filter(a => {
     const matchSearch = a.title.toLowerCase().includes(search.toLowerCase())
+    const matchJenis = jenisFilter === "all" || a.jenis === jenisFilter
     const matchStatus = statusFilter === "all" || a.status === statusFilter
-    return matchSearch && matchStatus
+    return matchSearch && matchJenis && matchStatus
   })
 
-  const publishedCount = dummyAnnouncements.filter(a => a.status === "published").length
-  const totalReads = dummyAnnouncements.reduce((s, a) => s + a.read, 0)
-  const totalTargets = dummyAnnouncements.reduce((s, a) => s + a.total, 0)
+  const draftCount = dummyAnnouncements.filter(a => a.status === "draft").length
+  const terjadwalCount = dummyAnnouncements.filter(a => a.status === "terjadwal").length
+  const terkirimCount = dummyAnnouncements.filter(a => a.status === "terkirim").length
+  const archivedCount = dummyAnnouncements.filter(a => a.status === "archived").length
 
   return (
     <SidebarProvider>
@@ -72,7 +158,7 @@ export default function AfterSalesPengumumanPage() {
               <BreadcrumbList>
                 <BreadcrumbItem><BreadcrumbLink href="/after-sales">After Sales</BreadcrumbLink></BreadcrumbItem>
                 <BreadcrumbSeparator />
-                <BreadcrumbItem><BreadcrumbPage>Pengumuman</BreadcrumbPage></BreadcrumbItem>
+                <BreadcrumbItem><BreadcrumbPage>Pengumuman & Update</BreadcrumbPage></BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
@@ -85,227 +171,177 @@ export default function AfterSalesPengumumanPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-3">
               <Link href="/after-sales">
-                <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Pengumuman & Feature Update</h1>
-                <p className="text-muted-foreground text-sm">Kirim update ke client via email + portal</p>
+                <h1 className="text-2xl font-bold tracking-tight">Pengumuman & Update</h1>
+                <p className="text-muted-foreground text-sm">Kirim pengumuman & update ke client</p>
               </div>
             </div>
-            <Button onClick={() => setShowCreate(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Buat Pengumuman Baru
-            </Button>
+            <Link href="/after-sales/pengumuman/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Buat Pengumuman Baru
+              </Button>
+            </Link>
           </div>
 
-          {/* Stats */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Terkirim</CardTitle>
-                <Send className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{publishedCount}</div>
-                <p className="text-xs text-muted-foreground">Sudah diterbitkan</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-zinc-500" />
+                  <span className="text-sm text-muted-foreground">Draft</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{draftCount}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Dibaca</CardTitle>
-                <Eye className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalReads}</div>
-                <p className="text-xs text-muted-foreground">Dari {totalTargets} client</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-muted-foreground">Terjadwal</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{terjadwalCount}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Draft</CardTitle>
-                <PenLine className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dummyAnnouncements.filter(a => a.status === "draft").length}</div>
-                <p className="text-xs text-muted-foreground">Belum terbit</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-muted-foreground">Terkirim</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{terkirimCount}</div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Archie</CardTitle>
-                <Archive className="h-4 w-4 text-zinc-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground">Sudah tidak aktif</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <Archive className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm text-muted-foreground">Archived</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{archivedCount}</div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Filter */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+          {/* Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari judul pengumuman..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input
+                placeholder="Cari pengumuman..."
+                className="pl-8"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={jenisFilter} onValueChange={setJenisFilter}>
               <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter Jenis" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Jenis</SelectItem>
+                <SelectItem value="fitur_baru">🔵 Fitur Baru</SelectItem>
+                <SelectItem value="pelayanan_baru">🟢 Pelayanan Baru</SelectItem>
+                <SelectItem value="info_pemeliharaan">🟡 Info Pemeliharaan</SelectItem>
+                <SelectItem value="undangan_event">🟣 Undangan Event</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filter Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="scheduled">Terjadwal</SelectItem>
-                <SelectItem value="published">Terkirim</SelectItem>
+                <SelectItem value="terjadwal">Terjadwal</SelectItem>
+                <SelectItem value="terkirim">Terkirim</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Table */}
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Judul</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Jenis</TableHead>
                     <TableHead>Target</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Dibaca</TableHead>
+                    <TableHead>Jadwal Kirim</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Total Client</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(a => (
-                    <TableRow key={a.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div className="font-medium">{a.title}</div>
-                        <div className="text-xs text-muted-foreground">Oleh {a.publisher}</div>
-                      </TableCell>
-                      <TableCell><Badge variant="outline">{catLabels[a.category]}</Badge></TableCell>
-                      <TableCell>
-                        <Badge className={
-                          a.priority === "urgent" ? "bg-red-100 text-red-800" :
-                          a.priority === "high" ? "bg-orange-100 text-orange-800" :
-                          "bg-zinc-100 text-zinc-800"
-                        }>{a.priority}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={a.status === "published" ? "default" : a.status === "scheduled" ? "secondary" : "outline"}>
-                          {a.status === "published" ? "Terkirim" : a.status === "scheduled" ? "Terjadwal" : "Draft"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">{a.target}</TableCell>
-                      <TableCell className="text-sm">{a.sent || "—"}</TableCell>
-                      <TableCell>
-                        {a.status === "published" ? (
-                          <div className="flex items-center gap-2">
-                            <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-sm">{a.read}/{a.total}</span>
-                            <div className="w-20 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
-                              <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.round((a.read / a.total) * 100)}%` }} />
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="ghost"><ArrowLeft className="w-4 h-4 rotate-180" /></Button>
+                  {filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <Megaphone className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                        <p>Tidak ada pengumuman</p>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : filtered.map(ann => {
+                    const jCfg = jenisConfig[ann.jenis]
+                    const stCfg = statusConfig[ann.status]
+
+                    return (
+                      <TableRow key={ann.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <Link href={`/after-sales/pengumuman/${ann.id}`} className="font-medium hover:underline">
+                            {ann.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={jCfg.color}>
+                            {jCfg.icon} {jCfg.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{ann.targetLabel}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 text-sm">
+                            {ann.sentAt ? (
+                              <>
+                                <Send className="w-3.5 h-3.5 text-green-500" />
+                                <span className="text-muted-foreground">{ann.sentAt}</span>
+                              </>
+                            ) : ann.scheduledAt ? (
+                              <>
+                                <CalendarClock className="w-3.5 h-3.5 text-blue-500" />
+                                <span className="text-blue-600">{ann.scheduledAt}</span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={stCfg.color}>
+                            {stCfg.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{ann.totalClient}</TableCell>
+                        <TableCell className="text-right">
+                          <Link href={`/after-sales/pengumuman/${ann.id}`}>
+                            <Button size="sm" variant="ghost">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
-
-          {/* Create Dialog */}
-          <Dialog open={showCreate} onOpenChange={setShowCreate}>
-            <DialogContent className="sm:max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Buat Pengumuman Baru</DialogTitle>
-                <DialogDescription>Kirim update ke semua client yang dipilih.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-2">
-                <div className="grid gap-2">
-                  <Label>Judul *</Label>
-                  <Input placeholder="e.g., Fitur Baru: Auto-Report Dashboard" />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Ringkasan (muncul di email subject)</Label>
-                  <Input placeholder="Satu kalimat menarik..." />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Isi Pengumuman *</Label>
-                  <Textarea rows={5} placeholder="Jelaskan detailnya kepada client..." />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Kategori</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="feature_update">Fitur Baru</SelectItem>
-                        <SelectItem value="service_change">Perubahan Layanan</SelectItem>
-                        <SelectItem value="maintenance_notice">Pemeliharaan</SelectItem>
-                        <SelectItem value="new_offering">Penawaran Baru</SelectItem>
-                        <SelectItem value="announcement">Pengumuman</SelectItem>
-                        <SelectItem value="event_invitation">Undangan Event</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Priority</Label>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Target Client</Label>
-                  <Select>
-                    <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Client</SelectItem>
-                      <SelectItem value="enterprise">Enterprise Only</SelectItem>
-                      <SelectItem value="active_retainer">Retainer Aktif</SelectItem>
-                      <SelectItem value="at_risk">At Risk / Cold</SelectItem>
-                      <SelectItem value="specific">Pilih Manual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label>Tanggal Terbit</Label>
-                    <Input type="date" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Status</Label>
-                    <Select defaultValue="draft">
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">Simpan Draft</SelectItem>
-                        <SelectItem value="published">Publikasikan Sekarang</SelectItem>
-                        <SelectItem value="scheduled">Jadwalkan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreate(false)}>Batal</Button>
-                <Button onClick={() => setShowCreate(false)}><Send className="w-4 h-4 mr-2" />Simpan & Kirim</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
         </div>
       </SidebarInset>

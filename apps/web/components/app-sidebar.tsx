@@ -36,6 +36,9 @@ import {
   UsersIcon,
   BuildingIcon,
   TruckIcon,
+  UsersIcon as UsersIcon2,
+  Building2Icon,
+  Clock,
 } from "lucide-react"
 
 // Navigation data — organized by module
@@ -58,25 +61,56 @@ const data = {
     },
   ],
   navMain: [
+    // ─────────────────────────────────────────────────────────────────
+    // HR MANAGEMENT (Mockup - No Database)
+    // ─────────────────────────────────────────────────────────────────
     {
       title: "HR Management",
       url: "#",
-      icon: <TerminalSquareIcon />,
+      icon: <UsersIcon2 />,
       items: [
-        { title: "User Management", url: "/users" },
-        { title: "Shift Kerja", url: "/pengaturan/hc/shift" },
-        { title: "Kalender Kerja", url: "/pengaturan/hc/kalender" },
-        { title: "UMR Kota", url: "/pengaturan/hc/umr" },
-        { title: "BPJS Config", url: "/pengaturan/hc/bpjs" },
-        { title: "PPh21 Config", url: "/pengaturan/hc/pajak" },
-        { title: "Komponen Gaji", url: "/pengaturan/hc/komponen-gaji" },
-        { title: "Grade & Matrix", url: "/pengaturan/hc/grade" },
-        { title: "Departemen", url: "/pengaturan/hc/departemen" },
-        { title: "Jabatan", url: "/pengaturan/hc/jabatan" },
-        { title: "Area Kerja", url: "/pengaturan/hc/area-kerja" },
-        { title: "Aturan Lembur", url: "/pengaturan/hc/lembur" },
+        {
+          title: "👥 Master Data",
+          url: "#hr-master",
+          isCategoryHeader: true,
+        },
+        { title: "Entity Management", url: "/hr/master/entity" },
+        { title: "User Management", url: "/hr/master/users" },
+        { title: "Organization Structure", url: "/hr/master/org-structure" },
+
+        {
+          title: "⚙️ Configuration",
+          url: "#hr-config",
+          isCategoryHeader: true,
+        },
+        { title: "Work Shifts", url: "/hr/config/shifts" },
+        { title: "BPJS Config", url: "/hr/config/bpjs" },
+        { title: "PPh21 Config", url: "/hr/config/pph21" },
+        { title: "Allowance Types", url: "/hr/config/allowances" },
+
+        {
+          title: "📊 Reports",
+          url: "#hr-reports",
+          isCategoryHeader: true,
+        },
+        { title: "Payroll Reports", url: "/hr/reports/payroll" },
+        { title: "Attendance Reports", url: "/hr/reports/attendance" },
+
+        {
+          title: "⏰ Attendance",
+          url: "#hr-attendance",
+          isCategoryHeader: true,
+        },
+        { title: "Attendance Dashboard", url: "/hr/attendance" },
+        { title: "Attendance Logs", url: "/hr/attendance/logs" },
+        { title: "Settings", url: "/hr/attendance/settings" },
+        { title: "Approvals", url: "/hr/attendance/approvals" },
       ],
     },
+
+    // ─────────────────────────────────────────────────────────────────
+    // LEADS MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────
     {
       title: "Leads Management",
       url: "#",
@@ -86,6 +120,10 @@ const data = {
         { title: "New Lead", url: "/leads/new" },
       ],
     },
+
+    // ─────────────────────────────────────────────────────────────────
+    // PROJECT BRIEFS
+    // ─────────────────────────────────────────────────────────────────
     {
       title: "Project Briefs",
       url: "#",
@@ -95,6 +133,10 @@ const data = {
         { title: "New Project Brief", url: "/project-briefs/new" },
       ],
     },
+
+    // ─────────────────────────────────────────────────────────────────
+    // QUOTATIONS
+    // ─────────────────────────────────────────────────────────────────
     {
       title: "Quotations",
       url: "#",
@@ -104,6 +146,10 @@ const data = {
         { title: "New Quotation", url: "/quotations/new" },
       ],
     },
+
+    // ─────────────────────────────────────────────────────────────────
+    // AFTER SALES
+    // ─────────────────────────────────────────────────────────────────
     {
       title: "After Sales",
       url: "#",
@@ -116,9 +162,23 @@ const data = {
       ],
     },
 
-    // ─────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
+    // COMMERCIAL CALCULATOR
+    // ─────────────────────────────────────────────────────────────────
+    {
+      title: "Commercial",
+      url: "#",
+      icon: <CalculatorIcon />,
+      items: [
+        { title: "Calculator", url: "/commercial" },
+        { title: "Projects", url: "/commercial/projects" },
+        { title: "Master Rate Cards", url: "/commercial/rate-cards" },
+      ],
+    },
+
+    // ─────────────────────────────────────────────────────────────────
     // FINANCE & ACCOUNTING — ORGANIZED INTO 4 SUB-CATEGORIES
-    // ─────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
     {
       title: "Finance & Accounting",
       url: "#",

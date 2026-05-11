@@ -9,7 +9,7 @@ import {
 import { Separator } from "@workspace/ui/components/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@workspace/ui/components/sidebar"
 import { Button } from "@workspace/ui/components/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@workspace/ui/components/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card"
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
 import {
@@ -18,52 +18,178 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@workspace/ui/components/select"
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from "@workspace/ui/components/dialog"
-import { Textarea } from "@workspace/ui/components/textarea"
-import { Label } from "@workspace/ui/components/label"
-import { ArrowLeft, MailOpen, Star, CheckCircle2, AlertTriangle, Clock, Eye, Filter, Send, RotateCcw } from "lucide-react"
+import { ArrowLeft, Send, CheckCircle2, Clock, XCircle, Eye, Search, CalendarDays, Smile, Meh, Frown } from "lucide-react"
 import Link from "next/link"
 
 /* ═════════════════ DUMMY DATA ═════════════════ */
 
 const dummySurveys = [
-  { id: 1, client: "PT Maju Jaya", type: "Project Completion", project: "Website Company Profile", rating: 5, status: "responded", sent: "2026-04-20", answered: "2026-04-21", positive: "Sangat puas dengan hasil, komunikasi sangat baik", improvement: "—", followUp: false },
-  { id: 2, client: "CV Kreasi Digital", type: "Ticket Resolution", project: "Bug Login Mobile", rating: 3, status: "responded", sent: "2026-04-18", answered: "2026-04-19", positive: "—", improvement: "Waktu perbaikan terlalu lama (3 hari)", followUp: true },
-  { id: 3, client: "PT Sinergi Nusantara", type: "Relationship Pulse", project: null, rating: null, status: "sent", sent: "2026-04-15", answered: null, positive: "—", improvement: "—", followUp: false },
-  { id: 4, client: "PT Global Tech", type: "Project Completion", project: "Dashboard Analytics", rating: 4, status: "responded", sent: "2026-04-10", answered: "2026-04-12", positive: "Desain modern, data real-time", improvement: "Export PDF bisa lebih bagus", followUp: false },
-  { id: 5, client: "CV Media Prima", type: "Ticket Resolution", project: "Update Konten", rating: null, status: "reminded", sent: "2026-04-12", answered: null, positive: "—", improvement: "—", followUp: false },
-  { id: 6, client: "PT Maju Jaya", type: "Relationship Pulse", project: null, rating: 5, status: "responded", sent: "2026-03-25", answered: "2026-03-26", positive: "Sangat loyal, berharap retainer tahun depan", improvement: "—", followUp: false },
+  {
+    id: 1,
+    client: "PT Maju Jaya",
+    sourceType: "Project",
+    sourceName: "Website Company Profile",
+    sentDate: "2026-04-20",
+    answeredDate: "2026-04-21",
+    avgScore: 4.8,
+    sentiment: "positive",
+    status: "answered",
+    picFollowUp: "Andi Supriyadi",
+    needFollowUp: false,
+    answers: {
+      stars: [5, 5, 5, 4, 5],
+      yesNo: "Ya",
+      texts: [
+        "Sangat puas dengan hasil dan waktu pengerjaan. Tim very responsive!",
+        "Pelayanan sangat profesional dan helpful",
+        "Semoga bisa kerja sama lagi untuk project berikutnya 🙏",
+      ],
+    },
+  },
+  {
+    id: 2,
+    client: "CV Kreasi Digital",
+    sourceType: "Tiket",
+    sourceName: "Bug Login Mobile",
+    sentDate: "2026-04-18",
+    answeredDate: "2026-04-19",
+    avgScore: 2.3,
+    sentiment: "negative",
+    status: "answered",
+    picFollowUp: "Dewi Kumalasari",
+    needFollowUp: true,
+    answers: {
+      stars: [2, 3, 2, 2, 2],
+      yesNo: "Mungkin",
+      texts: [
+        "Waktu perbaikan terlalu lama, 3 hari untuk bug simple",
+        "Respon awal cepat tapi solving lamban",
+        "Semoga ke depannya lebih cepat ya",
+      ],
+    },
+  },
+  {
+    id: 3,
+    client: "PT Sinergi Nusantara",
+    sourceType: "Tiket",
+    sourceName: "Error Laporan Bulanan",
+    sentDate: "2026-04-15",
+    answeredDate: null,
+    avgScore: null,
+    sentiment: null,
+    status: "sent",
+    picFollowUp: null,
+    needFollowUp: false,
+    answers: null,
+  },
+  {
+    id: 4,
+    client: "PT Global Tech",
+    sourceType: "Project",
+    sourceName: "Dashboard Analytics",
+    sentDate: "2026-04-10",
+    answeredDate: "2026-04-12",
+    avgScore: 4.2,
+    sentiment: "positive",
+    status: "answered",
+    picFollowUp: null,
+    needFollowUp: false,
+    answers: {
+      stars: [4, 4, 5, 4, 4],
+      yesNo: "Ya",
+      texts: [
+        "Desain modern dan data real-time, suka banget!",
+        "Export PDF bisa lebih bagus lagi styling-nya",
+        "Overall memuaskan, tim sangat cooperate",
+      ],
+    },
+  },
+  {
+    id: 5,
+    client: "CV Media Prima",
+    sourceType: "Tiket",
+    sourceName: "Update Konten Website",
+    sentDate: "2026-04-12",
+    answeredDate: null,
+    avgScore: null,
+    sentiment: null,
+    status: "expired",
+    picFollowUp: null,
+    needFollowUp: false,
+    answers: null,
+  },
+  {
+    id: 6,
+    client: "PT Energi Terbarukan Indonesia",
+    sourceType: "Project",
+    sourceName: "Sistem Monitoring Solar",
+    sentDate: "2026-04-05",
+    answeredDate: "2026-04-07",
+    avgScore: 3.6,
+    sentiment: "neutral",
+    status: "answered",
+    picFollowUp: null,
+    needFollowUp: false,
+    answers: {
+      stars: [4, 3, 4, 3, 4],
+      yesNo: "Ya",
+      texts: [
+        "Hasil bagus, sesuai ekspektasi",
+        "Dokumentasi teknis kurang lengkap",
+        "Netral saja, bukan yang terbaik tapi也不算差",
+      ],
+    },
+  },
+  {
+    id: 7,
+    client: "PT Karya Bersama",
+    sourceType: "Tiket",
+    sourceName: "Reset Password User",
+    sentDate: "2026-03-28",
+    answeredDate: null,
+    avgScore: null,
+    sentiment: null,
+    status: "expired",
+    picFollowUp: null,
+    needFollowUp: false,
+    answers: null,
+  },
 ]
 
+const sentimentConfig: Record<string, { label: string; color: string; icon: string }> = {
+  positive: { label: "Positif", color: "bg-green-100 text-green-800 border-green-300", icon: "🟢" },
+  neutral:  { label: "Netral",  color: "bg-yellow-100 text-yellow-800 border-yellow-300", icon: "🟡" },
+  negative: { label: "Negatif", color: "bg-red-100 text-red-800 border-red-300", icon: "🔴" },
+}
+
 const statusConfig: Record<string, { label: string; color: string }> = {
-  responded:  { label: "Sudah Jawab", color: "bg-green-100 text-green-800" },
-  sent:       { label: "Dikirim", color: "bg-blue-100 text-blue-800" },
-  reminded:   { label: "Di-reminder", color: "bg-orange-100 text-orange-800" },
-  expired:    { label: "Kadaluarsa", color: "bg-zinc-100 text-zinc-600" },
+  sent:     { label: "Terkirim",  color: "bg-blue-100 text-blue-800 border-blue-300" },
+  answered: { label: "Dijawab",   color: "bg-green-100 text-green-800 border-green-300" },
+  expired:  { label: "Kadaluarsa", color: "bg-zinc-100 text-zinc-600 border-zinc-300" },
 }
 
 export default function AfterSalesSurveysPage() {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [showDetail, setShowDetail] = useState(false)
-  const [selectedSurvey, setSelectedSurvey] = useState(null)
+  const [sentimentFilter, setSentimentFilter] = useState("all")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
 
   const filtered = dummySurveys.filter(s => {
-    const matchSearch = s.client.toLowerCase().includes(search.toLowerCase()) || s.type.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = s.client.toLowerCase().includes(search.toLowerCase()) ||
+      s.sourceName.toLowerCase().includes(search.toLowerCase())
     const matchStatus = statusFilter === "all" || s.status === statusFilter
-    return matchSearch && matchStatus
+    const matchSentiment = sentimentFilter === "all" || s.sentiment === sentimentFilter
+    const matchDateFrom = !dateFrom || s.sentDate >= dateFrom
+    const matchDateTo = !dateTo || s.sentDate <= dateTo
+    return matchSearch && matchStatus && matchSentiment && matchDateFrom && matchDateTo
   })
 
-  const pendingCount = dummySurveys.filter(s => s.status === "sent" || s.status === "reminded").length
-  const negativeCount = dummySurveys.filter(s => s.rating && s.rating <= 2).length
-  const avgRating = dummySurveys.filter(s => s.rating).reduce((a, c) => a + c.rating, 0) / dummySurveys.filter(s => s.rating).length
-
-  const openDetail = (survey: any) => {
-    setSelectedSurvey(survey)
-    setShowDetail(true)
-  }
+  // Summary stats
+  const totalSent = dummySurveys.length
+  const answeredCount = dummySurveys.filter(s => s.status === "answered").length
+  const pendingCount = dummySurveys.filter(s => s.status === "sent").length
+  const expiredCount = dummySurveys.filter(s => s.status === "expired").length
 
   return (
     <SidebarProvider>
@@ -77,7 +203,7 @@ export default function AfterSalesSurveysPage() {
               <BreadcrumbList>
                 <BreadcrumbItem><BreadcrumbLink href="/after-sales">After Sales</BreadcrumbLink></BreadcrumbItem>
                 <BreadcrumbSeparator />
-                <BreadcrumbItem><BreadcrumbPage>Survey & Feedback</BreadcrumbPage></BreadcrumbItem>
+                <BreadcrumbItem><BreadcrumbPage>Auto Survey</BreadcrumbPage></BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
@@ -90,135 +216,206 @@ export default function AfterSalesSurveysPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-3">
               <Link href="/after-sales">
-                <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Survey & Feedback</h1>
-                <p className="text-muted-foreground text-sm">Auto-survey setelah project selesai atau ticket ditutup</p>
+                <h1 className="text-2xl font-bold tracking-tight">Auto Survey</h1>
+                <p className="text-muted-foreground text-sm">Survey otomatis pasca project selesai atau tiket ditutup</p>
               </div>
             </div>
-            <Button variant="outline">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Jalankan Scanner
-            </Button>
+            <Link href="/after-sales/surveys/preview">
+              <Button variant="outline">
+                <Eye className="w-4 h-4 mr-2" />
+                Preview Form Client
+              </Button>
+            </Link>
           </div>
 
-          {/* Stats */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Summary Cards: Total Terkirim, Sudah Dijawab, Belum Dijawab, Kadaluarsa */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Survey Dikirim</CardTitle>
-                <MailOpen className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{dummySurveys.length}</div>
-                <p className="text-xs text-muted-foreground">Sejak awal</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm text-muted-foreground">Total Terkirim</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{totalSent}</div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Pending (Belum Jawab)</CardTitle>
-                <Clock className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{pendingCount}</div>
-                <p className="text-xs text-muted-foreground">Dikirim / Di-reminder</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-muted-foreground">Sudah Dijawab</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{answeredCount}</div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-                <Star className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{avgRating.toFixed(1)}</div>
-                <p className="text-xs text-muted-foreground">Dari {dummySurveys.filter(s => s.rating).length} jawaban</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm text-muted-foreground">Belum Dijawab</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{pendingCount}</div>
               </CardContent>
             </Card>
-
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Feedback Negatif</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{negativeCount}</div>
-                <p className="text-xs text-muted-foreground">Rating ≤ 2, perlu follow-up</p>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm text-muted-foreground">Kadaluarsa</span>
+                </div>
+                <div className="text-2xl font-bold mt-1">{expiredCount}</div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Filter */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <MailOpen className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari client atau tipe survey..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
+          {/* Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari client..."
+                className="pl-8"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filter Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="sent">Dikirim</SelectItem>
-                <SelectItem value="reminded">Di-reminder</SelectItem>
-                <SelectItem value="responded">Sudah Jawab</SelectItem>
+                <SelectItem value="sent">Terkirim</SelectItem>
+                <SelectItem value="answered">Dijawab</SelectItem>
+                <SelectItem value="expired">Kadaluarsa</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Filter Sentimen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Sentimen</SelectItem>
+                <SelectItem value="positive">🟢 Positif</SelectItem>
+                <SelectItem value="neutral">🟡 Netral</SelectItem>
+                <SelectItem value="negative">🔴 Negatif</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              className="w-[150px]"
+              value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              placeholder="Dari tanggal"
+            />
+            <Input
+              type="date"
+              className="w-[150px]"
+              value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              placeholder="Sampai tanggal"
+            />
           </div>
 
           {/* Table */}
           <Card>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Tipe Survey</TableHead>
-                    <TableHead>Project/Ticket</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Nama Client</TableHead>
+                    <TableHead>Sumber</TableHead>
                     <TableHead>Tanggal Kirim</TableHead>
-                    <TableHead>Follow-Up</TableHead>
+                    <TableHead>Tanggal Jawab</TableHead>
+                    <TableHead>Skor Rata-rata</TableHead>
+                    <TableHead>Sentimen</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(sv => {
-                    const st = statusConfig[sv.status] || statusConfig.sent
+                  {filtered.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <p>Tidak ada survey yang cocok dengan filter</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : filtered.map(sv => {
+                    const st = statusConfig[sv.status]
+                    const sentCfg = sv.sentiment ? sentimentConfig[sv.sentiment] : null
+
                     return (
-                      <TableRow key={sv.id} className="hover:bg-muted/50 cursor-pointer">
-                        <TableCell className="font-medium">{sv.client}</TableCell>
-                        <TableCell className="text-sm">{sv.type}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{sv.project || "—"}</TableCell>
+                      <TableRow key={sv.id} className="hover:bg-muted/50">
                         <TableCell>
-                          {sv.rating ? (
-                            <div className="flex items-center gap-1">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={`w-4 h-4 ${i < sv.rating ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-300'}`} />
-                              ))}
+                          <Link href={`/after-sales/surveys/${sv.id}`} className="font-medium hover:underline">
+                            {sv.client}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <Badge variant="outline" className="text-xs">
+                              {sv.sourceType === "Project" ? "📁 Project" : "🎫 Tiket"}
+                            </Badge>
+                            <div className="text-muted-foreground mt-0.5">{sv.sourceName}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <CalendarDays className="w-3.5 h-3.5" />
+                            {sv.sentDate}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {sv.answeredDate ? (
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                              {sv.answeredDate}
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </TableCell>
-                        <TableCell><Badge className={st.color}>{st.label}</Badge></TableCell>
-                        <TableCell className="text-sm">{sv.sent}</TableCell>
                         <TableCell>
-                          {sv.followUp ? (
-                            <Badge variant="destructive" className="gap-1">
-                              <AlertTriangle className="w-3 h-3" /> Perlu
-                            </Badge>
+                          {sv.avgScore ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <span key={i} className={`text-sm ${i < Math.round(sv.avgScore!) ? 'text-yellow-400' : 'text-zinc-300'}`}>★</span>
+                                ))}
+                              </div>
+                              <span className={`font-semibold text-sm ${sv.avgScore >= 4 ? 'text-green-700' : sv.avgScore >= 3 ? 'text-yellow-700' : 'text-red-700'}`}>
+                                {sv.avgScore.toFixed(1)}
+                              </span>
+                            </div>
                           ) : (
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
+                            <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {sentCfg ? (
+                            <Badge variant="outline" className={sentCfg.color}>
+                              {sentCfg.icon} {sentCfg.label}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={st.color}>
+                            {st.label}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="ghost" onClick={() => openDetail(sv)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <Link href={`/after-sales/surveys/${sv.id}`}>
+                            <Button size="sm" variant="ghost">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     )
@@ -227,59 +424,6 @@ export default function AfterSalesSurveysPage() {
               </Table>
             </CardContent>
           </Card>
-
-          {/* Detail Dialog */}
-          <Dialog open={showDetail} onOpenChange={setShowDetail}>
-            <DialogContent className="sm:max-w-lg">
-              {selectedSurvey && (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>Detail Survey</DialogTitle>
-                    <DialogDescription>{selectedSurvey.client} — {selectedSurvey.type}</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-2">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Status</Label>
-                        <div className="font-medium">{(statusConfig[selectedSurvey.status]?.label) || selectedSurvey.status}</div>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Rating</Label>
-                        <div>
-                          {selectedSurvey.rating ? (
-                            <div className="flex items-center gap-1">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className={`w-4 h-4 ${i < selectedSurvey.rating ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-300'}`} />
-                              ))}
-                            </div>
-                          ) : "Belum dijawab"}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Masukan Positif</Label>
-                      <div className="text-sm mt-1 p-2 bg-green-50 rounded-md">{selectedSurvey.positive || "—"}</div>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Saran Perbaikan</Label>
-                      <div className="text-sm mt-1 p-2 bg-orange-50 rounded-md">{selectedSurvey.improvement || "—"}</div>
-                    </div>
-                    {selectedSurvey.followUp && (
-                      <div className="p-3 bg-red-50 rounded-md border border-red-200">
-                        <div className="flex items-center gap-2 text-red-800 font-medium text-sm">
-                          <AlertTriangle className="w-4 h-4" /> Perlu Tindak Lanjut
-                        </div>
-                        <div className="text-sm text-red-700 mt-1">{selectedSurvey.improvement}</div>
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowDetail(false)}>Tutup</Button>
-                  </DialogFooter>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
 
         </div>
       </SidebarInset>

@@ -251,14 +251,16 @@ export type HrSalaryMatrixUpdate = Partial<Omit<HrSalaryMatrix, 'id' | 'created_
 export type HrOvertimeRule = {
   id: string
   tenant_id: string
-  entity_id: string
+  entity_id: string | null
   branch_id: string | null
-  day_type: 'weekday' | 'weekend' | 'national_holiday'
-  rate_brackets: any
-  max_hours_per_day: number
-  max_hours_per_week: number
-  description: string | null
+  code: string
+  name: string
+  min_overtime_minutes: number
+  overtime_multiplier: number
+  max_overtime_hours_per_day: number
+  max_overtime_hours_per_month: number
   is_active: boolean
+  description: string | null
   created_at: string
   updated_at: string
 }
