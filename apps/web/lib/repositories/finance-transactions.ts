@@ -55,7 +55,7 @@ export async function getVendors(entityId?: string) {
   // contacts table has vendor-type contacts (no contact_type column in live DB,
   // but we filter by notes='vendor' convention or just return all contacts)
   let query = supabase
-    .from('contacts')
+    .from('clients')
     .select('*')
     .is('deleted_at', null)
     .order('name', { ascending: true })
@@ -70,7 +70,7 @@ export async function getVendors(entityId?: string) {
 export async function getVendorById(id: string) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('clients')
     .select('*')
     .eq('id', id)
     .is('deleted_at', null)
@@ -83,7 +83,7 @@ export async function getVendorById(id: string) {
 export async function createVendor(vendor: VendorInsert) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('clients')
     .insert(vendor)
     .select()
     .single()
@@ -95,7 +95,7 @@ export async function createVendor(vendor: VendorInsert) {
 export async function updateVendor(id: string, updates: VendorUpdate) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('clients')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
@@ -108,7 +108,7 @@ export async function updateVendor(id: string, updates: VendorUpdate) {
 export async function deleteVendor(id: string) {
   const supabase = await createAdminClient()
   const { error } = await supabase
-    .from('contacts')
+    .from('clients')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
   
@@ -123,7 +123,7 @@ export async function deleteVendor(id: string) {
 export async function getCustomers(entityId?: string) {
   const supabase = await createAdminClient()
   let query = supabase
-    .from('contacts')
+    .from('clients')
     .select('*')
     .is('deleted_at', null)
     .order('name', { ascending: true })
@@ -138,7 +138,7 @@ export async function getCustomers(entityId?: string) {
 export async function getCustomerById(id: string) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('clients')
     .select('*')
     .eq('id', id)
     .is('deleted_at', null)
@@ -151,7 +151,7 @@ export async function getCustomerById(id: string) {
 export async function createCustomer(customer: CustomerInsert) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('clients')
     .insert(customer)
     .select()
     .single()
@@ -163,7 +163,7 @@ export async function createCustomer(customer: CustomerInsert) {
 export async function updateCustomer(id: string, updates: CustomerUpdate) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('clients')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
@@ -176,7 +176,7 @@ export async function updateCustomer(id: string, updates: CustomerUpdate) {
 export async function deleteCustomer(id: string) {
   const supabase = await createAdminClient()
   const { error } = await supabase
-    .from('contacts')
+    .from('clients')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id)
   

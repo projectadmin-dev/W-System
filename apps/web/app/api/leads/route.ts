@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Validate required fields
-    const requiredFields = ['name', 'source', 'tenant_id', 'current_pic_id']
+    const requiredFields = ['name', 'source']
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -88,7 +88,12 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-    
+
+    // Fallback tenant_id for dev (production: derive from JWT session)
+    if (!body.tenant_id) {
+      body.tenant_id = '00000000-0000-0000-0000-000000000001'
+    }
+
     // Calculate total score if scoring components provided
     let totalScore = 0
     if (body.budget_disclosed || body.authority_level || body.need_definition || body.timeline || body.engagement_score) {
