@@ -290,7 +290,8 @@ function OrgStructureTab() {
   // CRUD State
   const [departments, setDepartments] = useState<any[]>([])
   const [departmentsLoading, setDepartmentsLoading] = useState(false)
-  const [divisions, setDivisions] = useState(initialDivisions)
+  const [divisions, setDivisions] = useState<any[]>([])
+  const [divisionsLoading, setDivisionsLoading] = useState(false)
   const [jobTitles, setJobTitles] = useState<any[]>([])
   const [jobTitlesLoading, setJobTitlesLoading] = useState(false)
   const [jobLevels, setJobLevels] = useState<any[]>([])
@@ -317,18 +318,21 @@ function OrgStructureTab() {
     if (!selectedEntity) return
 
     setDepartmentsLoading(true)
+    setDivisionsLoading(true)
     setJobTitlesLoading(true)
     setJobLevelsLoading(true)
     setWorkAreasLoading(true)
 
     Promise.all([
       fetch(`/api/org-structure/departments?entity_id=${selectedEntity.id}`).then(r => r.json()),
+      fetch(`/api/org-structure/divisions?entity_id=${selectedEntity.id}`).then(r => r.json()),
       fetch(`/api/org-structure/positions?entity_id=${selectedEntity.id}`).then(r => r.json()),
       fetch(`/api/org-structure/job-levels?entity_id=${selectedEntity.id}`).then(r => r.json()),
       fetch(`/api/org-structure/work-areas?entity_id=${selectedEntity.id}`).then(r => r.json()),
     ])
-      .then(([depts, titles, levels, areas]) => {
+      .then(([depts, divs, titles, levels, areas]) => {
         setDepartments(depts.data || [])
+        setDivisions(divs.data || [])
         setJobTitles(titles.data || [])
         setJobLevels(levels.data || [])
         setWorkAreas(areas.data || [])
@@ -342,6 +346,7 @@ function OrgStructureTab() {
       })
       .finally(() => {
         setDepartmentsLoading(false)
+        setDivisionsLoading(false)
         setJobTitlesLoading(false)
         setJobLevelsLoading(false)
         setWorkAreasLoading(false)
@@ -359,6 +364,7 @@ function OrgStructureTab() {
     const { type, id } = deleteConfirm
     try {
       const endpoint = type === "departments" ? `/api/org-structure/departments/${id}`
+        : type === "divisions" ? `/api/org-structure/divisions/${id}`
         : type === "job-titles" ? `/api/org-structure/positions/${id}`
         : type === "job-levels" ? `/api/org-structure/job-levels/${id}`
         : type === "work-areas" ? `/api/org-structure/work-areas/${id}`

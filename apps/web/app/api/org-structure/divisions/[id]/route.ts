@@ -10,7 +10,7 @@ export async function DELETE(
     const supabase = createAdminClient()
 
     const { error } = await supabase
-      .from('hr_work_areas')
+      .from('hr_divisions')
       .delete()
       .eq('id', id)
 
@@ -23,7 +23,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, id })
   } catch (error) {
-    console.error('Failed to delete work area:', error)
+    console.error('Failed to delete division:', error)
     return NextResponse.json(
       { success: false, error: (error as Error).message },
       { status: 500 }
@@ -40,17 +40,18 @@ export async function PATCH(
     const supabase = createAdminClient()
     const body = await request.json()
 
-    const { name, location, type, capacity, is_active } = body
+    const { name, head_user_id, email, phone, description, is_active } = body
 
     const updates: any = {}
     if (name !== undefined) updates.name = name
-    if (location !== undefined) updates.location = location
-    if (type !== undefined) updates.type = type
-    if (capacity !== undefined) updates.capacity = capacity
+    if (head_user_id !== undefined) updates.head_user_id = head_user_id
+    if (email !== undefined) updates.email = email
+    if (phone !== undefined) updates.phone = phone
+    if (description !== undefined) updates.description = description
     if (is_active !== undefined) updates.is_active = is_active
 
     const { data, error } = await supabase
-      .from('hr_work_areas')
+      .from('hr_divisions')
       .update(updates)
       .eq('id', id)
       .select()
@@ -65,7 +66,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, data })
   } catch (error) {
-    console.error('Failed to update work area:', error)
+    console.error('Failed to update division:', error)
     return NextResponse.json(
       { success: false, error: (error as Error).message },
       { status: 500 }

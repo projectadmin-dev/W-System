@@ -126,5 +126,4 @@ export async function GET_BY_ID(request: NextRequest, { params }: { params: { id
   }
 }
 
-// Export as GET (for single record)
-export { GET_BY_ID as GET }
+// NOTE: Single record GET moved to [id]/route.ts
