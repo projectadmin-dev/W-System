@@ -23,10 +23,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid UUID format' }, { status: 400 })
     }
 
-    if (!isValidUUID(id)) {
-      return NextResponse.json({ error: 'Invalid UUID format' }, { status: 400 })
-    }
-
     const result = await voidJournalEntry(id)
     return NextResponse.json(result)
   } catch (error) {
