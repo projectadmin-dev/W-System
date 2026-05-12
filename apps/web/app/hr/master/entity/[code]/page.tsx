@@ -37,10 +37,12 @@ export default function EntityDetailPage() {
   useEffect(() => {
     async function fetchEntity() {
       try {
-        const res = await fetch(`/api/entities?id=${code}`)
+        const res = await fetch(`/api/entities`)
         const result = await res.json()
-        if (result.success && result.data) {
-          setEntity(result.data)
+        const data = Array.isArray(result) ? result : (result.data ?? [])
+        const found = data.find((e: any) => e.code === code)
+        if (found) {
+          setEntity(found)
         }
       } catch (error) {
         console.error('Failed to fetch entity:', error)

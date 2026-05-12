@@ -44,13 +44,15 @@ export default function EditEntityPage() {
   useEffect(() => {
     async function fetchEntity() {
       try {
-        const res = await fetch(`/api/entities?id=${code}`)
+        const res = await fetch(`/api/entities`)
         const result = await res.json()
-        if (result.success && result.data) {
-          setEntity(result.data)
+        const data = Array.isArray(result) ? result : (result.data ?? [])
+        const found = data.find((e: any) => e.code === code)
+        if (found) {
+          setEntity(found)
           setFormData({
-            name: result.data.name,
-            status: result.data.status,
+            name: found.name,
+            status: found.status,
           })
         }
       } catch (error) {
