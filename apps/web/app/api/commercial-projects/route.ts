@@ -9,6 +9,27 @@ const supabase = createClient(
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
+/* ── auto-generate project code ── */
+async function generateProjectCode(): Promise<string> {
+  const year = new Date().getFullYear().toString()
+  const prefix = `CMP-${year}-`
+
+  const { data } = await supabase
+    .from('commercial_projects')
+    .select('project_code')
+    .ilike('project_code', `${prefix}%`)
+    .order('project_code', { ascending: false })
+    .limit(1)
+    .single()
+
+  let nextNum = 1
+  if (data?.project_code) {
+    const suffix = data.project_code.slice(prefix.length)
+    nextNum = (parseInt(suffix, 10) || 0) + 1
+  }
+
+  return `${prefix}${String(nextNum).padStart(4, '0')}`
+}
 /* ── helpers: snake <-> camel ── */
 interface ManpowerPayload {
   group: string
@@ -252,7 +273,7 @@ export async function POST(request: NextRequest) {
     if (pErr) throw pErr
     if (!project) throw new Error('Project insert failed')
 
-    // Insert manpower
+    // ── Re-fetch to get trigger-generated project_code ──
     if (body.manpower?.length) {
       const rows = body.manpower.map((m) => {
         const rc = rcMap.get(`${body.type}|${m.group}|${m.role}`)
