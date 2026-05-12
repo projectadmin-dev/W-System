@@ -36,8 +36,7 @@ import {
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
-import { Textarea } from "@workspace/ui/components/textarea"
-import { ArrowLeft, Save, AlertCircle, CheckCircle, TrendingUp } from "lucide-react"
+import { ArrowLeft, Save, AlertCircle, CheckCircle } from "lucide-react"
 import Link from "next/link"
 
 const profile = {
@@ -58,18 +57,8 @@ export default function NewLeadPage() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    company_name: '',
     contact_email: '',
-    contact_phone: '',
-    job_title: '',
     source: 'inbound',
-    budget_disclosed: 'unknown',
-    authority_level: 'influencer',
-    need_definition: 0,
-    timeline: 'unknown',
-    engagement_score: 0,
-    notes: '',
-    tags: '' as string,
   })
 
   const handleSave = async () => {
@@ -78,17 +67,16 @@ export default function NewLeadPage() {
       setError(null)
 
       // Validate required fields
-      if (!formData.name || !formData.source) {
-        setError('Name and Source are required fields')
+      if (!formData.name || !formData.contact_email || !formData.source) {
+        setError('Name, Email, and Source are required')
         setSaving(false)
         return
       }
 
       const payload = {
-        ...formData,
-        need_definition: parseInt(formData.need_definition as any) || 0,
-        engagement_score: parseInt(formData.engagement_score as any) || 0,
-        tags: formData.tags ? formData.tags.split(',').map((t: string) => t.trim()) : [],
+        name: formData.name,
+        contact_email: formData.contact_email,
+        source: formData.source,
       }
 
       const response = await fetch('/api/leads', {
@@ -118,35 +106,6 @@ export default function NewLeadPage() {
     }
   }
 
-  const calculateScore = () => {
-    let score = 0
-    
-    if (formData.budget_disclosed === 'exact') score += 25
-    else if (formData.budget_disclosed === 'range') score += 15
-    
-    if (formData.authority_level === 'c_level') score += 25
-    else if (formData.authority_level === 'manager') score += 15
-    else if (formData.authority_level === 'influencer') score += 5
-    
-    score += Math.min(parseInt(formData.need_definition as any) || 0, 20)
-    
-    if (formData.timeline === 'within_3mo') score += 15
-    else if (formData.timeline === 'within_6mo') score += 8
-    
-    score += Math.min(parseInt(formData.engagement_score as any) || 0, 15)
-    
-    return score
-  }
-
-  const currentScore = calculateScore()
-
-  const getStageFromScore = (score: number) => {
-    if (score >= 75) return 'hot'
-    if (score >= 50) return 'warm'
-    return 'cold'
-  }
-
-  const predictedStage = getStageFromScore(currentScore)
 
   return (
     <SidebarProvider>
@@ -237,12 +196,12 @@ export default function NewLeadPage() {
             )}
 
             <div className="grid gap-6 md:grid-cols-2">
-              
-              {/* Contact Information */}
+
+              {/* Basic Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                  <CardDescription>Basic details about the lead</CardDescription>
+                  <CardTitle>Lead Information</CardTitle>
+                  <CardDescription>Basic details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -254,23 +213,7 @@ export default function NewLeadPage() {
                     />
                   </div>
                   <div>
-                    <Label>Job Title</Label>
-                    <Input
-                      value={formData.job_title}
-                      onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                      placeholder="Marketing Director"
-                    />
-                  </div>
-                  <div>
-                    <Label>Company Name</Label>
-                    <Input
-                      value={formData.company_name}
-                      onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                      placeholder="PT Example Company"
-                    />
-                  </div>
-                  <div>
-                    <Label>Email</Label>
+                    <Label>Email *</Label>
                     <Input
                       type="email"
                       value={formData.contact_email}
@@ -279,124 +222,10 @@ export default function NewLeadPage() {
                     />
                   </div>
                   <div>
-                    <Label>Phone</Label>
-                    <Input
-                      value={formData.contact_phone}
-                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                      placeholder="+62 812 3456 7890"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Lead Scoring */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Lead Scoring
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={currentScore >= 75 ? 'bg-green-100 text-green-800' : currentScore >= 50 ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}>
-                        Score: {currentScore}/100
-                      </Badge>
-                      <Badge variant="outline" className={
-                        predictedStage === 'hot' ? 'bg-red-100 text-red-800' :
-                        predictedStage === 'warm' ? 'bg-orange-100 text-orange-800' :
-                        'bg-blue-100 text-blue-800'
-                      }>
-                        {predictedStage.toUpperCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardDescription>
-                    Score determines pipeline stage automatically
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Budget Disclosed</Label>
-                    <Select
-                      value={formData.budget_disclosed}
-                      onValueChange={(value) => setFormData({ ...formData, budget_disclosed: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unknown">Unknown (0 pts)</SelectItem>
-                        <SelectItem value="range">Range disclosed (15 pts)</SelectItem>
-                        <SelectItem value="exact">Exact amount (25 pts)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Authority Level</Label>
-                    <Select
-                      value={formData.authority_level}
-                      onValueChange={(value) => setFormData({ ...formData, authority_level: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="influencer">Influencer (5 pts)</SelectItem>
-                        <SelectItem value="manager">Manager (15 pts)</SelectItem>
-                        <SelectItem value="c_level">C-Level (25 pts)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Need Definition (0-20)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={formData.need_definition}
-                      onChange={(e) => setFormData({ ...formData, need_definition: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div>
-                    <Label>Timeline</Label>
-                    <Select
-                      value={formData.timeline}
-                      onValueChange={(value) => setFormData({ ...formData, timeline: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unknown">Unknown (0 pts)</SelectItem>
-                        <SelectItem value="within_6mo">Within 6 months (8 pts)</SelectItem>
-                        <SelectItem value="within_3mo">Within 3 months (15 pts)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Engagement Score (0-15)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="15"
-                      value={formData.engagement_score}
-                      onChange={(e) => setFormData({ ...formData, engagement_score: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Source & Notes */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Source & Notes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
                     <Label>Lead Source *</Label>
                     <Select
                       value={formData.source}
-                      onValueChange={(value: any) => setFormData({ ...formData, source: value })}
+                      onValueChange={(value) => setFormData({ ...formData, source: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -411,58 +240,25 @@ export default function NewLeadPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Tags (comma-separated)</Label>
-                    <Input
-                      value={formData.tags}
-                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                      placeholder="enterprise, priority, q1-2026"
-                    />
-                  </div>
-                  <div>
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Additional notes about this lead..."
-                      rows={4}
-                    />
-                  </div>
                 </CardContent>
               </Card>
 
-              {/* Info Panel */}
+              {/* Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Pipeline Stages</CardTitle>
+                  <CardTitle>Informasi</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between p-2 bg-blue-50 rounded">
-                    <span className="text-sm font-medium">Cold</span>
-                    <span className="text-xs text-muted-foreground">0-49 pts</span>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <p className="font-medium mb-1">Status Awal:</p>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800">Cold</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-orange-50 rounded">
-                    <span className="text-sm font-medium">Warm</span>
-                    <span className="text-xs text-muted-foreground">50-74 pts</span>
+                  <div>
+                    <p className="font-medium mb-1">Lead Assign:</p>
+                    <Badge variant="outline">Default (Admin)</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-red-50 rounded">
-                    <span className="text-sm font-medium">Hot 🔥</span>
-                    <span className="text-xs text-muted-foreground">75-100 pts</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-green-50 rounded">
-                    <span className="text-sm font-medium">Deal</span>
-                    <span className="text-xs text-muted-foreground">Signed contract</span>
-                  </div>
-                  
-                  <div className="pt-4 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      <strong>SLA Timelines:</strong>
-                    </p>
-                    <ul className="text-xs text-muted-foreground mt-1 space-y-1">
-                      <li>• Cold → Warm: 7 days</li>
-                      <li>• Warm → Hot: 14 days</li>
-                      <li>• Hot → Deal: 30 days</li>
-                    </ul>
+                  <div className="pt-2 border-t text-xs text-muted-foreground">
+                    Minimal lead creation. Lengkapi data lebih lanjut setelah create.
                   </div>
                 </CardContent>
               </Card>

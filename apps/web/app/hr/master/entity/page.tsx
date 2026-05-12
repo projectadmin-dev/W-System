@@ -105,6 +105,17 @@ function EntityListTab() {
 
   return (
     <div className="space-y-6">
+      {/* Header + Add Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Manajemen Entity</h3>
+          <p className="text-sm text-muted-foreground">Kelola holding dan subsidiary</p>
+        </div>
+        <Button asChild>
+          <Link href="/hr/master/entity/add"><Plus className="h-4 w-4 mr-2" /> Tambah Entity</Link>
+        </Button>
+      </div>
+
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Entity</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{loading ? "—" : entities.length}</div></CardContent></Card>
