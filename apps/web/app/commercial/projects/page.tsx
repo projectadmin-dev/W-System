@@ -57,6 +57,8 @@ import {
 } from 'recharts';
 
 interface SavedProject {
+  id: string;
+  projectCode: string;
   projectName: string;
   pic: string;
   status: string;
@@ -144,19 +146,32 @@ export default function CommercialProjectsPage() {
   const [sortAsc, setSortAsc] = useState(false);
 
   // Load from server API
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
+    setLoading(true);
     fetch('/api/commercial-projects')
-      .then((res) => res.json())
-      .then((data: SavedProject[]) => {
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: any) => {
+        const list = Array.isArray(data) ? data : (data.data || []);
         setProjects(
-          data.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime()
+          list.sort(
+            (a: any, b: any) =>
+              new Date(b.createdAt || b.created_at).getTime() -
+              new Date(a.createdAt || a.created_at).getTime()
           )
         );
+        setLoading(false);
       })
-      .catch((err) => console.error('Failed to fetch projects:', err));
+      .catch((err) => {
+        console.error('Failed to fetch projects:', err);
+        setError(String(err));
+        setLoading(false);
+      });
   }, []);
 
   // Sort handler — click kolom
@@ -282,28 +297,21 @@ export default function CommercialProjectsPage() {
   ]);
 
   const getOriginalIndex = (filteredIdx: number) => {
-    const p = filtered[filteredIdx];
-    return projects.findIndex(
-      (original) =>
-        original.createdAt === p.createdAt &&
-        original.projectName === p.projectName
-    );
+    if (filteredIdx < 0 || filteredIdx >= filtered.length) return -1;
+    const filteredId = filtered[filteredIdx].id;
+    return projects.findIndex((original) => original.id === filteredId);
   };
 
   const deleteProject = async (filteredIdx: number) => {
     if (!confirm('Are you sure you want to delete this project?')) return;
     const originalIdx = getOriginalIndex(filteredIdx);
-    const updated = projects.filter((_, i) => i !== originalIdx);
-    setProjects(updated);
-    // sync to server
+    if (originalIdx < 0) return;
+    const id = projects[originalIdx].id;
+    setProjects((prev) => prev.filter((p) => p.id !== id));
     try {
-      await fetch('/api/commercial-projects', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
+      await fetch(`/api/commercial-projects?id=${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.error('Failed to sync delete:', err);
+      console.error('Failed to delete:', err);
     }
   };
 

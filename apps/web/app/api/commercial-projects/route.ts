@@ -76,6 +76,7 @@ function manpowerClientToDb(projectId: string, payload: ManpowerPayload, rateCar
 function projectDbToClient(db: any): any {
   return {
     id: db.id,
+    projectCode: db.project_code || '',
     projectName: db.project_name,
     pic: db.pic || '',
     status: db.status,

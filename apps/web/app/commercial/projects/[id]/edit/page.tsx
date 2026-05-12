@@ -48,7 +48,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function EditProjectPage() {
   const params = useParams();
   const router = useRouter();
-  const projectIndex = parseInt(params.index as string);
+  const projectId = params.id as string;
 
   const [loaded, setLoaded] = useState(false);
   const [project, setProject] = useState({ projectName: '', pic: '', status: 'Draft', type: 'Consultant' });
@@ -58,52 +58,61 @@ export default function EditProjectPage() {
   const [quotationRaw, setQuotationRaw] = useState('');
   const [actualDealRaw, setActualDealRaw] = useState('');
 
-  // Load data once
+  // Load data from API
   useEffect(() => {
-    const raw = localStorage.getItem('ws-commercial-projects');
-    if (!raw) {
-      toast.error('No saved projects found');
+    if (!projectId) {
+      toast.error('Project ID not found');
       router.push('/commercial/projects');
       return;
     }
-    const projects = JSON.parse(raw);
-    const p = projects[projectIndex];
-    if (!p) {
-      toast.error('Project not found');
-      router.push('/commercial/projects');
-      return;
-    }
-    setProject({
-      projectName: p.projectName || '',
-      pic: p.pic || p.PIC || '',
-      status: p.status || 'Draft',
-      type: p.type || p.projectType || 'Consultant',
-    });
-    setDeductions({
-      pajak: p.deductions?.pajak ?? 11,
-      founderFee: p.deductions?.founderFee ?? 3,
-      managementFee: p.deductions?.managementFee ?? 0,
-      seFee: p.deductions?.seFee ?? 0,
-    });
-    setTopp({
-      cogsPct: p.topp?.cogsPct ?? 20,
-      opexPct: p.topp?.opexPct ?? 80,
-    });
-    setQuotationRaw(p.quotationPublish ? fmtIDR(p.quotationPublish).replace('IDR ', '') : '');
-    setActualDealRaw(p.actualDeal ? fmtIDR(p.actualDeal).replace('IDR ', '') : '');
+    fetch(`/api/commercial-projects?id=${projectId}`)
+      .then((res) => res.json())
+      .then((p) => {
+        const data = p.data || p;
+        if (!data || data.error) {
+          toast.error(data?.error || 'Project not found');
+          router.push('/commercial/projects');
+          return;
+        }
+        setProject({
+          projectName: data.projectName || data.project_name || '',
+          pic: data.pic || '',
+          status: data.status || 'Draft',
+          type: data.type || data.project_type || 'Consultant',
+        });
+        setDeductions({
+          pajak: data.deductions?.pajak ?? 11,
+          founderFee: data.deductions?.founderFee ?? 3,
+          managementFee: data.deductions?.managementFee ?? 0,
+          seFee: data.deductions?.seFee ?? 0,
+        });
+        setTopp({
+          cogsPct: data.topp?.cogsPct ?? 20,
+          opexPct: data.topp?.opexPct ?? 80,
+        });
+        setQuotationRaw(data.quotationPublish ? fmtIDR(data.quotationPublish).replace('IDR ', '') : '');
+        setActualDealRaw(data.actualDeal ? fmtIDR(data.actualDeal).replace('IDR ', '') : '');
 
-    // Load manpower rows
-    const loadedRows = (p.manpower || p.rows || []).map((m: any) => ({
-      id: nextId(),
-      group: m.group || '',
-      role: m.role || '',
-      nama: m.nama || '',
-      qty: m.qty || 1,
-      months: m.months || 1,
-    }));
-    setRows(loadedRows.length > 0 ? loadedRows : [{ id: nextId(), group: '', role: '', nama: '', qty: 1, months: 1 }]);
-    setLoaded(true);
-  }, [projectIndex, router]);
+        // Load manpower rows
+        const mp = data.manpower || [];
+        const loadedRows = mp.length > 0
+          ? mp.map((m: any) => ({
+              id: nextId(),
+              group: m.group || m.group_name || '',
+              role: m.role || m.role_name || '',
+              nama: m.nama || m.employee_name || '',
+              qty: m.qty || 1,
+              months: m.months || 1,
+            }))
+          : [{ id: nextId(), group: '', role: '', nama: '', qty: 1, months: 1 }];
+        setRows(loadedRows);
+        setLoaded(true);
+      })
+      .catch(() => {
+        toast.error('Failed to load project');
+        router.push('/commercial/projects');
+      });
+  }, [projectId, router]);
 
   const quotationPublish = useMemo(() => parseIDR(quotationRaw), [quotationRaw]);
   const actualDeal = useMemo(() => parseIDR(actualDealRaw), [actualDealRaw]);
@@ -151,38 +160,44 @@ export default function EditProjectPage() {
     setter(clean);
   };
 
-  const saveChanges = () => {
+  const saveChanges = async () => {
     if (!project.projectName.trim()) {
       toast.error('Project Name is required!');
       return;
     }
-    const raw = localStorage.getItem('ws-commercial-projects');
-    if (!raw) return;
-    const projects = JSON.parse(raw);
-    const payload = {
-      ...projects[projectIndex],
-      projectName: project.projectName,
-      pic: project.pic,
-      status: project.status,
-      type: project.type,
-      quotationPublish,
-      actualDeal,
-      manpower: rows.map((r) => ({
-        group: r.group,
-        role: r.role,
-        nama: r.nama,
-        qty: r.qty,
-        months: r.months,
-      })),
-      deductions,
-      topp,
-      summary,
-      updatedAt: new Date().toISOString(),
-    };
-    projects[projectIndex] = payload;
-    localStorage.setItem('ws-commercial-projects', JSON.stringify(projects));
-    toast.success(`Project "${project.projectName}" berhasil diupdate!`);
-    router.push('/commercial/projects');
+    try {
+      const res = await fetch('/api/commercial-projects', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: projectId,
+          projectName: project.projectName,
+          pic: project.pic,
+          status: project.status,
+          type: project.type,
+          quotationPublish,
+          actualDeal,
+          manpower: rows.map((r) => ({
+            group: r.group,
+            role: r.role,
+            nama: r.nama,
+            qty: r.qty,
+            months: r.months,
+          })),
+          deductions,
+          topp,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        toast.success(`Project "${project.projectName}" berhasil diupdate!`);
+        router.push('/commercial/projects');
+      } else {
+        toast.error(result.error || 'Gagal update project');
+      }
+    } catch (e) {
+      toast.error('Gagal update project');
+    }
   };
 
   if (!loaded) {
