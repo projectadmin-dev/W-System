@@ -77,6 +77,7 @@ const data = {
         { title: "Entity Management", url: "/hr/master/entity" },
         { title: "User Management", url: "/hr/master/users" },
         { title: "Employee Contracts", url: "/hr/master/contracts" },
+        { title: "Pengaturan Kompensasi", url: "/hr/compensation" },
 
         {
           title: "⏰ TIME & ATTENDANCE",
@@ -94,15 +95,6 @@ const data = {
           url: "#hr-compensation",
           isCategoryHeader: true,
         },
-        { title: "Job Grades", url: "/hr/compensation" },
-        { title: "Salary Matrix", url: "/hr/compensation" },
-        { title: "Salary Components", url: "/hr/compensation" },
-        { title: "Allowance Types", url: "/hr/compensation" },
-        { title: "THR Settings", url: "/hr/compensation" },
-        { title: "Pro-Rate Config", url: "/hr/compensation" },
-        { title: "BPJS Config", url: "/hr/compensation" },
-        { title: "PPh21 Config", url: "/hr/compensation" },
-        { title: "City UMR", url: "/hr/compensation" },
       ],
     },
 
