@@ -80,6 +80,13 @@ const data = {
         { title: "Pengaturan Kompensasi", url: "/hr/compensation" },
 
         {
+          title: "🗂️ HR ADMINISTRATION",
+          url: "#hr-admin",
+          isCategoryHeader: true,
+        },
+        { title: "Kontrak Management", url: "/hr/master/contracts" },
+
+        {
           title: "⏰ TIME & ATTENDANCE",
           url: "#hr-attendance",
           isCategoryHeader: true,
