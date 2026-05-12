@@ -106,6 +106,43 @@ const data = {
     },
 
     // ─────────────────────────────────────────────────────────────────
+    // WORKFORCE MANAGEMENT
+    // ─────────────────────────────────────────────────────────────────
+    {
+      title: "Workforce Management",
+      url: "/workforce",
+      icon: <TargetIcon />,
+      items: [
+        {
+          title: "👥 WORKFORCE",
+          url: "#wf-workforce",
+          isCategoryHeader: true,
+        },
+        { title: "Workforce Dashboard", url: "/workforce" },
+        { title: "Workload Monitoring", url: "/workforce/workload" },
+        { title: "Resource Allocation", url: "/workforce/resources" },
+        { title: "Timesheet", url: "/workforce/timesheet" },
+
+        {
+          title: "📁 PROJECT",
+          url: "#wf-project",
+          isCategoryHeader: true,
+        },
+        { title: "Project Dashboard", url: "/workforce/projects" },
+        { title: "Task Management", url: "/workforce/tasks" },
+        { title: "Sprint Board", url: "/workforce/sprint" },
+
+        {
+          title: "📊 REPORTS",
+          url: "#wf-reports",
+          isCategoryHeader: true,
+        },
+        { title: "Utilization Report", url: "/workforce/reports/utilization" },
+        { title: "Role Dashboard", url: "/workforce/reports/role-dashboard" },
+      ],
+    },
+
+    // ─────────────────────────────────────────────────────────────────
     // LEADS MANAGEMENT
     // ─────────────────────────────────────────────────────────────────
     {
