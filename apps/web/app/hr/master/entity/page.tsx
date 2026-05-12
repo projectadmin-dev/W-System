@@ -22,8 +22,12 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@workspace/ui/components/collapsible"
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogHeader, AlertDialogTitle,
+} from "@workspace/ui/components/alert-dialog"
+import {
   Building2, GitBranch, Search, Plus, Edit, Trash2,
-  ChevronRight, ChevronDown, ListTree,
+  ChevronRight, ChevronDown, ListTree, Loader2,
 } from "lucide-react"
 import type { Department, Division, JobTitle, JobLevel, WorkArea } from "../org-structure/data"
 import {
@@ -56,6 +60,7 @@ function EntityListTab() {
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [typeFilter, setTypeFilter] = useState("ALL")
   const [currentPage, setCurrentPage] = useState(1)
+  const [deleteDialog, setDeleteDialog] = useState<{ show: boolean; entity: Entity | null; deleting: boolean }>({ show: false, entity: null, deleting: false })
   const rowsPerPage = 10
 
   useEffect(() => {
@@ -67,6 +72,29 @@ function EntityListTab() {
       })
       .catch(() => { setEntities([]); setLoading(false) })
   }, [])
+
+  async function handleDelete(entity: Entity) {
+    setDeleteDialog({ show: true, entity, deleting: false })
+  }
+
+  async function confirmDelete() {
+    if (!deleteDialog.entity) return
+    setDeleteDialog(prev => ({ ...prev, deleting: true }))
+    try {
+      const res = await fetch(`/api/entities/${deleteDialog.entity.id}`, { method: 'DELETE' })
+      const result = await res.json()
+      if (result.success) {
+        setEntities(entities.filter(e => e.id !== deleteDialog.entity!.id))
+        setDeleteDialog({ show: false, entity: null, deleting: false })
+      } else {
+        alert('Gagal menghapus: ' + result.error)
+      }
+    } catch (error) {
+      alert('Error: ' + (error as Error).message)
+    } finally {
+      setDeleteDialog(prev => ({ ...prev, deleting: false }))
+    }
+  }
 
   const filtered = useMemo(() => {
     let result = [...entities]
@@ -196,6 +224,9 @@ function EntityListTab() {
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/hr/master/entity/${entity.code}/edit`}>Edit</Link>
                         </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(entity)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -217,6 +248,29 @@ function EntityListTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.show} onOpenChange={(show) => !deleteDialog.deleting && setDeleteDialog({ ...deleteDialog, show })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Entity?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda akan menghapus entity <strong>{deleteDialog.entity?.name}</strong> ({deleteDialog.entity?.code}). Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-2 justify-end">
+            <AlertDialogCancel disabled={deleteDialog.deleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteDialog.deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleteDialog.deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              {deleteDialog.deleting ? 'Menghapus...' : 'Hapus'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
