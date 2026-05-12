@@ -52,7 +52,7 @@ export default function EditEntityPage() {
           setEntity(found)
           setFormData({
             name: found.name,
-            status: found.status,
+            status: found.status?.toLowerCase() || 'active',
           })
         }
       } catch (error) {
@@ -75,7 +75,7 @@ export default function EditEntityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
-          status: formData.status,
+          status: formData.status === 'active' ? 'active' : 'inactive',
         })
       })
       const result = await res.json()

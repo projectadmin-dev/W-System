@@ -280,9 +280,23 @@ function EntityListTab() {
 type OrgTab = "departments" | "divisions" | "job-titles" | "job-levels" | "work-areas"
 
 function OrgStructureTab() {
+  const [entities, setEntities] = useState<Entity[]>([])
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
+  const [loadingEntities, setLoadingEntities] = useState(true)
   const [activeTab, setActiveTab] = useState<OrgTab>("departments")
   const [search, setSearch] = useState("")
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    fetch("/api/entities")
+      .then(r => r.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data.data ?? [])
+        setEntities(list)
+        setLoadingEntities(false)
+      })
+      .catch(() => { setEntities([]); setLoadingEntities(false) })
+  }, [])
 
   const toggleDept = (id: string) =>
     setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }))
@@ -343,8 +357,54 @@ function OrgStructureTab() {
       : <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Inactive</Badge>
   }
 
+  if (!selectedEntity) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Pilih Entity</CardTitle>
+            <CardDescription>Pilih entity untuk mengelola struktur organisasi</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingEntities ? (
+              <p className="text-muted-foreground text-sm">Memuat data entity...</p>
+            ) : entities.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Tidak ada entity</p>
+            ) : (
+              <div className="grid gap-2">
+                {entities.map(entity => (
+                  <Button
+                    key={entity.id}
+                    variant="outline"
+                    className="justify-start h-auto py-3"
+                    onClick={() => setSelectedEntity(entity)}
+                  >
+                    <div className="text-left">
+                      <p className="font-medium">{entity.name}</p>
+                      <p className="text-xs text-muted-foreground">{entity.code}</p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">{selectedEntity.name}</h3>
+          <p className="text-sm text-muted-foreground">{selectedEntity.code}</p>
+        </div>
+        <Button variant="outline" onClick={() => setSelectedEntity(null)}>
+          Ganti Entity
+        </Button>
+      </div>
+
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
