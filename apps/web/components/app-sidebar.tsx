@@ -75,6 +75,7 @@ const data = {
           isCategoryHeader: true,
         },
         { title: "Entity Management", url: "/hr/master/entity" },
+        { title: "Struktur Organisasi", url: "/hr/master/org-structure" },
         { title: "User Management", url: "/hr/master/users" },
         { title: "Employee Contracts", url: "/hr/master/contracts" },
         { title: "Pengaturan Kompensasi", url: "/hr/compensation" },
