@@ -287,6 +287,20 @@ function OrgStructureTab() {
   const [search, setSearch] = useState("")
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({})
 
+  // CRUD State
+  const [departments, setDepartments] = useState<any[]>([])
+  const [departmentsLoading, setDepartmentsLoading] = useState(false)
+  const [divisions, setDivisions] = useState(initialDivisions)
+  const [jobTitles, setJobTitles] = useState<any[]>([])
+  const [jobTitlesLoading, setJobTitlesLoading] = useState(false)
+  const [jobLevels, setJobLevels] = useState<any[]>([])
+  const [jobLevelsLoading, setJobLevelsLoading] = useState(false)
+  const [workAreas, setWorkAreas] = useState<any[]>([])
+  const [workAreasLoading, setWorkAreasLoading] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; type: OrgTab; id: string }>({ show: false, type: "departments", id: "" })
+
   useEffect(() => {
     fetch("/api/entities")
       .then(r => r.json())
@@ -298,18 +312,86 @@ function OrgStructureTab() {
       .catch(() => { setEntities([]); setLoadingEntities(false) })
   }, [])
 
+  // Fetch org structure from API when entity is selected
+  useEffect(() => {
+    if (!selectedEntity) return
+
+    setDepartmentsLoading(true)
+    setJobTitlesLoading(true)
+    setJobLevelsLoading(true)
+    setWorkAreasLoading(true)
+
+    Promise.all([
+      fetch(`/api/org-structure/departments?entity_id=${selectedEntity.id}`).then(r => r.json()),
+      fetch(`/api/org-structure/positions?entity_id=${selectedEntity.id}`).then(r => r.json()),
+      fetch(`/api/org-structure/job-levels?entity_id=${selectedEntity.id}`).then(r => r.json()),
+      fetch(`/api/org-structure/work-areas?entity_id=${selectedEntity.id}`).then(r => r.json()),
+    ])
+      .then(([depts, titles, levels, areas]) => {
+        setDepartments(depts.data || [])
+        setJobTitles(titles.data || [])
+        setJobLevels(levels.data || [])
+        setWorkAreas(areas.data || [])
+      })
+      .catch(err => {
+        console.error('Failed to fetch org structure:', err)
+        setDepartments([])
+        setJobTitles([])
+        setJobLevels([])
+        setWorkAreas([])
+      })
+      .finally(() => {
+        setDepartmentsLoading(false)
+        setJobTitlesLoading(false)
+        setJobLevelsLoading(false)
+        setWorkAreasLoading(false)
+      })
+  }, [selectedEntity])
+
   const toggleDept = (id: string) =>
     setExpandedDepts(prev => ({ ...prev, [id]: !prev[id] }))
 
+  const handleDelete = (type: OrgTab, id: string) => {
+    setDeleteConfirm({ show: true, type, id })
+  }
+
+  const confirmDelete = async () => {
+    const { type, id } = deleteConfirm
+    try {
+      const endpoint = type === "departments" ? `/api/org-structure/departments/${id}`
+        : type === "job-titles" ? `/api/org-structure/positions/${id}`
+        : type === "job-levels" ? `/api/org-structure/job-levels/${id}`
+        : type === "work-areas" ? `/api/org-structure/work-areas/${id}`
+        : null
+
+      if (!endpoint) return
+
+      const res = await fetch(endpoint, { method: 'DELETE' })
+      const result = await res.json()
+
+      if (result.success) {
+        if (type === "departments") setDepartments(departments.filter(d => d.id !== id))
+        else if (type === "divisions") setDivisions(divisions.filter(d => d.id !== id))
+        else if (type === "job-titles") setJobTitles(jobTitles.filter(j => j.id !== id))
+        else if (type === "job-levels") setJobLevels(jobLevels.filter(l => l.id !== id))
+        else if (type === "work-areas") setWorkAreas(workAreas.filter(w => w.id !== id))
+      } else {
+        alert('Gagal menghapus: ' + result.error)
+      }
+    } catch (error) {
+      alert('Error: ' + (error as Error).message)
+    }
+    setDeleteConfirm({ show: false, type, id: "" })
+  }
+
   const filteredDepartments = useMemo(() => {
-    if (!search) return initialDepartments
+    if (!search) return departments
     const s = search.toLowerCase()
-    return initialDepartments.filter(d =>
+    return departments.filter(d =>
       d.name.toLowerCase().includes(s) ||
-      d.code.toLowerCase().includes(s) ||
-      (d.head && d.head.toLowerCase().includes(s))
+      d.code.toLowerCase().includes(s)
     )
-  }, [search])
+  }, [search, departments])
 
   const filteredDivisions = useMemo(() => {
     if (!search) return initialDivisions
@@ -322,34 +404,31 @@ function OrgStructureTab() {
   }, [search])
 
   const filteredJobTitles = useMemo(() => {
-    if (!search) return initialJobTitles
+    if (!search) return jobTitles
     const s = search.toLowerCase()
-    return initialJobTitles.filter(j =>
+    return jobTitles.filter(j =>
       j.name.toLowerCase().includes(s) ||
-      j.code.toLowerCase().includes(s) ||
-      getCompanyName(j.companyId).toLowerCase().includes(s)
+      j.code.toLowerCase().includes(s)
     )
-  }, [search])
+  }, [search, jobTitles])
 
   const filteredJobLevels = useMemo(() => {
-    if (!search) return initialJobLevels
+    if (!search) return jobLevels
     const s = search.toLowerCase()
-    return initialJobLevels.filter(l =>
+    return jobLevels.filter(l =>
       l.name.toLowerCase().includes(s) ||
-      l.code.toLowerCase().includes(s) ||
-      l.grade.toLowerCase().includes(s)
+      l.code.toLowerCase().includes(s)
     )
-  }, [search])
+  }, [search, jobLevels])
 
   const filteredWorkAreas = useMemo(() => {
-    if (!search) return initialWorkAreas
+    if (!search) return workAreas
     const s = search.toLowerCase()
-    return initialWorkAreas.filter(w =>
+    return workAreas.filter(w =>
       w.name.toLowerCase().includes(s) ||
-      w.code.toLowerCase().includes(s) ||
-      w.location.toLowerCase().includes(s)
+      w.code.toLowerCase().includes(s)
     )
-  }, [search])
+  }, [search, workAreas])
 
   function statusBadge(status: string) {
     return status === "Active"
@@ -426,6 +505,7 @@ function OrgStructureTab() {
 
         {/* Departments */}
         <TabsContent value="departments" className="space-y-4 mt-4">
+          <Button className="gap-2"><Plus className="h-4 w-4" /> Tambah Departemen</Button>
           {filteredDepartments.map(dept => (
             <Card key={dept.id}>
               <Collapsible open={expandedDepts[dept.id] || false} onOpenChange={() => toggleDept(dept.id)}>
@@ -444,7 +524,7 @@ function OrgStructureTab() {
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete("departments", dept.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                   </div>
                 </CardHeader>
                 <CollapsibleContent>
@@ -463,7 +543,8 @@ function OrgStructureTab() {
         </TabsContent>
 
         {/* Divisions */}
-        <TabsContent value="divisions" className="mt-4">
+        <TabsContent value="divisions" className="space-y-4 mt-4">
+          <Button className="gap-2"><Plus className="h-4 w-4" /> Tambah Divisi</Button>
           <Card>
             <CardContent className="pt-4">
               <Table>
@@ -481,7 +562,10 @@ function OrgStructureTab() {
                       <TableCell className="font-mono text-sm">{div.code}</TableCell>
                       <TableCell className="font-medium">{div.name}</TableCell>
                       <TableCell>{getCompanyName(div.companyId)}</TableCell>
-                      <TableCell className="text-right"><Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button></TableCell>
+                      <TableCell className="text-right flex justify-end gap-1">
+                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete("divisions", div.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -491,7 +575,8 @@ function OrgStructureTab() {
         </TabsContent>
 
         {/* Job Titles */}
-        <TabsContent value="job-titles" className="mt-4">
+        <TabsContent value="job-titles" className="space-y-4 mt-4">
+          <Button className="gap-2"><Plus className="h-4 w-4" /> Tambah Jabatan</Button>
           <Card>
             <CardContent className="pt-4">
               <Table>
@@ -511,7 +596,10 @@ function OrgStructureTab() {
                       <TableCell className="font-medium">{jt.name}</TableCell>
                       <TableCell>{getCompanyName(jt.companyId)}</TableCell>
                       <TableCell>{jt.levelId}</TableCell>
-                      <TableCell className="text-right"><Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button></TableCell>
+                      <TableCell className="text-right flex justify-end gap-1">
+                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete("job-titles", jt.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -521,7 +609,8 @@ function OrgStructureTab() {
         </TabsContent>
 
         {/* Job Levels */}
-        <TabsContent value="job-levels" className="mt-4">
+        <TabsContent value="job-levels" className="space-y-4 mt-4">
+          <Button className="gap-2"><Plus className="h-4 w-4" /> Tambah Level</Button>
           <Card>
             <CardContent className="pt-4">
               <Table>
@@ -541,7 +630,10 @@ function OrgStructureTab() {
                       <TableCell className="font-medium">{lv.name}</TableCell>
                       <TableCell>{lv.grade}</TableCell>
                       <TableCell className="font-mono text-sm">{formatRupiah(lv.minSalary)} – {formatRupiah(lv.maxSalary)}</TableCell>
-                      <TableCell className="text-right"><Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button></TableCell>
+                      <TableCell className="text-right flex justify-end gap-1">
+                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete("job-levels", lv.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -551,7 +643,8 @@ function OrgStructureTab() {
         </TabsContent>
 
         {/* Work Areas */}
-        <TabsContent value="work-areas" className="mt-4">
+        <TabsContent value="work-areas" className="space-y-4 mt-4">
+          <Button className="gap-2"><Plus className="h-4 w-4" /> Tambah Area Kerja</Button>
           <Card>
             <CardContent className="pt-4">
               <Table>
@@ -571,7 +664,10 @@ function OrgStructureTab() {
                       <TableCell className="font-medium">{wa.name}</TableCell>
                       <TableCell>{wa.location}</TableCell>
                       <TableCell><Badge variant="outline">{wa.type}</Badge></TableCell>
-                      <TableCell className="text-right"><Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button></TableCell>
+                      <TableCell className="text-right flex justify-end gap-1">
+                        <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete("work-areas", wa.id)}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -580,6 +676,24 @@ function OrgStructureTab() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirm.show} onOpenChange={(show) => !show && setDeleteConfirm({ ...deleteConfirm, show: false })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-2 justify-end">
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              <Trash2 className="h-4 w-4 mr-2" /> Hapus
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

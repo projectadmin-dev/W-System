@@ -233,6 +233,14 @@ export default function CommercialCalculatorPage() {
     setter(clean);
   };
 
+  // ── helper: get roles for a group (pure function, not a hook) ──
+  const getRoles = useCallback(
+    (group: string) => {
+      return rateCards.filter((r) => r.type === project.type && r.group === group);
+    },
+    [rateCards, project.type]
+  );
+
   return (
     <div className="p-4 lg:p-6 space-y-6">
       {/* Header */}
@@ -361,7 +369,7 @@ export default function CommercialCalculatorPage() {
                         publish: entry.publishRate * (row.qty || 0) * (row.months || 0),
                       }
                     : { publish: 0 };
-                  const roleOptions = useRoles(rateCards, project.type, row.group);
+                  const roleOptions = getRoles(row.group);
 
                   return (
                     <div
