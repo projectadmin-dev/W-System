@@ -1,175 +1,199 @@
-import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import { join } from "path";
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-const RATE_CARD_PATH = join(process.cwd(), "data", "commercial-rate-cards.json");
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { db: { schema: 'public' }, auth: { autoRefreshToken: false, persistSession: false } }
+)
 
-async function readRateCards(): Promise<any[]> {
-  try {
-    const data = await fs.readFile(RATE_CARD_PATH, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return [];
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
+
+/* ── DB → frontend shape helpers ── */
+function dbToRateCard(db: any) {
+  return {
+    id: db.id,
+    type: db.type,
+    group: db.group_name,      // map
+    role: db.role_name,        // map
+    hpp: Number(db.hpp),
+    specialRate: Number(db.special_rate), // map
+    publishRate: Number(db.publish_rate), // map
+    isActive: db.is_active,
+    notes: db.notes,
+    createdAt: db.created_at,
+    updatedAt: db.updated_at,
   }
 }
 
-async function writeRateCards(data: any[]) {
-  await fs.writeFile(RATE_CARD_PATH, JSON.stringify(data, null, 2), "utf-8");
+function frontendToDb(body: any) {
+  return {
+    tenant_id: DEFAULT_TENANT_ID,
+    type: body.type,
+    group_name: body.group?.trim(),
+    role_name: body.role?.trim(),
+    hpp: Number(body.hpp),
+    special_rate: Number(body.specialRate),
+    publish_rate: Number(body.publishRate),
+    is_active: body.isActive ?? true,
+    notes: body.notes,
+  }
 }
 
-// GET — list all rate cards (with optional filter)
+// ───────────────────────── GET ─────────────────────────
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type");
-    const group = searchParams.get("group");
-    
-    let rateCards = await readRateCards();
-    
-    if (type) rateCards = rateCards.filter((r: any) => r.type === type);
-    if (group) rateCards = rateCards.filter((r: any) => r.group === group);
-    
-    // Get unique types and groups for filter dropdown
-    const types = [...new Set(rateCards.map((r: any) => r.type))];
-    const groups = [...new Set(rateCards.map((r: any) => r.group))];
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: rateCards,
-      meta: { types, groups }
-    }, { status: 200 });
-  } catch (error) {
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type') || undefined
+    const group = searchParams.get('group') || undefined
+
+    let query = supabase
+      .from('commercial_rate_cards')
+      .select('*')
+      .eq('tenant_id', DEFAULT_TENANT_ID)
+      .order('type', { ascending: true })
+      .order('group_name', { ascending: true })
+
+    if (type) query = query.eq('type', type)
+    if (group) query = query.eq('group_name', group)
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    const mapped = (data || []).map(dbToRateCard)
+    const types  = [...new Set(mapped.map((r) => r.type))]
+    const groups = [...new Set(mapped.map((r) => r.group))]
+
+    return NextResponse.json({
+      success: true,
+      data: mapped,
+      meta: { types, groups },
+    }, { status: 200 })
+  } catch (error: any) {
+    console.error('Rate cards GET error:', error)
     return NextResponse.json(
-      { success: false, message: "Failed to read rate cards", error: String(error) },
+      { success: false, message: 'Failed to fetch rate cards', error: error.message },
       { status: 500 }
-    );
+    )
   }
 }
 
-// POST — add new rate card
+// ───────────────────────── POST ─────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { type, group, role, hpp, specialRate, publishRate } = body;
-    
-    // Validate required fields
-    if (!type || !group || !role || hpp === undefined || specialRate === undefined || publishRate === undefined) {
+    const body = await request.json()
+
+    if (!body.type || !body.group || !body.role || body.hpp === undefined || body.specialRate === undefined || body.publishRate === undefined) {
       return NextResponse.json(
-        { success: false, message: "Missing required fields" },
+        { success: false, message: 'Missing required fields' },
         { status: 400 }
-      );
+      )
     }
-    
-    const rateCards = await readRateCards();
-    
-    // Generate ID
-    const prefix = type.substring(0, 1).toLowerCase();
-    const count = rateCards.filter((r: any) => r.type === type).length + 1;
-    const id = `${prefix}-${count}`;
-    
-    const newCard = {
-      id,
-      type,
-      group,
-      role,
-      hpp: Number(hpp),
-      specialRate: Number(specialRate),
-      publishRate: Number(publishRate)
-    };
-    
-    rateCards.push(newCard);
-    await writeRateCards(rateCards);
-    
+
+    const payload = frontendToDb(body)
+
+    const { data, error } = await supabase
+      .from('commercial_rate_cards')
+      .insert([payload])
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true, data: dbToRateCard(data) }, { status: 201 })
+  } catch (error: any) {
+    console.error('Rate cards POST error:', error)
+    if (error?.code === '23505') {
+      return NextResponse.json(
+        { success: false, message: 'Rate card combination already exists for this type/group/role' },
+        { status: 409 }
+      )
+    }
     return NextResponse.json(
-      { success: true, data: newCard },
-      { status: 201 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, message: "Failed to add rate card", error: String(error) },
+      { success: false, message: 'Failed to add rate card', error: error.message },
       { status: 500 }
-    );
+    )
   }
 }
 
-// PUT — update rate card by ID
+// ───────────────────────── PUT ─────────────────────────
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { id, type, group, role, hpp, specialRate, publishRate } = body;
-    
+    const body = await request.json()
+    const { id } = body
+
     if (!id) {
       return NextResponse.json(
-        { success: false, message: "ID is required" },
+        { success: false, message: 'ID is required' },
         { status: 400 }
-      );
+      )
     }
-    
-    const rateCards = await readRateCards();
-    const index = rateCards.findIndex((r: any) => r.id === id);
-    
-    if (index === -1) {
+
+    const updatePayload: any = {}
+    if (body.type !== undefined) updatePayload.type = body.type
+    if (body.group !== undefined) updatePayload.group_name = body.group.trim()
+    if (body.role !== undefined) updatePayload.role_name = body.role.trim()
+    if (body.hpp !== undefined) updatePayload.hpp = Number(body.hpp)
+    if (body.specialRate !== undefined) updatePayload.special_rate = Number(body.specialRate)
+    if (body.publishRate !== undefined) updatePayload.publish_rate = Number(body.publishRate)
+
+    const { data, error } = await supabase
+      .from('commercial_rate_cards')
+      .update(updatePayload)
+      .eq('id', id)
+      .eq('tenant_id', DEFAULT_TENANT_ID)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ success: true, data: dbToRateCard(data) }, { status: 200 })
+  } catch (error: any) {
+    console.error('Rate cards PUT error:', error)
+    if (error?.code === '23505') {
       return NextResponse.json(
-        { success: false, message: "Rate card not found" },
-        { status: 404 }
-      );
+        { success: false, message: 'Rate card combination already exists for this type/group/role' },
+        { status: 409 }
+      )
     }
-    
-    // Update fields (partial update)
-    if (type !== undefined) rateCards[index].type = type;
-    if (group !== undefined) rateCards[index].group = group;
-    if (role !== undefined) rateCards[index].role = role;
-    if (hpp !== undefined) rateCards[index].hpp = Number(hpp);
-    if (specialRate !== undefined) rateCards[index].specialRate = Number(specialRate);
-    if (publishRate !== undefined) rateCards[index].publishRate = Number(publishRate);
-    
-    await writeRateCards(rateCards);
-    
     return NextResponse.json(
-      { success: true, data: rateCards[index] },
-      { status: 200 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, message: "Failed to update rate card", error: String(error) },
+      { success: false, message: 'Failed to update rate card', error: error.message },
       { status: 500 }
-    );
+    )
   }
 }
 
-// DELETE — delete rate card by ID
+// ───────────────────────── DELETE ─────────────────────────
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-    
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
     if (!id) {
       return NextResponse.json(
-        { success: false, message: "ID is required" },
+        { success: false, message: 'ID is required' },
         { status: 400 }
-      );
+      )
     }
-    
-    const rateCards = await readRateCards();
-    const filtered = rateCards.filter((r: any) => r.id !== id);
-    
-    if (filtered.length === rateCards.length) {
-      return NextResponse.json(
-        { success: false, message: "Rate card not found" },
-        { status: 404 }
-      );
-    }
-    
-    await writeRateCards(filtered);
-    
+
+    const { error } = await supabase
+      .from('commercial_rate_cards')
+      .delete()
+      .eq('id', id)
+      .eq('tenant_id', DEFAULT_TENANT_ID)
+
+    if (error) throw error
+
     return NextResponse.json(
-      { success: true, message: "Rate card deleted" },
+      { success: true, message: 'Rate card deleted' },
       { status: 200 }
-    );
-  } catch (error) {
+    )
+  } catch (error: any) {
+    console.error('Rate cards DELETE error:', error)
     return NextResponse.json(
-      { success: false, message: "Failed to delete rate card", error: String(error) },
+      { success: false, message: 'Failed to delete rate card', error: error.message },
       { status: 500 }
-    );
+    )
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card';
 import { Input } from '@workspace/ui/components/input';
 import { Button } from '@workspace/ui/components/button';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, Plus, Calculator, FileText, Percent, RotateCcw, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  RATE_CARD,
+  // RATE_CARD,  // now fetched from API
   PROJECT_TYPES,
   PROJECT_STATUSES,
   getGroups,
@@ -21,6 +21,7 @@ import {
   type ManpowerRow,
   type Deductions,
   type ToppAllocation,
+  type RateCardEntry,
   type ProjectInfo,
 } from '@/lib/commercial-data';
 
@@ -31,6 +32,17 @@ interface CalculatorRow {
   nama: string;
   qty: number;
   months: number;
+}
+
+// Dynamic helpers using fetched rate cards
+function useGroups(rateCards: RateCardEntry[], type: string): string[] {
+  const groups = new Set<string>();
+  rateCards.filter((r) => r.type === type).forEach((r) => groups.add(r.group));
+  return Array.from(groups).sort();
+}
+
+function useRoles(rateCards: RateCardEntry[], type: string, group: string): RateCardEntry[] {
+  return rateCards.filter((r) => r.type === type && r.group === group);
 }
 
 let uidCounter = 0;
@@ -73,6 +85,29 @@ export default function CommercialCalculatorPage() {
   // TOPP
   const [topp, setTopp] = useState<ToppAllocation>({ cogsPct: 20, opexPct: 80 });
 
+  // Rate cards from API
+  const [rateCards, setRateCards] = useState<RateCardEntry[]>([]);
+  const [rateCardsLoading, setRateCardsLoading] = useState(true);
+
+  // Fetch rate cards from API
+  useEffect(() => {
+    fetch('/api/commercial-rate-cards')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setRateCards(data.data);
+        } else {
+          // Fallback to static if API fails
+          import('@/lib/commercial-data').then((mod) => setRateCards(mod.RATE_CARD));
+        }
+        setRateCardsLoading(false);
+      })
+      .catch(() => {
+        import('@/lib/commercial-data').then((mod) => setRateCards(mod.RATE_CARD));
+        setRateCardsLoading(false);
+      });
+  }, []);
+
   // Deal inputs
   const [quotationRaw, setQuotationRaw] = useState('');
   const [actualDealRaw, setActualDealRaw] = useState('');
@@ -82,12 +117,12 @@ export default function CommercialCalculatorPage() {
   const actualDeal = useMemo(() => parseIDR(actualDealRaw), [actualDealRaw]);
 
   // Groups for current selected type
-  const groups = useMemo(() => getGroups(project.type), [project.type]);
+  const groups = useMemo(() => useGroups(rateCards, project.type), [rateCards, project.type]);
 
   // Build data rows with rate card entries
   const dataRows = useMemo(() => {
     return rows.map((r) => {
-      const entry = RATE_CARD.find(
+      const entry = rateCards.find(
         (rc) => rc.type === project.type && rc.group === r.group && rc.role === r.role
       );
       return { entry, qty: r.qty || 0, months: r.months || 0 };
@@ -318,7 +353,7 @@ export default function CommercialCalculatorPage() {
               {/* Rows */}
               <div className="space-y-2">
                 {rows.map((row, idx) => {
-                  const entry = RATE_CARD.find(
+                  const entry = rateCards.find(
                     (rc) => rc.type === project.type && rc.group === row.group && rc.role === row.role
                   );
                   const calc = entry
@@ -326,7 +361,7 @@ export default function CommercialCalculatorPage() {
                         publish: entry.publishRate * (row.qty || 0) * (row.months || 0),
                       }
                     : { publish: 0 };
-                  const roleOptions = getRoles(project.type, row.group);
+                  const roleOptions = useRoles(rateCards, project.type, row.group);
 
                   return (
                     <div
