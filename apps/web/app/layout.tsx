@@ -24,7 +24,7 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
     >
       <body>
-        <ThemeProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange storageKey="wtheme">
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>

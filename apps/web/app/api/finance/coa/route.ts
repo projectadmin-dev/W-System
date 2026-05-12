@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type')
     const entityId = searchParams.get('entityId') || undefined
     const tree = searchParams.get('tree')
-    
+    const cashFlowCategory = searchParams.get('cashFlowCategory')
+
     if (id) {
       const account = await getCoaById(id)
       return NextResponse.json(account)
@@ -43,7 +44,12 @@ export async function GET(request: NextRequest) {
       const accounts = await getCoaByType(type as any)
       return NextResponse.json(accounts)
     }
-    
+
+    if (cashFlowCategory) {
+      const accounts = await getCoaAccounts(entityId)
+      return NextResponse.json(accounts.filter(a => a.cash_flow_category === cashFlowCategory))
+    }
+
     const accounts = await getCoaAccounts(entityId)
     return NextResponse.json(accounts)
   } catch (error) {

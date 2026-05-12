@@ -1,93 +1,290 @@
-import Link from 'next/link';
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import {
+  TrendingUpIcon, AlertTriangleIcon, DollarSignIcon, FileTextIcon,
+  BookOpenIcon, CalendarIcon, WalletIcon, LandmarkIcon, TargetIcon,
+  ReceiptIcon, CalculatorIcon, BarChart3Icon, ClipboardListIcon, ArrowLeftRightIcon,
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import { Badge } from '@workspace/ui/components/badge'
+
+interface ARStats {
+  total: number
+  current: number
+  days_1_30: number
+  days_31_60: number
+  days_61_90: number
+  over_90: number
+}
+
+interface InvoiceSummary {
+  total_count: number
+  total_amount: number
+  paid_total: number
+  overdue_count: number
+  draft_count: number
+  sent_count: number
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0)
+}
 
 export default function FinanceDashboard() {
+  const [stats, setStats] = useState<ARStats | null>(null)
+  const [summary, setSummary] = useState<InvoiceSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  async function fetchDashboardData() {
+    setLoading(true)
+    try {
+      const arRes = await fetch('/api/finance/ar-aging')
+      if (arRes.ok) {
+        const { data } = await arRes.json()
+        setStats(data)
+      }
+      const invRes = await fetch('/api/finance/customer-invoices')
+      if (invRes.ok) {
+        const { data: invoices } = await invRes.json()
+        const s: InvoiceSummary = {
+          total_count: invoices?.length || 0,
+          total_amount: invoices?.reduce((acc: number, inv: any) => acc + (Number(inv.total_amount) || 0), 0) || 0,
+          paid_total: invoices?.reduce((acc: number, inv: any) => acc + (Number(inv.paid_amount) || 0), 0) || 0,
+          overdue_count: invoices?.filter((inv: any) => inv.status === 'overdue').length || 0,
+          draft_count: invoices?.filter((inv: any) => inv.status === 'draft').length || 0,
+          sent_count: invoices?.filter((inv: any) => inv.status === 'sent' || inv.status === 'partial').length || 0,
+        }
+        setSummary(s)
+      }
+    } catch {
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Finance Module</h1>
-          <p className="text-gray-400">W.System Financial Management</p>
-        </div>
+    <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Finance Dashboard</h1>
+        <p className="text-muted-foreground">Overview of your financial position and performance.</p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* COA Card */}
-          <Link href="/finance/coa" className="block">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Chart of Accounts</h2>
-                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 36v-3m-3 3h.01M9 17h.01M9 21h.01M9 13h.01M9 9h.01M9 5h.01M9 1h.01M15 1h.01M15 5h.01M15 9h.01M15 13h.01M15 17h.01M15 21h.01M15 25h.01M15 29h.01" />
-                </svg>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Manage your chart of accounts - assets, liabilities, equity, revenue, and expenses.
-              </p>
-              <div className="mt-4 text-blue-400 text-sm font-medium">
-                Manage COA →
-              </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Outstanding AR</CardTitle>
+            <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <LoadingPulse /> : formatCurrency(stats?.total || 0)}
             </div>
-          </Link>
+          </CardContent>
+        </Card>
 
-          {/* Journal Entries Card */}
-          <Link href="/finance/journal" className="block">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Journal Entries</h2>
-                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Record and manage financial transactions with double-entry bookkeeping.
-              </p>
-              <div className="mt-4 text-green-400 text-sm font-medium">
-                Manage Journals →
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Overdue AR</CardTitle>
+            <AlertTriangleIcon className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {loading ? <LoadingPulse /> : formatCurrency((stats?.days_31_60 || 0) + (stats?.days_61_90 || 0) + (stats?.over_90 || 0))}
             </div>
-          </Link>
+            <p className="text-xs text-muted-foreground mt-1">31-60 / 61-90 / 90+ days</p>
+          </CardContent>
+        </Card>
 
-          {/* Fiscal Periods Card */}
-          <Link href="/finance/periods" className="block">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 hover:border-purple-500 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Fiscal Periods</h2>
-                <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <p className="text-gray-400 text-sm">
-                Configure fiscal years and accounting periods for financial reporting.
-              </p>
-              <div className="mt-4 text-purple-400 text-sm font-medium">
-                Manage Periods →
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Paid (YTD)</CardTitle>
+            <DollarSignIcon className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">
+              {loading ? <LoadingPulse /> : formatCurrency(summary?.paid_total || 0)}
             </div>
-          </Link>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Quick Stats */}
-        <div className="mt-8 bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-400">-</div>
-              <div className="text-sm text-gray-400">Total Accounts</div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Active Invoices</CardTitle>
+            <FileTextIcon className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <LoadingPulse /> : summary?.sent_count || 0} Unpaid
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">-</div>
-              <div className="text-sm text-gray-400">Journal Entries</div>
+            <p className="text-xs text-muted-foreground mt-1">{summary?.overdue_count || 0} Overdue</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AR Aging */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>AR Aging Breakdown</CardTitle>
+          <Link href="/finance/ar-aging" className="text-sm text-primary hover:underline">View Detail →</Link>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="h-20 bg-muted rounded animate-pulse" />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: 'Current', value: stats?.current, variant: 'default' as const },
+                { label: '1-30 Days', value: stats?.days_1_30, variant: 'secondary' as const },
+                { label: '31-60 Days', value: stats?.days_31_60, variant: 'outline' as const },
+                { label: '61-90 Days', value: stats?.days_61_90, variant: 'destructive' as const },
+                { label: '90+ Days', value: stats?.over_90, variant: 'destructive' as const },
+              ].map((item) => (
+                <div key={item.label} className="text-center p-4 rounded-lg bg-muted">
+                  <p className="text-sm text-muted-foreground mb-1">{item.label}</p>
+                  <p className="text-lg font-semibold">{formatCurrency(item.value || 0)}</p>
+                </div>
+              ))}
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400">-</div>
-              <div className="text-sm text-gray-400">Active Periods</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-400">-</div>
-              <div className="text-sm text-gray-400">Current Period</div>
-            </div>
-          </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Module Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ModuleCard
+          title="Chart of Accounts"
+          description="Manage account structure (add, edit, activate)"
+          href="/finance/coa"
+          icon={<BookOpenIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Journal Entries"
+          description="Double-entry bookkeeping — create, post, reverse"
+          href="/finance/journal"
+          icon={<FileTextIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Fiscal Periods"
+          description="Configure accounting periods"
+          href="/finance/periods"
+          icon={<CalendarIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Cash / Bank Register"
+          description="Tracking daily in & out + running balance"
+          href="/finance/cash-register"
+          icon={<WalletIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Bank Reconciliation"
+          description="Match bank statements with journal entries"
+          href="/finance/bank-reconciliation"
+          icon={<LandmarkIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Payment Reconciliation"
+          description="Match receipts with invoices and payments with vendor bills"
+          href="/finance/payment-reconciliation"
+          icon={<ArrowLeftRightIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Petty Cash"
+          description="Manage small cash fund: top-up, expenses, settlement, running balance"
+          href="/finance/petty-cash"
+          icon={<WalletIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Budget vs Actual"
+          description="Track monthly spending against budget by kind & category"
+          href="/finance/budget-vs-actual"
+          icon={<TargetIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Money Requests"
+          description="Procurement, Reimbursement, Cash Advance via NIK"
+          href="/finance/money-requests"
+          icon={<ClipboardListIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="Expense Tracking"
+          description="Budget vs Actual + transaction detail"
+          href="/finance/expenses"
+          icon={<ReceiptIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="AR Aging (Piutang)"
+          description="Customer receivable aging analysis"
+          href="/finance/ar-aging"
+          icon={<CalculatorIcon className="h-5 w-5" />}
+        />
+        <ModuleCard
+          title="AP Aging (Hutang)"
+          description="Vendor payable aging analysis"
+          href="/finance/ap-aging"
+          icon={<BarChart3Icon className="h-5 w-5" />}
+        />
+      </div>
+
+      {/* Reports Section */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Financial Reports</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <ReportCard title="Trial Balance" description="Account balances with debit=credit check" href="/finance/reports/trial-balance" />
+          <ReportCard title="Income Statement" description="Revenue vs expenses profitability" href="/finance/reports/profit-loss" />
+          <ReportCard title="Balance Sheet" description="Assets, liabilities, and equity position" href="/finance/reports/balance-sheet" />
         </div>
       </div>
     </div>
-  );
+  )
+}
+
+/* ---------- Subcomponents ---------- */
+
+function LoadingPulse() {
+  return <div className="h-8 bg-muted rounded animate-pulse" />
+}
+
+function ModuleCard({ title, description, href, icon }: { title: string; description: string; href: string; icon: React.ReactNode }) {
+  return (
+    <Link href={href}>
+      <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+        <CardContent className="p-5 flex items-start gap-4">
+          <div className="mt-1 text-primary">{icon}</div>
+          <div>
+            <h4 className="font-semibold">{title}</h4>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+function ReportCard({ title, description, href }: { title: string; description: string; href: string }) {
+  return (
+    <Link href={href}>
+      <Card className="hover:border-primary transition-colors cursor-pointer">
+        <CardContent className="p-5">
+          <h4 className="font-semibold mb-1">{title}</h4>
+          <p className="text-sm text-muted-foreground">{description}</p>
+          <Badge variant="secondary" className="mt-3">Report</Badge>
+        </CardContent>
+      </Card>
+    </Link>
+  )
 }

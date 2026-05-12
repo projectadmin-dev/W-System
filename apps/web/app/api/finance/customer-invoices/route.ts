@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const entityId = searchParams.get('entity_id') || undefined
     const status = searchParams.get('status') || undefined
-
     const invoices = await getCustomerInvoices(entityId, status)
     return NextResponse.json({ data: invoices })
   } catch (error) {

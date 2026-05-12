@@ -1,7 +1,18 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { toast } from 'sonner'
+import {
+  PlusIcon,
+  Loader2Icon,
+  FileTextIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import { Badge } from '@workspace/ui/components/badge'
+import { Button } from '@workspace/ui/components/button'
 
 interface JournalEntry {
   id: string;
@@ -26,8 +37,8 @@ export default function JournalPage() {
     loadJournalEntries();
   }, [statusFilter]);
 
-  const loadJournalEntries = async () => {
-    setLoading(true);
+  async function loadJournalEntries() {
+    setLoading(true)
     try {
       const url = statusFilter === 'all' ? '/api/finance/journal' : `/api/finance/journal?status=${statusFilter}`;
       const res = await fetch(url);
@@ -41,9 +52,9 @@ export default function JournalPage() {
       console.error('Failed to load journal entries:', error);
       setEntries([]);
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handlePost = async (id: string) => {
     if (!confirm('Are you sure you want to post this journal entry? Once posted, it cannot be edited (PSAK compliance).')) {
@@ -112,6 +123,10 @@ export default function JournalPage() {
             </button>
           </Link>
         </div>
+        <Link href="/finance/journal/new">
+          <Button><PlusIcon className="h-4 w-4 mr-2" />New Entry</Button>
+        </Link>
+      </div>
 
         {error && (
           <div className="mb-6 bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg">
@@ -244,12 +259,70 @@ export default function JournalPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ) : (
+                  entries.map((entry) => (
+                    <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-6 py-3 text-sm font-mono text-primary font-medium">{entry.entry_number}</td>
+                      <td className="px-6 py-3 text-sm text-muted-foreground">
+                        {entry.transaction_date ? new Date(entry.transaction_date).toLocaleDateString('id-ID') : '—'}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-muted-foreground max-w-xs truncate">{entry.description || '—'}</td>
+                      <td className="px-6 py-3 text-sm text-right text-emerald-600 font-medium">{fmt(entry.total_debit)}</td>
+                      <td className="px-6 py-3 text-sm text-right text-destructive font-medium">{fmt(entry.total_credit)}</td>
+                      <td className="px-6 py-3">
+                        <div className="flex gap-1">
+                          {statusBadge(entry.status)}
+                          {entry.reversal_of_id && <Badge variant="secondary">Reversal</Badge>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                          <Link href={`/finance/journal/${entry.id}`}>
+                            <Button variant="ghost" size="sm">View</Button>
+                          </Link>
+                          {entry.status === 'draft' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePost(entry.id)}
+                                disabled={postingId === entry.id}
+                                className="text-emerald-600 hover:text-emerald-700"
+                              >
+                                {postingId === entry.id ? 'Posting...' : 'Post'}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(entry.id)}
+                                className="text-destructive hover:text-destructive/80"
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  );
+  )
+}
+
+function StatCard({ label, value, positive, warn, raw }: { label: string; value: string | number; positive?: boolean; warn?: boolean; raw?: boolean }) {
+  const val = raw ? value : typeof value === 'number' ? new Intl.NumberFormat('id-ID').format(value) : value
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className={`text-xl font-bold ${positive ? 'text-emerald-600' : warn ? 'text-amber-600' : ''}`}>{val}</p>
+      </CardContent>
+    </Card>
+  )
 }

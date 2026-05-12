@@ -1,14 +1,15 @@
 module.exports = {
   apps: [
     {
-      name: 'wsystem-1',
+      name: 'wsystem-1-staging',
       cwd: '/home/ubuntu/apps/wsystem-1/apps/web',
       script: 'npx',
       args: 'next start --port 3001',
       env: {
-        NODE_ENV: 'production',
-        PORT: '3001',
-        NEXT_PUBLIC_PORT: '3001',
+        NODE_ENV: 'development',
+        NEXT_PUBLIC_APP_ENV: 'staging',
+        PORT: 3001,
+        HOSTNAME: '0.0.0.0',
       },
       instances: 1,
       autorestart: true,

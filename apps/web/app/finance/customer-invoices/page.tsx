@@ -219,6 +219,7 @@ export default function CustomerInvoicesPage() {
   }
 
   return (
+
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
