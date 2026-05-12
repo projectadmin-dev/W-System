@@ -76,7 +76,6 @@ const data = {
         },
         { title: "Entity Management", url: "/hr/master/entity" },
         { title: "User Management", url: "/hr/master/users" },
-        { title: "Organization Structure", url: "/hr/master/org-structure" },
         { title: "Employee Contracts", url: "/hr/master/contracts" },
 
         {
