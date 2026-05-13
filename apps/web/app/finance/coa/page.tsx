@@ -3,10 +3,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { PlusIcon, Loader2Icon, FilterIcon, DropletsIcon } from 'lucide-react'
+import { PlusIcon, Loader2Icon, FilterIcon, DropletsIcon, XIcon } from 'lucide-react'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
+import { Input } from '@workspace/ui/components/input'
+import { Label } from '@workspace/ui/components/label'
+import { Textarea } from '@workspace/ui/components/textarea'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@workspace/ui/components/dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@workspace/ui/components/select'
@@ -43,6 +49,17 @@ export default function COAPage() {
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('all')
   const [filterCF, setFilterCF] = useState('all')
+  const [isOpen, setIsOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    code: '',
+    account_name: '',
+    account_type: 'asset',
+    parent_id: '',
+    description: '',
+    cash_flow_category: 'not_applicable',
+    is_active: true,
+  })
 
   useEffect(() => { loadCOA() }, [filterType, filterCF])
 
@@ -60,6 +77,37 @@ export default function COAPage() {
     } catch {
       toast.error('Gagal memuat Chart of Accounts')
     } finally { setLoading(false) }
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.code.trim() || !form.account_name.trim()) {
+      toast.error('Kode akun dan nama akun wajib diisi')
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        ...form,
+        account_type: form.account_type as COA['account_type'],
+        parent_id: form.parent_id || null,
+      }
+      const res = await fetch('/api/finance/coa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || err.message || 'Gagal membuat akun')
+      }
+      toast.success('Akun berhasil dibuat')
+      setIsOpen(false)
+      setForm({ code: '', account_name: '', account_type: 'asset', parent_id: '', description: '', cash_flow_category: 'not_applicable', is_active: true })
+      loadCOA()
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal membuat akun')
+    } finally { setSaving(false) }
   }
 
   const filteredList = coaList
@@ -81,7 +129,7 @@ export default function COAPage() {
           </h1>
           <p className="text-muted-foreground">Kelola struktur akun — termasuk tagging Cash Flow untuk laporan arus kas.</p>
         </div>
-        <Button><PlusIcon className="h-4 w-4 mr-2" /> Tambah Akun</Button>
+        <Button onClick={() => setIsOpen(true)}><PlusIcon className="h-4 w-4 mr-2" /> Tambah Akun</Button>
       </div>
 
       {/* Cash Flow Summary Cards */}
@@ -212,6 +260,108 @@ export default function COAPage() {
           )
         })}
       </div>
+
+      {/* ── ADD ACCOUNT MODAL ── */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Tambah Akun Baru</DialogTitle>
+            <DialogDescription>
+              Buat akun baru di Chart of Accounts. Kode akun harus unique.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">Kode Akun *</Label>
+                <Input
+                  id="code"
+                  placeholder="e.g. 6-1000"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="account_name">Nama Akun *</Label>
+                <Input
+                  id="account_name"
+                  placeholder="e.g. Biaya Transportasi"
+                  value={form.account_name}
+                  onChange={(e) => setForm({ ...form, account_name: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="account_type">Tipe Akun *</Label>
+                <Select
+                  value={form.account_type}
+                  onValueChange={(v) => setForm({ ...form, account_type: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asset">Asset</SelectItem>
+                    <SelectItem value="liability">Liability</SelectItem>
+                    <SelectItem value="equity">Equity</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="expense">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cash_flow_category">Cash Flow Category</Label>
+                <Select
+                  value={form.cash_flow_category}
+                  onValueChange={(v) => setForm({ ...form, cash_flow_category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="operating">🔄 Operating</SelectItem>
+                    <SelectItem value="investing">📊 Investing</SelectItem>
+                    <SelectItem value="financing">💰 Financing</SelectItem>
+                    <SelectItem value="non_cash">⚡ Non-Cash</SelectItem>
+                    <SelectItem value="not_applicable">— Not Applicable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parent_id">Parent Account ID (Optional)</Label>
+              <Input
+                id="parent_id"
+                placeholder="UUID of parent account"
+                value={form.parent_id}
+                onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe this account..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
