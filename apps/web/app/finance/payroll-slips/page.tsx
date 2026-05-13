@@ -49,10 +49,10 @@ interface PayrollSlip {
   employee_id: string
   employee_name: string
   employee_code: string
-  Basic_Salary: number
-  Transportation_Allowance: number
-  Meal_Allowance: number
- communication_Allowance: number
+  basic_salary: number
+  transportation_allowance: number
+  meal_allowance: number
+  communication_allowance: number
   overtime_pay: number
   tax_deduction: number
   bpjs_kesehatan: number
@@ -286,19 +286,19 @@ export default function PayrollSlipsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Basic Salary</span>
-                    <span>{formatCurrency(selectedSlip.Basic_Salary || 0)}</span>
+                    <span>{formatCurrency(selectedSlip.basic_salary || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Transportation</span>
-                    <span>{formatCurrency(selectedSlip.Transportation_Allowance || 0)}</span>
+                    <span>{formatCurrency(selectedSlip.transportation_allowance || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Meal Allowance</span>
-                    <span>{formatCurrency(selectedSlip.Meal_Allowance || 0)}</span>
+                    <span>{formatCurrency(selectedSlip.meal_allowance || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Communication</span>
-                    <span>{formatCurrency(selectedSlip.communication_Allowance || 0)}</span>
+                    <span>{formatCurrency(selectedSlip.communication_allowance || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Overtime</span>
