@@ -288,7 +288,11 @@ export async function voidJournalEntry(id: string) {
     .eq('id', id)
     .single()
   
-  if (current?.status === 'posted') {
+  if (!current) {
+    throw new Error('Journal entry not found')
+  }
+  
+  if (current.status === 'posted') {
     throw new Error('Cannot void posted entry. Use reversal instead')
   }
   
@@ -297,7 +301,7 @@ export async function voidJournalEntry(id: string) {
     .update({ status: 'void' })
     .eq('id', id)
     .select()
-    .single()
+    .maybeSingle()
   
   if (error) throw new Error(`Failed to void journal entry: ${error.message}`)
   return data
