@@ -67,7 +67,6 @@ export default function COAPage() {
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('all')
   const [filterCF, setFilterCF] = useState('all')
-  const [refreshKey, setRefreshKey] = useState(0)
 
   // Create modal
   const [isOpen, setIsOpen] = useState(false)
@@ -85,7 +84,7 @@ export default function COAPage() {
   const [deleting, setDeleting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  useEffect(() => { loadCOA() }, [filterType, filterCF, refreshKey])
+  useEffect(() => { loadCOA() }, [filterType, filterCF])
 
   async function loadCOA() {
     setLoading(true)
@@ -134,7 +133,7 @@ export default function COAPage() {
       toast.success('Akun berhasil dibuat')
       setIsOpen(false)
       setForm({ ...emptyForm })
-      setRefreshKey((k) => k + 1)
+      await loadCOA()
     } catch (err: any) {
       toast.error(err.message || 'Gagal membuat akun')
     } finally { setSaving(false) }
@@ -185,7 +184,7 @@ export default function COAPage() {
       toast.success('Akun berhasil diperbarui')
       setEditOpen(false)
       setEditId(null)
-      setRefreshKey((k) => k + 1)
+      await loadCOA()
     } catch (err: any) {
       toast.error(err.message || 'Gagal memperbarui akun')
     } finally { setUpdating(false) }
@@ -208,7 +207,7 @@ export default function COAPage() {
       toast.success('Akun berhasil dihapus')
       setConfirmOpen(false)
       setDeleteId(null)
-      setRefreshKey((k) => k + 1)
+      await loadCOA()
     } catch (err: any) {
       toast.error(err.message || 'Gagal menghapus akun')
     } finally { setDeleting(false) }
