@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { toast } from 'sonner'
-import { PlusIcon, Loader2Icon, FilterIcon, DropletsIcon, XIcon } from 'lucide-react'
+import {
+  PlusIcon, Loader2Icon, FilterIcon, DropletsIcon,
+  Trash2Icon, PencilIcon
+} from 'lucide-react'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
@@ -19,10 +21,12 @@ import {
 
 interface COA {
   id: string
-  code: string
+  code?: string
+  account_code?: string
   account_name: string
   account_type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
-  parent_id: string | null
+  parent_id?: string | null
+  parent_account_id?: string | null
   description: string | null
   is_active: boolean
   cash_flow_category?: string | null
@@ -44,22 +48,41 @@ const cfConfig: Record<string, { label: string; color: string; bg: string; icon:
   not_applicable: { label: 'N/A', color: 'text-muted-foreground', bg: 'bg-muted', icon: '—' },
 }
 
+function getNormalBalance(type: string) {
+  return type === 'asset' || type === 'expense' ? 'debit' : 'credit'
+}
+
+const emptyForm = {
+  code: '',
+  account_name: '',
+  account_type: 'asset',
+  parent_id: '',
+  description: '',
+  cash_flow_category: 'not_applicable' as string,
+  is_active: true,
+}
+
 export default function COAPage() {
   const [coaList, setCoaList] = useState<COA[]>([])
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('all')
   const [filterCF, setFilterCF] = useState('all')
+
+  // Create modal
   const [isOpen, setIsOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    code: '',
-    account_name: '',
-    account_type: 'asset',
-    parent_id: '',
-    description: '',
-    cash_flow_category: 'not_applicable',
-    is_active: true,
-  })
+  const [form, setForm] = useState({ ...emptyForm })
+
+  // Edit modal
+  const [editOpen, setEditOpen] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ ...emptyForm })
+  const [updating, setUpdating] = useState(false)
+
+  // Delete
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => { loadCOA() }, [filterType, filterCF])
 
@@ -88,9 +111,15 @@ export default function COAPage() {
     setSaving(true)
     try {
       const payload = {
-        ...form,
-        account_type: form.account_type as COA['account_type'],
-        parent_id: form.parent_id || null,
+        account_code: form.code.trim(),
+        account_name: form.account_name.trim(),
+        account_type: form.account_type,
+        level: 1,
+        normal_balance: getNormalBalance(form.account_type),
+        parent_account_id: form.parent_id?.trim() || null,
+        description: form.description?.trim() || null,
+        cash_flow_category: form.cash_flow_category === 'not_applicable' ? null : form.cash_flow_category,
+        is_active: form.is_active,
       }
       const res = await fetch('/api/finance/coa', {
         method: 'POST',
@@ -103,11 +132,85 @@ export default function COAPage() {
       }
       toast.success('Akun berhasil dibuat')
       setIsOpen(false)
-      setForm({ code: '', account_name: '', account_type: 'asset', parent_id: '', description: '', cash_flow_category: 'not_applicable', is_active: true })
+      setForm({ ...emptyForm })
       loadCOA()
     } catch (err: any) {
       toast.error(err.message || 'Gagal membuat akun')
     } finally { setSaving(false) }
+  }
+
+  function openEdit(coa: COA) {
+    setEditId(coa.id)
+    setEditForm({
+      code: coa.account_code || coa.code || '',
+      account_name: coa.account_name,
+      account_type: coa.account_type,
+      parent_id: coa.parent_account_id || coa.parent_id || '',
+      description: coa.description || '',
+      cash_flow_category: coa.cash_flow_category || 'not_applicable',
+      is_active: coa.is_active,
+    })
+    setEditOpen(true)
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editId) return
+    if (!editForm.code.trim() || !editForm.account_name.trim()) {
+      toast.error('Kode akun dan nama akun wajib diisi')
+      return
+    }
+    setUpdating(true)
+    try {
+      const payload = {
+        account_code: editForm.code.trim(),
+        account_name: editForm.account_name.trim(),
+        account_type: editForm.account_type,
+        normal_balance: getNormalBalance(editForm.account_type),
+        parent_account_id: editForm.parent_id?.trim() || null,
+        description: editForm.description?.trim() || null,
+        cash_flow_category: editForm.cash_flow_category === 'not_applicable' ? null : editForm.cash_flow_category,
+        is_active: editForm.is_active,
+      }
+      const res = await fetch(`/api/finance/coa?id=${editId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || err.message || 'Gagal memperbarui akun')
+      }
+      toast.success('Akun berhasil diperbarui')
+      setEditOpen(false)
+      setEditId(null)
+      loadCOA()
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memperbarui akun')
+    } finally { setUpdating(false) }
+  }
+
+  function openDelete(id: string) {
+    setDeleteId(id)
+    setConfirmOpen(true)
+  }
+
+  async function handleDelete() {
+    if (!deleteId) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/finance/coa?id=${deleteId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || err.message || 'Gagal menghapus akun')
+      }
+      toast.success('Akun berhasil dihapus')
+      setConfirmOpen(false)
+      setDeleteId(null)
+      loadCOA()
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal menghapus akun')
+    } finally { setDeleting(false) }
   }
 
   const filteredList = coaList
@@ -210,7 +313,7 @@ export default function COAPage() {
                     const cf = cfConfig[coa.cash_flow_category || 'not_applicable'] || cfConfig.not_applicable
                     return (
                       <tr key={coa.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-6 py-3 text-sm font-mono">{coa.code}</td>
+                        <td className="px-6 py-3 text-sm font-mono">{coa.account_code || coa.code}</td>
                         <td className="px-6 py-3 text-sm font-medium">{coa.account_name}</td>
                         <td className="px-6 py-3">
                           <Badge variant="outline" className={`capitalize ${cfg.color} ${cfg.bg}`}>
@@ -230,9 +333,12 @@ export default function COAPage() {
                         </td>
                         <td className="px-6 py-3">
                           <div className="flex gap-2">
-                            <Link href={`/finance/coa/${coa.id}`}>
-                              <Button variant="ghost" size="sm">Edit</Button>
-                            </Link>
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(coa)}>
+                              <PencilIcon className="h-4 w-4 mr-1" /> Edit
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => openDelete(coa.id)}>
+                              <Trash2Icon className="h-4 w-4 mr-1" /> Hapus
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -360,6 +466,129 @@ export default function COAPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── EDIT ACCOUNT MODAL ── */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Akun</DialogTitle>
+            <DialogDescription>
+              Perbarui data akun Chart of Accounts.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-code">Kode Akun *</Label>
+                <Input
+                  id="edit-code"
+                  placeholder="e.g. 6-1000"
+                  value={editForm.code}
+                  onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-account_name">Nama Akun *</Label>
+                <Input
+                  id="edit-account_name"
+                  placeholder="e.g. Biaya Transportasi"
+                  value={editForm.account_name}
+                  onChange={(e) => setEditForm({ ...editForm, account_name: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-account_type">Tipe Akun *</Label>
+                <Select
+                  value={editForm.account_type}
+                  onValueChange={(v) => setEditForm({ ...editForm, account_type: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asset">Asset</SelectItem>
+                    <SelectItem value="liability">Liability</SelectItem>
+                    <SelectItem value="equity">Equity</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="expense">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-cash_flow_category">Cash Flow Category</Label>
+                <Select
+                  value={editForm.cash_flow_category}
+                  onValueChange={(v) => setEditForm({ ...editForm, cash_flow_category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="operating">🔄 Operating</SelectItem>
+                    <SelectItem value="investing">📊 Investing</SelectItem>
+                    <SelectItem value="financing">💰 Financing</SelectItem>
+                    <SelectItem value="non_cash">⚡ Non-Cash</SelectItem>
+                    <SelectItem value="not_applicable">— Not Applicable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-parent_id">Parent Account ID (Optional)</Label>
+              <Input
+                id="edit-parent_id"
+                placeholder="UUID of parent account"
+                value={editForm.parent_id}
+                onChange={(e) => setEditForm({ ...editForm, parent_id: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                placeholder="Describe this account..."
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={updating}>
+                {updating && <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />}
+                Simpan Perubahan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── DELETE CONFIRMATION ── */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus akun ini? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={deleting}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />}
+              Hapus
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
