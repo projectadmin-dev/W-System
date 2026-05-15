@@ -32,7 +32,13 @@ export default function VendorsPage() {
       const res = await fetch('/api/finance/vendors')
       const data = await res.json()
       if (data.data) {
-        setVendors(data.data)
+        const normalized = data.data.map((v: any) => ({
+          ...v,
+          vendor_code: v.vendor_code || (v.id ? v.id.slice(0,8).toUpperCase() : 'N/A'),
+          vendor_name: v.vendor_name || v.name || 'Unnamed',
+          is_active: v.is_active ?? (v.type === 'active'),
+        }))
+        setVendors(normalized)
       }
     } catch (error) {
       console.error('Error fetching vendors:', error)
