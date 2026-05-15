@@ -91,7 +91,13 @@ export default function CustomersPage() {
       const res = await fetch('/api/finance/customers')
       const data = await res.json()
       if (data.data) {
-        setCustomers(data.data)
+        const normalized = data.data.map((c: any) => ({
+          ...c,
+          customer_code: c.customer_code || (c.id ? c.id.slice(0,8).toUpperCase() : 'N/A'),
+          customer_name: c.customer_name || c.name || 'Unnamed',
+          is_active: c.is_active ?? (c.type === 'active'),
+        }))
+        setCustomers(normalized)
       }
     } catch (error) {
       console.error('Error fetching customers:', error)
