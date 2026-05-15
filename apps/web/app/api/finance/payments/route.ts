@@ -29,7 +29,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const payment = await createPayment(body)
+    
+    // Auto-generate payment_number if not provided
+    const { payment_date, ...rest } = body
+    const paymentBody = {
+      ...rest,
+      payment_date: payment_date || new Date().toISOString().split('T')[0],
+    }
+    
+    if (!paymentBody.payment_number) {
+      const timestamp = Date.now()
+      paymentBody.payment_number = `PMT-${timestamp}`
+    }
+    
+    const payment = await createPayment(paymentBody)
 
     return NextResponse.json({ data: payment }, { status: 201 })
   } catch (error) {

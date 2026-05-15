@@ -192,14 +192,16 @@ export async function deleteCustomer(id: string) {
 
 export async function getVendorBills(entityId?: string, status?: string) {
   const supabase = await createAdminClient()
-  // Fallback: use contacts as vendor records since vendor_bills table doesn't exist
+  // Quick fix: use invoices table with VB- prefix as vendor bills
   let query = supabase
-    .from('contacts')
+    .from('invoices')
     .select('*')
+    .ilike('invoice_number', 'VB-%')
     .is('deleted_at', null)
-    .order('created_at', { ascending: false })
+    .order('issue_date', { ascending: false })
 
-  if (entityId) query = query.eq('tenant_id', entityId)
+  if (entityId) query = query.eq('entity_id', entityId)
+  if (status) query = query.eq('status', status)
 
   const { data, error } = await query
   if (error) throw new Error(`Failed to fetch vendor bills: ${error.message}`)
@@ -209,9 +211,10 @@ export async function getVendorBills(entityId?: string, status?: string) {
 export async function getVendorBillById(id: string) {
   const supabase = await createAdminClient()
   const { data, error } = await supabase
-    .from('contacts')
+    .from('invoices')
     .select('*')
     .eq('id', id)
+    .ilike('invoice_number', 'VB-%')
     .is('deleted_at', null)
     .single()
   
@@ -221,10 +224,17 @@ export async function getVendorBillById(id: string) {
 
 export async function createVendorBill(bill: VendorBillInsert, lines: VendorBillLineInsert[]) {
   const supabase = await createAdminClient()
-  // vendor_bills doesn't exist — create as contact record
+  // Use invoices table with VB- prefix
   const { data, error } = await supabase
-    .from('contacts')
-    .insert(bill)
+    .from('invoices')
+    .insert({
+      ...bill,
+      invoice_number: bill.invoice_number?.startsWith('VB-') ? bill.invoice_number : `VB-${bill.invoice_number || Date.now()}`,
+      subtotal: bill.amount ?? 0,
+      tax_amount: (bill.amount ?? 0) * ((bill.tax_rate ?? 0) / 100),
+      total_amount: (bill.amount ?? 0) * (1 + (bill.tax_rate ?? 0) / 100),
+      line_items: lines as any,
+    })
     .select()
     .single()
   
@@ -295,10 +305,35 @@ export async function getCustomerInvoiceById(id: string) {
 export async function createCustomerInvoice(invoice: CustomerInvoiceInsert, lines: CustomerInvoiceLineInsert[]) {
   const supabase = await createAdminClient()
   
-  // Use invoices table
+  // Extract UI-specific fields that don't exist in DB
+  const { 
+    customer_name, customer_id, amount, tax_rate, issue_date, due_date, 
+    description, notes, status: rawStatus, 
+    // Remove fields that might cause issues
+    ...cleanInvoice 
+  } = invoice as any
+
+  // Map UI fields to DB schema
+  const dbInvoice = {
+    tenant_id: cleanInvoice.tenant_id || '00000000-0000-0000-0000-000000000001',
+    client_id: customer_id || cleanInvoice.client_id || null,
+    invoice_number: cleanInvoice.invoice_number || `INV-${Date.now()}`,
+    issue_date: issue_date || new Date().toISOString().split('T')[0],
+    due_date: due_date || new Date().toISOString().split('T')[0],
+    description: description || cleanInvoice.description || '',
+    notes: notes || cleanInvoice.notes || '',
+    status: rawStatus || 'draft',
+    subtotal: amount || cleanInvoice.subtotal || 0,
+    tax_rate: tax_rate || cleanInvoice.tax_rate || 11,
+    tax_amount: (amount || cleanInvoice.subtotal || 0) * ((tax_rate || cleanInvoice.tax_rate || 11) / 100),
+    total_amount: (amount || cleanInvoice.subtotal || 0) * (1 + (tax_rate || cleanInvoice.tax_rate || 11) / 100),
+    currency: cleanInvoice.currency || 'IDR',
+    line_items: lines as any,
+  }
+  
   const { data: invoiceData, error: invoiceError } = await supabase
     .from('invoices')
-    .insert({ ...invoice, line_items: lines as any })
+    .insert(dbInvoice)
     .select()
     .single()
   

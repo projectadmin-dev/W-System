@@ -24,7 +24,7 @@ export async function getJournalEntries(filters?: {
   sourceType?: JournalEntry['source_type']
   sourceId?: string
 }) {
-  const supabase = await createServerClient()
+  const supabase = await createAdminClient()
   let query = supabase
     .from('journal_entries')
     .select(`
@@ -63,7 +63,7 @@ export async function getJournalEntries(filters?: {
  * Get journal entry by ID with lines
  */
 export async function getJournalEntryById(id: string) {
-  const supabase = await createServerClient()
+  const supabase = await createAdminClient()
   const { data, error } = await supabase
     .from('journal_entries')
     .select(`
@@ -211,20 +211,20 @@ export async function updateJournalEntry(id: string, updates: JournalEntryUpdate
  * PSAK: Entry becomes immutable after posting
  */
 export async function postJournalEntry(id: string, postedBy: string) {
-  const supabase = await createServerClient()
+  const supabase = await createAdminClient()
   
   const { data, error } = await supabase
     .from('journal_entries')
     .update({
       status: 'posted',
       posted_by: postedBy,
-      posted_at: new Date().toISOString()
     })
     .eq('id', id)
     .select()
-    .single()
+    .maybeSingle()
   
   if (error) throw new Error(`Failed to post journal entry: ${error.message}`)
+  if (!data) throw new Error('Journal entry not found')
   return data
 }
 

@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
     
     if (id) {
       const entry = await getJournalEntryById(id)
-      return NextResponse.json(entry)
+      // Enrich computed totals
+      const lines = (entry as any).journal_lines || []
+      const total_debit = lines.reduce((s: number, l: any) => s + Number(l.debit_amount || 0), 0)
+      const total_credit = lines.reduce((s: number, l: any) => s + Number(l.credit_amount || 0), 0)
+      return NextResponse.json({ ...entry, total_debit, total_credit })
     }
     
     if (entryNumber) {
@@ -54,7 +58,14 @@ export async function GET(request: NextRequest) {
       sourceType: sourceType as any,
       sourceId: sourceId || undefined
     })
-    return NextResponse.json(entries)
+    // Enrich with computed totals (not stored in DB)
+    const enriched = (entries as any[]).map((entry) => {
+      const lines = entry.journal_lines || []
+      const total_debit = lines.reduce((s: number, l: any) => s + Number(l.debit_amount || 0), 0)
+      const total_credit = lines.reduce((s: number, l: any) => s + Number(l.credit_amount || 0), 0)
+      return { ...entry, total_debit, total_credit }
+    })
+    return NextResponse.json(enriched)
   } catch (error) {
     console.error('Failed to fetch journal entries:', error)
     return NextResponse.json(
@@ -159,6 +170,42 @@ export async function PUT(request: NextRequest) {
     console.error('Failed to update journal entry:', error)
     return NextResponse.json(
       { error: 'Failed to update journal entry', message: (error as Error).message },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE /api/finance/journal - Soft delete journal entry
+ * Query params: id
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
+
+    const supabase = await createAdminClient()
+
+    // Soft delete entry
+    const { error: entryError } = await supabase
+      .from('journal_entries')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+
+    if (entryError) throw new Error(entryError.message)
+
+    // Soft delete lines
+    await supabase
+      .from('journal_lines')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('journal_entry_id', id)
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Failed to delete journal entry:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete journal entry', message: (error as Error).message },
       { status: 500 }
     )
   }
