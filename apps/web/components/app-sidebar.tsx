@@ -281,6 +281,7 @@ const data = {
           url: "#finance-reports",
           isCategoryHeader: true,
         },
+        { title: "Laporan Keuangan", url: "/finance/laporan-keuangan" },
         { title: "Trial Balance", url: "/finance/reports/trial-balance" },
         { title: "Income Statement", url: "/finance/reports/profit-loss" },
         { title: "Balance Sheet", url: "/finance/reports/balance-sheet" },
