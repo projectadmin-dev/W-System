@@ -152,7 +152,7 @@ BEGIN
         created_by, created_at, updated_at
       ) VALUES (
         v_inv_id, v_tenant, v_proj_maint, 'HRIS Maintenance & Support Retainer', 'PT Prima Teknologi Indonesia', 600000000,
-        'INV-2026' || v_months[v_i] || '01-001',
+        'INV-2026' || v_months[v_i] || '01-003',
         ('2026-' || v_months[v_i] || '-01')::DATE,
         'recurring',
         'Monthly Maintenance & Support Fee — Bulan ' || v_i,
