@@ -32,6 +32,14 @@ interface COA {
   cash_flow_category?: string | null
 }
 
+const pluralMap: Record<string, string> = {
+  asset: 'assets',
+  liability: 'liabilities',
+  equity: 'equities',
+  revenue: 'revenue',
+  expense: 'expenses',
+}
+
 const typeConfig: Record<string, { color: string; bg: string }> = {
   asset: { color: 'text-blue-700', bg: 'bg-blue-50' },
   liability: { color: 'text-red-700', bg: 'bg-red-50' },
@@ -360,7 +368,7 @@ export default function COAPage() {
             <Card key={type}>
               <CardContent className="p-4 text-center">
                 <p className={`text-2xl font-bold ${cfg.color}`}>{count}</p>
-                <p className="text-sm text-muted-foreground capitalize">{type}s</p>
+                <p className="text-sm text-muted-foreground">{pluralMap[type] || type}</p>
               </CardContent>
             </Card>
           )
