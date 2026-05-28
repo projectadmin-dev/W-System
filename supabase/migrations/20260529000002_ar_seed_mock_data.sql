@@ -128,7 +128,7 @@ BEGIN
   DECLARE
     v_parent_id UUID := gen_random_uuid();
     v_months    TEXT[] := ARRAY['01','02','03','04','05','06'];
-    v_statuses  TEXT[] := ARRAY['lunas','lunas','lunas','sebagian','reminder','reminder'];
+    v_statuses  TEXT[] := ARRAY['sent','sent','sent','sent','reminder','reminder'];
     v_paid      NUMERIC[] := ARRAY[50000000,50000000,50000000,25000000,0,0];
     v_sb        TEXT[] := ARRAY['lunas','lunas','lunas','sebagian','belum','belum'];
     v_i         INT;
