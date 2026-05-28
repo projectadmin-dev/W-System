@@ -82,7 +82,7 @@ export default function CustomerInvoicesPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('transfer')
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentDate, setPaymentDate] = useState('')
   const [paymentNotes, setPaymentNotes] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<CustomerInvoice | null>(null)
@@ -94,8 +94,8 @@ export default function CustomerInvoicesPage() {
     description: '',
     amount: '',
     tax_rate: '11', // PPN 11%
-    issue_date: new Date().toISOString().split('T')[0],
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
+    issue_date: '',
+    due_date: '',
   })
 
   useEffect(() => {
@@ -148,8 +148,8 @@ export default function CustomerInvoicesPage() {
           description: '',
           amount: '',
           tax_rate: '11',
-          issue_date: new Date().toISOString().split('T')[0],
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          issue_date: '',
+          due_date: '',
         })
       } else {
         const error = await response.json()

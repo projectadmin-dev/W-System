@@ -1,0 +1,72 @@
+{
+  "project_name": "W.System",
+  "project_type": "ERP (Enterprise Resource Planning)",
+  "scanned_at": "2025-01-20T10:00:00Z",
+  "tech_stack": {
+    "framework": "Next.js 15",
+    "language": "TypeScript",
+    "styling": "Tailwind CSS",
+    "database": "Supabase (PostgreSQL)",
+    "state": "Zustand + React Context",
+    "ui_components": "shadcn/ui",
+    "charts": "Recharts",
+    "drag_drop": "dnd-kit",
+    "monorepo": "Turborepo"
+  },
+  "naming": {
+    "variables": "camelCase",
+    "functions": "camelCase",
+    "components": "PascalCase",
+    "files": "kebab-case",
+    "database_tables": "snake_case",
+    "api_routes": "kebab-case"
+  },
+  "patterns": {
+    "async_style": "async/await",
+    "error_handling": "try-catch + custom error class",
+    "api_pattern": "repository pattern",
+    "component_style": "functional_components + hooks",
+    "state_management": "Zustand store per module",
+    "auth_pattern": "Supabase Auth + middleware"
+  },
+  "imports": {
+    "absolute": true,
+    "alias": "@/",
+    "style": "separate blocks (external, internal, relative)"
+  },
+  "testing": {
+    "framework": "Jest (implied)",
+    "pattern": "*.test.ts",
+    "location": "alongside files"
+  },
+  "architecture": {
+    "pattern": "modular monolith",
+    "modules": [
+      "Finance",
+      "HR/Payroll",
+      "HC (Human Capital)",
+      "CRM",
+      "Projects",
+      "Inventory",
+      "Auth"
+    ]
+  },
+  "do_and_dont": [
+    "\u2705 ALWAYS use async/await for API calls",
+    "\u2705 ALWAYS use try-catch in data fetching",
+    "\u2705 Repository pattern for all database access",
+    "\u2705 Zod validation for all API endpoints",
+    "\u274c NEVER use .then() chains",
+    "\u274c NEVER use any[] \u2014 always define proper types",
+    "\u274c NEVER mix snake_case and camelCase in JS/TS",
+    "\u274c NEVER skip Supabase RLS policies",
+    "\u274c NEVER expose secrets in code"
+  ],
+  "symbol_graph": {
+    "available": true,
+    "file": ".symbol_graph.json",
+    "files_scanned": 660,
+    "symbols_found": 851,
+    "dependencies_tracked": 8893
+  }
+}

@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { fmtIDR } from '@/lib/commercial-data';
 import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 import {
   BarChart, Bar,
   LineChart, Line,
@@ -302,16 +303,19 @@ export default function CommercialProjectsPage() {
     return projects.findIndex((original) => original.id === filteredId);
   };
 
-  const deleteProject = async (filteredIdx: number) => {
-    if (!confirm('Are you sure you want to delete this project?')) return;
-    const originalIdx = getOriginalIndex(filteredIdx);
-    if (originalIdx < 0) return;
-    const id = projects[originalIdx].id;
-    setProjects((prev) => prev.filter((p) => p.id !== id));
+  const deleteProject = async (id: string) => {
+    if (!confirm('Yakin mau hapus project ini?')) return;
     try {
-      await fetch(`/api/commercial-projects?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/commercial-projects?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+        toast.success('Project berhasil dihapus');
+      } else {
+        toast.error('Gagal menghapus project');
+      }
     } catch (err) {
       console.error('Failed to delete:', err);
+      toast.error('Gagal menghapus project');
     }
   };
 
@@ -919,7 +923,7 @@ export default function CommercialProjectsPage() {
                         <div className="flex gap-1">
                           {/* Edit */}
                           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                            <Link href={`/commercial/projects/${getOriginalIndex(idx)}/edit`}>
+                            <Link href={`/commercial/projects/${p.id}/edit`}>
                               <Pencil className="h-4 w-4 text-blue-400" />
                             </Link>
                           </Button>
@@ -945,9 +949,10 @@ export default function CommercialProjectsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-red-400 hover:text-red-300"
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this project?'))
-                                deleteProject(idx);
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteProject(p.id);
                             }}
                           >
                             <Trash2 className="h-4 w-4" />

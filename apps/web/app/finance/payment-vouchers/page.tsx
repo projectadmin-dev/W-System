@@ -127,8 +127,8 @@ export default function PaymentVouchersPage() {
     description: '',
     reference_number: '',
   })
-  const [items, setItems] = useState<VoucherItem[]>([
-    { id: crypto.randomUUID(), description: '', coa_id: '', amount: '', notes: '' }
+  const [items, setItems] = useState<VoucherItem[]>(() => [
+    { id: '', description: '', coa_id: '', amount: '', notes: '' }
   ])
 
   useEffect(() => { loadAll() }, [typeFilter, statusFilter])
@@ -187,7 +187,7 @@ export default function PaymentVouchersPage() {
   }
 
   const addItem = () =>
-    setItems(prev => [...prev, { id: crypto.randomUUID(), description: '', coa_id: '', amount: '', notes: '' }])
+    setItems(prev => [...prev, { id: `pv-${Math.random().toString(36).slice(2, 6)}-${Date.now()}`, description: '', coa_id: '', amount: '', notes: '' }])
 
   const removeItem = (id: string) =>
     setItems(prev => prev.filter(i => i.id !== id))

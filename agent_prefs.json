@@ -1,0 +1,28 @@
+{
+  "project_name": "W.System",
+  "tech_stack": {
+    "framework": "Next.js",
+    "language": "TypeScript",
+    "styling": "Tailwind CSS",
+    "database": "Supabase",
+    "state": "Zustand"
+  },
+  "naming": {
+    "variables": "camelCase",
+    "components": "PascalCase",
+    "files": "kebab-case",
+    "database": "snake_case"
+  },
+  "patterns": {
+    "async_style": "async/await",
+    "error_handling": "try-catch + custom error",
+    "validation": "zod",
+    "api_pattern": "repository"
+  },
+  "agent_behavior": {
+    "ask_before_breaking_change": true,
+    "max_retries": 3,
+    "run_tests_post_edit": true,
+    "auto_lint": false
+  }
+}

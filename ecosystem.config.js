@@ -1,18 +1,16 @@
 module.exports = {
-  apps: [
-    {
-      name: 'wsystem-1-staging',
-      cwd: '/home/ubuntu/apps/wsystem-1/apps/web',
-      script: '/home/ubuntu/apps/wsystem-1/node_modules/.bin/next',
-      args: 'dev --port 3001 --hostname 0.0.0.0',
-      env: {
-        NODE_ENV: 'development',
-        NEXT_PUBLIC_APP_ENV: 'staging',
-        PORT: 3001,
-        HOSTNAME: '0.0.0.0',
-      },
-      instances: 1,
-      exec_mode: 'fork',
+  apps: [{
+    name: 'wsystem-1',
+    script: './node_modules/.bin/next',
+    args: 'dev --turbopack --port 3001',
+    cwd: '/home/ubuntu/apps/wsystem-1/apps/web',
+    env: {
+      PORT: '3001',
+      NEXT_PUBLIC_APP_URL: 'http://43.153.224.59:3001',
+      NODE_ENV: 'development',
     },
-  ],
+    restart_delay: 5000,
+    max_restarts: 3,
+    watch: false,
+  }]
 };

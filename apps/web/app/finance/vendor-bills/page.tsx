@@ -74,21 +74,21 @@ export default function VendorBillsPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('transfer')
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
+  const [paymentDate, setPaymentDate] = useState('')
   const [paymentNotes, setPaymentNotes] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [selectedBill, setSelectedBill] = useState<VendorBill | null>(null)
 
   // Form state for new bill
-  const [newBill, setNewBill] = useState({
+  const [newBill, setNewBill] = useState(() => ({
     vendor_id: '',
     vendor_name: '',
     description: '',
     amount: '',
-    tax_rate: '11', // PPN 11%
-    bill_date: new Date().toISOString().split('T')[0],
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
-  })
+    tax_rate: '11',
+    bill_date: '',
+    due_date: '',
+  }))
 
   useEffect(() => {
     fetchBills()
@@ -151,8 +151,8 @@ export default function VendorBillsPage() {
           description: '',
           amount: '',
           tax_rate: '11',
-          bill_date: new Date().toISOString().split('T')[0],
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          bill_date: '',
+          due_date: '',
         })
       } else {
         toast.error('Failed to create vendor bill')
