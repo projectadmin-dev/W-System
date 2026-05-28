@@ -26,7 +26,7 @@ async function getPembayaranRows(db: ReturnType<typeof createAdminClient>, ids: 
   const map: Record<string, any[]> = {}
   for (const b of data ?? []) {
     if (!map[b.pembayaran_id]) map[b.pembayaran_id] = []
-    map[b.pembayaran_id].push(b)
+    ;(map[b.pembayaran_id] as any[]).push(b)
   }
   return map
 }

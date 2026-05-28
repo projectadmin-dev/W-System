@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         .order('urutan')
       for (const it of items ?? []) {
         if (!itemsMap[it.permintaan_uang_id]) itemsMap[it.permintaan_uang_id] = []
-        itemsMap[it.permintaan_uang_id].push(it)
+        ;(itemsMap[it.permintaan_uang_id] as any[]).push(it)
       }
     }
 
