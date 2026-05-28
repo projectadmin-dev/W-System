@@ -262,6 +262,7 @@ const data = {
           url: "#finance-aging",
           isCategoryHeader: true,
         },
+        { title: "AR Monitoring", url: "/finance/ar-monitoring" },
         { title: "AR Aging (Piutang)", url: "/finance/ar-aging" },
         { title: "AP Aging (Hutang)", url: "/finance/ap-aging" },
         { title: "Budget vs Actual", url: "/finance/budget-vs-actual" },
