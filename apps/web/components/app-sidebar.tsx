@@ -239,11 +239,10 @@ const data = {
           url: "#finance-transactions",
           isCategoryHeader: true,
         },
-        { title: "Customer Invoices", url: "/finance/customer-invoices" },
-        { title: "Vendor Bills", url: "/finance/vendor-bills" },
+        { title: "Permintaan Uang", url: "/finance/permintaan-uang" },
+        { title: "Approval PU", url: "/finance/permintaan-uang?status=PENDING_APPROVAL" },
+        { title: "Pembayaran", url: "/finance/pembayaran" },
         { title: "Receipts (BKM)", url: "/finance/receipts" },
-        { title: "Payments", url: "/finance/payments" },
-        { title: "Payment Vouchers", url: "/finance/payment-vouchers" },
         { title: "Expense Tracking", url: "/finance/expenses" },
 
         // ── Reconciliation ────────────────────────────────
