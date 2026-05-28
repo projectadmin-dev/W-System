@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('projects')
       .select(`id, project_name, budget_amount, status, client_id, clients(name)`)
       .eq('tenant_id', tenantId)
-      .eq('status', 'active')
+      .in('status', ['active', 'on_hold', 'planning'])
       .is('deleted_at', null)
       .order('project_name')
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ChevronRightIcon,
   ChevronDownIcon,
@@ -12,6 +12,7 @@ import {
   ChevronsDownUpIcon,
   ChevronsUpDownIcon,
   SendIcon,
+  CheckIcon,
 } from 'lucide-react'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
@@ -56,6 +57,101 @@ import {
   isOverdue,
   previewRecurringDates,
 } from '@/types/ar'
+
+// ─── Searchable Select ───────────────────────────────────────────────────────
+
+interface SearchableSelectOption { value: string; label: string }
+
+function SearchableSelect({
+  options,
+  value,
+  onValueChange,
+  placeholder = 'Pilih...',
+  searchPlaceholder = 'Cari...',
+  disabled,
+}: {
+  options: SearchableSelectOption[]
+  value: string
+  onValueChange: (value: string) => void
+  placeholder?: string
+  searchPlaceholder?: string
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef<HTMLDivElement>(null)
+
+  const filtered = options.filter((o) =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  )
+  const selected = options.find((o) => o.value === value)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => { setOpen((o) => !o); setSearch('') }}
+        className={cn(
+          'flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background',
+          'hover:bg-accent/30 focus:outline-none focus:ring-1 focus:ring-ring',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          open && 'ring-1 ring-ring'
+        )}
+      >
+        <span className={cn('truncate', !selected && 'text-muted-foreground')}>
+          {selected?.label ?? placeholder}
+        </span>
+        <ChevronDownIcon className={cn('ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+          <div className="p-2 border-b">
+            <div className="relative">
+              <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full rounded border-0 bg-transparent pl-7 pr-2 py-1 text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground">Tidak ada hasil.</p>
+            ) : (
+              filtered.map((o) => (
+                <button
+                  key={o.value}
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent',
+                    value === o.value && 'bg-accent/60 font-medium'
+                  )}
+                  onClick={() => { onValueChange(o.value); setOpen(false); setSearch('') }}
+                >
+                  <CheckIcon className={cn('h-3.5 w-3.5 shrink-0', value === o.value ? 'opacity-100' : 'opacity-0')} />
+                  {o.label}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Status badges ────────────────────────────────────────────────────────────
 
@@ -279,14 +375,15 @@ function EditPaymentModal({
 
           <div>
             <label className="text-xs font-medium">Bank Tujuan *</label>
-            <Select value={form.bank_id} onValueChange={(v) => setForm({ ...form, bank_id: v })}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih bank..." /></SelectTrigger>
-              <SelectContent>
-                {banks.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="mt-1">
+              <SearchableSelect
+                options={banks.map((b) => ({ value: b.id, label: b.label }))}
+                value={form.bank_id ?? ''}
+                onValueChange={(v) => setForm({ ...form, bank_id: v })}
+                placeholder="Pilih bank..."
+                searchPlaceholder="Cari bank..."
+              />
+            </div>
           </div>
 
           <div>
@@ -466,14 +563,15 @@ function NewInvoiceModal({
             <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Informasi Project</p>
             <div>
               <label className="text-xs font-medium">Nama Project *</label>
-              <Select value={form.project_id ?? ''} onValueChange={handleProjectChange}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih project..." /></SelectTrigger>
-                <SelectContent>
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="mt-1">
+                <SearchableSelect
+                  options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                  value={form.project_id ?? ''}
+                  onValueChange={handleProjectChange}
+                  placeholder="Pilih project..."
+                  searchPlaceholder="Cari nama project..."
+                />
+              </div>
             </div>
             {selectedProject && (
               <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/30 p-3 text-xs">
@@ -627,14 +725,15 @@ function NewInvoiceModal({
             </div>
             <div>
               <label className="text-xs font-medium">Bank</label>
-              <Select value={form.bank_id ?? ''} onValueChange={(v) => setForm((f) => ({ ...f, bank_id: v }))}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih bank (opsional)..." /></SelectTrigger>
-                <SelectContent>
-                  {banks.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="mt-1">
+                <SearchableSelect
+                  options={banks.map((b) => ({ value: b.id, label: b.label }))}
+                  value={form.bank_id ?? ''}
+                  onValueChange={(v) => setForm((f) => ({ ...f, bank_id: v }))}
+                  placeholder="Pilih bank (opsional)..."
+                  searchPlaceholder="Cari bank..."
+                />
+              </div>
             </div>
           </div>
         </div>
