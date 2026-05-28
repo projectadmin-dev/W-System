@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     if (projErr) return NextResponse.json({ error: projErr.message }, { status: 500 })
 
     const data = (projects ?? []).map((p: { id: string; project_name: string; budget_amount: number | null; client_id: string | null; clients: { name: string } | { name: string }[] | null }) => {
-      const clientRecord = Array.isArray(p.clients) ? p.clients[0] : p.clients
+      const raw = p.clients ?? null
+      const clientRecord = raw === null ? null : Array.isArray(raw) ? (raw[0] ?? null) : raw
       return {
         id: p.id,
         project_name: p.project_name,

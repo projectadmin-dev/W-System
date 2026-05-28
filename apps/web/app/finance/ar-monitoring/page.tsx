@@ -228,7 +228,7 @@ function EditPaymentModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).error) ?? `HTTP ${res.status}`)
       toast.success('Pembayaran berhasil dicatat')
       onSaved()
       onClose()
@@ -441,8 +441,8 @@ function NewInvoiceModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`)
       toast.success(`${json.data?.length ?? 1} invoice berhasil dibuat`)
       onSaved()
       onClose()
@@ -946,7 +946,7 @@ export default function ARMonitoringPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ invoice_ids: Array.from(selectedInvoices) }),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).error) ?? `HTTP ${res.status}`)
       toast.success(`${selectedInvoices.size} invoice ditandai Sent`)
       setSelectedInvoices(new Set())
       fetchData()
@@ -960,7 +960,7 @@ export default function ARMonitoringPage() {
       message: `Yakin mengarsipkan invoice ${inv.no_invoice}?`,
       onConfirm: async () => {
         const res = await fetch(`/api/ar/invoices/${inv.id}/archive`, { method: 'PATCH' })
-        if (!res.ok) throw new Error((await res.json()).error)
+        if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).error) ?? `HTTP ${res.status}`)
         toast.success('Invoice diarsipkan')
         setConfirmArchive(null)
         fetchData()
@@ -977,7 +977,7 @@ export default function ARMonitoringPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ project_id: grp.project_id }),
         })
-        if (!res.ok) throw new Error((await res.json()).error)
+        if (!res.ok) throw new Error(((await res.json().catch(() => ({}))).error) ?? `HTTP ${res.status}`)
         toast.success('Semua invoice project diarsipkan')
         setConfirmArchive(null)
         fetchData()
