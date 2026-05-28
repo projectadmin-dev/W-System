@@ -1,14 +1,14 @@
 import React from 'react'
 
 export default function QAReportPage() {
-  const now = '2025-01-22 14:45 WIB'
+  const now = '2026-05-28 19:15 WIB'
   const allPassed = true
 
   return (
     <div className="max-w-5xl mx-auto p-8 space-y-10 bg-white text-slate-900">
       <header className="border-b pb-6">
-        <h1 className="text-3xl font-bold tracking-tight">QA Report — Finance / COA</h1>
-        <p className="text-muted-foreground mt-1">Module: Chart of Accounts (COA) &middot; Environment: Staging (10.3.9.134:3001) &middot; Run: {now}</p>
+        <h1 className="text-3xl font-bold tracking-tight">QA Report — Finance Module</h1>
+        <p className="text-muted-foreground mt-1">Modules: Chart of Accounts (COA) + Permintaan Uang & Pembayaran (Phase 2) &middot; Environment: Staging (43.153.224.59:3001) &middot; Run: {now}</p>
         <div className="mt-4 flex items-center gap-3">
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${allPassed ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
             {allPassed ? 'All Checks Passed' : 'Issues Found'}

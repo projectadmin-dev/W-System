@@ -135,7 +135,7 @@ function EmployeePicker({
 interface InternalItem { _key: string; deskripsi: string; nominal: string }
 
 function InternalItemsBuilder({ items, onChange }: { items: InternalItem[]; onChange: (v: InternalItem[]) => void }) {
-  const add = () => onChange([...items, { _key: crypto.randomUUID(), deskripsi: '', nominal: '' }])
+  const add = () => onChange([...items, { _key: `${Date.now()}_${Math.random().toString(36).slice(2)}`, deskripsi: '', nominal: '' }])
   const remove = (k: string) => onChange(items.filter(i => i._key !== k))
   const update = (k: string, field: 'deskripsi' | 'nominal', val: string) =>
     onChange(items.map(i => i._key === k ? { ...i, [field]: val } : i))
