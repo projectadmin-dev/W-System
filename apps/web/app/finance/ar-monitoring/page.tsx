@@ -999,7 +999,11 @@ export default function ARMonitoringPage() {
       if (search) params.set('search', search)
 
       const res = await fetch(`/api/ar/invoices?${params}`)
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(json.error === 'Unauthorized' ? 'Sesi habis, silakan login kembali' : (json.error ?? `Error ${res.status}`))
+        return
+      }
       setGroups(json.data ?? [])
       setSummary(json.summary ?? null)
     } catch {
