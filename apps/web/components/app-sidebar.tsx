@@ -242,6 +242,7 @@ const data = {
         { title: "Permintaan Uang", url: "/finance/permintaan-uang" },
         { title: "Approval PU", url: "/finance/permintaan-uang?status=PENDING_APPROVAL" },
         { title: "Pembayaran", url: "/finance/pembayaran" },
+        { title: "Pengelolaan Tagihan", url: "/finance/account-payable" },
         { title: "Receipts (BKM)", url: "/finance/receipts" },
         { title: "Expense Tracking", url: "/finance/expenses" },
 
