@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
+import {
+  apNumberPrefix, formatApNumber, computeTotals, computeSummary,
+  startOfDay, isPaid, isOverdue, isOpen,
+} from '@/lib/ap-logic'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 
 async function genApNumber(db: ReturnType<typeof createAdminClient>): Promise<string> {
   const now = new Date()
-  const prefix = `AP-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`
   const { count } = await db
     .from('ap_invoices')
     .select('*', { count: 'exact', head: true })
     .eq('tenant_id', TENANT)
-    .like('ap_number', `${prefix}%`)
-  return `${prefix}${String((count ?? 0) + 1).padStart(4, '0')}`
+    .like('ap_number', `${apNumberPrefix(now)}%`)
+  return formatApNumber(now, count ?? 0)
 }
-
-function startOfToday(): Date { const d = new Date(); d.setHours(0, 0, 0, 0); return d }
-function addDays(base: Date, days: number): Date { const d = new Date(base); d.setDate(d.getDate() + days); return d }
-function ymd(d: Date): string { return d.toISOString().split('T')[0] as string }
-function dlabel(d: Date): string { return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' }) }
 
 // ── GET: list + dashboard summary (aging + cash-out forecast) ────────────────
 export async function GET(request: NextRequest) {
@@ -77,56 +75,18 @@ export async function GET(request: NextRequest) {
       rows = rows.map((r: any) => ({ ...r, items: [] }))
     }
 
-    const today = startOfToday()
-    const isPaid    = (r: any) => r.status === 'PAID' || Number(r.amount_due) <= 0
-    const isOverdue = (r: any) => !isPaid(r) && new Date(r.tgl_jatuh_tempo) < today
-    const isOpen    = (r: any) => !isPaid(r) && !isOverdue(r) && r.status !== 'REJECTED' && r.status !== 'DRAFT'
+    const today = startOfDay()
 
     // ── Summary over the full (unfiltered-by-display) set ──
-    const active = rows.filter((r: any) => r.status !== 'REJECTED')
-    const open_count    = active.filter(isOpen).length
-    const overdue_count = active.filter(isOverdue).length
-    const paid_total    = active.reduce((s: number, r: any) => s + Number(r.amount_paid || 0), 0)
-    const total_due     = active.filter((r: any) => !isPaid(r)).reduce((s: number, r: any) => s + Number(r.amount_due || 0), 0)
-
-    // ── AP Aging (unpaid only, by days overdue) ──
-    const agingDefs = [
-      { label: 'Current', lo: -Infinity, hi: 0 },
-      { label: '1-30 Hari', lo: 1, hi: 30 },
-      { label: '31-60 Hari', lo: 31, hi: 60 },
-      { label: '61-90 Hari', lo: 61, hi: 90 },
-      { label: '>90 Hari', lo: 91, hi: Infinity },
-    ]
-    const aging = agingDefs.map(d => ({ label: d.label, amount: 0, count: 0 }))
-    for (const r of active) {
-      if (isPaid(r)) continue
-      const overdueDays = Math.round((today.getTime() - new Date(r.tgl_jatuh_tempo).getTime()) / 86_400_000)
-      const idx = agingDefs.findIndex(d => overdueDays >= d.lo && overdueDays <= d.hi)
-      if (idx >= 0) { aging[idx]!.amount += Number(r.amount_due || 0); aging[idx]!.count += 1 }
-    }
-
-    // ── Cash-out forecast (next 4 weekly buckets, approved+unpaid by due date) ──
-    const forecast = [] as { label: string; date_from: string; date_to: string; amount: number }[]
-    for (let w = 0; w < 4; w++) {
-      const from = addDays(today, w * 7)
-      const to = addDays(today, w * 7 + 6)
-      const amount = active
-        .filter((r: any) => !isPaid(r) && r.status === 'APPROVED')
-        .filter((r: any) => { const due = new Date(r.tgl_jatuh_tempo); return due >= from && due <= to })
-        .reduce((s: number, r: any) => s + Number(r.amount_due || 0), 0)
-      forecast.push({ label: `${dlabel(from)} - ${dlabel(to)}`, date_from: ymd(from), date_to: ymd(to), amount })
-    }
+    const summary = computeSummary(rows, today)
 
     // ── Apply display filter to returned rows ──
     let outRows = rows
-    if (display === 'paid')    outRows = rows.filter(isPaid)
-    if (display === 'overdue') outRows = rows.filter(isOverdue)
-    if (display === 'open')    outRows = rows.filter(isOpen)
+    if (display === 'paid')    outRows = rows.filter((r: any) => isPaid(r))
+    if (display === 'overdue') outRows = rows.filter((r: any) => isOverdue(r, today))
+    if (display === 'open')    outRows = rows.filter((r: any) => isOpen(r, today))
 
-    return NextResponse.json({
-      data: outRows,
-      summary: { open_count, overdue_count, paid_total, total_due, aging, forecast },
-    })
+    return NextResponse.json({ data: outRows, summary })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
@@ -169,12 +129,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Totals
-    const subtotal = items.reduce((s: number, it: any) => s + (Number(it.qty || 0) * Number(it.harga || 0)), 0)
-    const itemDiskon = items.reduce((s: number, it: any) => s + Number(it.diskon || 0), 0)
-    const itemPajak  = items.reduce((s: number, it: any) => s + Number(it.pajak || 0), 0)
-    const totalDiscount = Number(discount_amount || 0) + itemDiskon
-    const totalTax = Number(tax_amount || 0) + itemPajak
-    const grand_total = subtotal - totalDiscount + totalTax
+    const totals = computeTotals(items, discount_amount, tax_amount)
+    const { subtotal, grand_total } = totals
+    const totalDiscount = totals.discount_amount
+    const totalTax = totals.tax_amount
 
     const ap_number = await genApNumber(db)
 

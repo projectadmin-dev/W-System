@@ -289,6 +289,14 @@ const data = {
         { title: "Cash Flow Statement", url: "/finance/reports/cash-flow-statement" },
         { title: "All Reports", url: "/finance/reports" },
         { title: "BI Dashboard", url: "/dashboard/bi" },
+
+        // ── Quality Assurance ────────────────────────────
+        {
+          title: "🧪 Quality Assurance",
+          url: "#finance-qa",
+          isCategoryHeader: true,
+        },
+        { title: "QA Test Plan", url: "/finance/qa" },
       ],
     },
   ],
