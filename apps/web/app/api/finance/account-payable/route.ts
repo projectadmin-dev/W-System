@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
     const search  = searchParams.get('search') ?? ''
     const dateFrom = searchParams.get('date_from')
     const dateTo   = searchParams.get('date_to')
+    const terimaFrom = searchParams.get('terima_from')   // tgl_terima >=
+    const terimaTo   = searchParams.get('terima_to')     // tgl_terima <=
+    const jatuhFrom  = searchParams.get('jatuh_from')    // tgl_jatuh_tempo >=
+    const jatuhTo    = searchParams.get('jatuh_to')      // tgl_jatuh_tempo <=
 
     let q = db
       .from('ap_invoices')
@@ -47,6 +51,10 @@ export async function GET(request: NextRequest) {
     if (status) q = q.eq('status', status)
     if (dateFrom) q = q.gte('tgl_jatuh_tempo', dateFrom)
     if (dateTo) q = q.lte('tgl_jatuh_tempo', dateTo)
+    if (terimaFrom) q = q.gte('tgl_terima', terimaFrom)
+    if (terimaTo) q = q.lte('tgl_terima', terimaTo)
+    if (jatuhFrom) q = q.gte('tgl_jatuh_tempo', jatuhFrom)
+    if (jatuhTo) q = q.lte('tgl_jatuh_tempo', jatuhTo)
     if (search) q = q.or(`pihak_ketiga.ilike.%${search}%,no_invoice.ilike.%${search}%,ap_number.ilike.%${search}%`)
 
     const { data, error } = await q.order('tgl_jatuh_tempo', { ascending: true })

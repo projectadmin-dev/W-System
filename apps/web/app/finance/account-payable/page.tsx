@@ -17,7 +17,12 @@ import {
 import {
   ChevronDownIcon, ChevronRightIcon, PlusIcon, XIcon, SearchIcon, RefreshCwIcon,
   WalletIcon, AlertTriangleIcon, CheckCircle2Icon, SendIcon, FileDownIcon, Loader2Icon,
+  FilterIcon, RotateCcwIcon, AreaChartIcon, BarChart3Icon, TrendingUpIcon,
 } from 'lucide-react'
+import {
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
+} from 'recharts'
 import type {
   APInvoice, APItem, APSummary, APStatus, DasarPengajuanAP,
 } from '@/types/account-payable'
@@ -96,6 +101,17 @@ export default function AccountPayablePage() {
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
+  // chart + advanced filters
+  const [forecastChart, setForecastChart] = useState<'area' | 'bar'>('area')
+  const [showFilters, setShowFilters] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [terimaFrom, setTerimaFrom] = useState('')
+  const [terimaTo, setTerimaTo] = useState('')
+  const [jatuhFrom, setJatuhFrom] = useState('')
+  const [jatuhTo, setJatuhTo] = useState('')
+  const activeFilterCount =
+    [statusFilter !== 'all', !!terimaFrom, !!terimaTo, !!jatuhFrom, !!jatuhTo].filter(Boolean).length
+
   // modals
   const [createOpen, setCreateOpen] = useState(false)
   const [approveTarget, setApproveTarget] = useState<APInvoice | null>(null)
@@ -108,13 +124,18 @@ export default function AccountPayablePage() {
       const params = new URLSearchParams()
       if (filter !== 'semua') params.set('display', filter)
       if (search) params.set('search', search)
+      if (statusFilter !== 'all') params.set('status', statusFilter)
+      if (terimaFrom) params.set('terima_from', terimaFrom)
+      if (terimaTo) params.set('terima_to', terimaTo)
+      if (jatuhFrom) params.set('jatuh_from', jatuhFrom)
+      if (jatuhTo) params.set('jatuh_to', jatuhTo)
       const res = await fetch(`/api/finance/account-payable?${params}`)
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(json.error ?? `Error ${res.status}`); return }
       setRows(json.data ?? [])
       setSummary(json.summary ?? null)
     } catch { toast.error('Gagal memuat data tagihan') } finally { setLoading(false) }
-  }, [filter, search])
+  }, [filter, search, statusFilter, terimaFrom, terimaTo, jatuhFrom, jatuhTo])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -168,8 +189,31 @@ export default function AccountPayablePage() {
 
       {/* ── Forecast Cash Out ── */}
       <div className="rounded-xl border bg-card p-5">
-        <h2 className="text-sm font-semibold mb-4">Forecast Cash Out</h2>
-        <ForecastChart buckets={summary?.forecast ?? []} loading={loading} />
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold">Forecast Cash Out</h2>
+            <p className="text-xs text-muted-foreground">Proyeksi kas keluar 4 minggu ke depan (tagihan disetujui &amp; belum lunas).</p>
+          </div>
+          <div className="flex items-center gap-1 rounded-md border p-0.5">
+            <button
+              type="button"
+              onClick={() => setForecastChart('area')}
+              className={cn('inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors',
+                forecastChart === 'area' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+            >
+              <AreaChartIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Area</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForecastChart('bar')}
+              className={cn('inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors',
+                forecastChart === 'bar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+            >
+              <BarChart3Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Bar</span>
+            </button>
+          </div>
+        </div>
+        <ForecastChart buckets={summary?.forecast ?? []} loading={loading} chartType={forecastChart} />
       </div>
 
       {/* ── Daftar Tagihan ── */}
@@ -196,11 +240,63 @@ export default function AccountPayablePage() {
                 {f === 'semua' ? 'Semua' : f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
+            <Button variant={showFilters ? 'default' : 'outline'} size="sm" onClick={() => setShowFilters(v => !v)} className="h-8 gap-1.5">
+              <FilterIcon className="w-3.5 h-3.5" />Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCsv} className="h-8 gap-1.5"><FileDownIcon className="w-3.5 h-3.5" />CSV</Button>
             <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="h-8"><RefreshCwIcon className={cn('w-3.5 h-3.5', loading && 'animate-spin')} /></Button>
             <Button size="sm" onClick={() => setCreateOpen(true)} className="h-8 gap-1.5"><PlusIcon className="w-4 h-4" />Input Tagihan Baru</Button>
           </div>
         </div>
+
+        {/* advanced filters */}
+        {showFilters && (
+          <div className="border-b bg-muted/20 p-4 space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Status Workflow</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
+                    <SelectItem value="SUBMITTED">Diajukan</SelectItem>
+                    <SelectItem value="APPROVED">Disetujui</SelectItem>
+                    <SelectItem value="PAID">Lunas</SelectItem>
+                    <SelectItem value="REJECTED">Ditolak</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Tgl Terima — Dari</label>
+                <Input type="date" className="mt-1 h-9" value={terimaFrom} max={terimaTo || undefined} onChange={e => setTerimaFrom(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Tgl Terima — Sampai</label>
+                <Input type="date" className="mt-1 h-9" value={terimaTo} min={terimaFrom || undefined} onChange={e => setTerimaTo(e.target.value)} />
+              </div>
+              <div className="hidden lg:block" />
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Jatuh Tempo — Dari</label>
+                <Input type="date" className="mt-1 h-9" value={jatuhFrom} max={jatuhTo || undefined} onChange={e => setJatuhFrom(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Jatuh Tempo — Sampai</label>
+                <Input type="date" className="mt-1 h-9" value={jatuhTo} min={jatuhFrom || undefined} onChange={e => setJatuhTo(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{activeFilterCount} filter aktif</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setStatusFilter('all'); setTerimaFrom(''); setTerimaTo(''); setJatuhFrom(''); setJatuhTo('') }}
+              >
+                <RotateCcwIcon className="mr-1 h-4 w-4" />Reset Filter
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* table */}
         <div className="overflow-x-auto">
@@ -270,23 +366,66 @@ function SummaryCard({ icon, iconBg, value, label, loading, big }: { icon: React
   )
 }
 
-// ── Forecast horizontal bars ──────────────────────────────────────────────────
-function ForecastChart({ buckets, loading }: { buckets: APSummary['forecast']; loading: boolean }) {
-  if (loading) return <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-6 w-full" />)}</div>
-  const max = Math.max(1, ...buckets.map(b => b.amount))
-  if (buckets.length === 0) return <p className="text-sm text-muted-foreground">Tidak ada data forecast.</p>
+// ── Forecast cash-out infographic (area / bar toggle) ──────────────────────────
+function fmtCompactRp(n: number): string {
+  const v = n || 0
+  if (Math.abs(v) >= 1_000_000_000) return `${(v / 1_000_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} M`
+  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toLocaleString('id-ID', { maximumFractionDigits: 1 })} jt`
+  if (Math.abs(v) >= 1_000) return `${(v / 1_000).toLocaleString('id-ID', { maximumFractionDigits: 0 })} rb`
+  return String(v)
+}
+
+function ForecastChart({ buckets, loading, chartType }: { buckets: APSummary['forecast']; loading: boolean; chartType: 'area' | 'bar' }) {
+  if (loading) return <Skeleton className="h-[240px] w-full" />
+  if (buckets.length === 0 || buckets.every(b => (b.amount || 0) === 0)) {
+    return (
+      <div className="flex h-[240px] flex-col items-center justify-center gap-1 text-center text-sm text-muted-foreground">
+        <TrendingUpIcon className="h-6 w-6 opacity-40" />
+        Belum ada tagihan disetujui yang jatuh tempo dalam 4 minggu ke depan.
+      </div>
+    )
+  }
+  const data = buckets.map(b => ({ name: b.label, amount: b.amount }))
+  const total = buckets.reduce((s, b) => s + (b.amount || 0), 0)
   return (
-    <div className="space-y-2.5">
-      {buckets.map((b, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-28 shrink-0 tabular-nums">{b.label}</span>
-          <div className="flex-1 h-6 rounded bg-muted/50 overflow-hidden">
-            <div className="h-full rounded bg-primary/80 transition-all" style={{ width: `${(b.amount / max) * 100}%`, minWidth: b.amount > 0 ? '2px' : '0' }} />
-          </div>
-          <span className="text-xs font-medium w-32 text-right tabular-nums">{formatRpAP(b.amount)}</span>
-        </div>
-      ))}
-    </div>
+    <>
+      <ResponsiveContainer width="100%" height={240}>
+        {chartType === 'area' ? (
+          <AreaChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+            <defs>
+              <linearGradient id="apForecastFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+            <YAxis tickFormatter={fmtCompactRp} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={56} />
+            <RTooltip
+              formatter={(v: any) => [formatRpAP(Number(v)), 'Cash Out']}
+              contentStyle={{ fontSize: 12, borderRadius: 8 }}
+            />
+            <Area type="monotone" dataKey="amount" name="Cash Out" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#apForecastFill)" />
+          </AreaChart>
+        ) : (
+          <BarChart data={data} margin={{ top: 8, right: 8, left: 4, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+            <YAxis tickFormatter={fmtCompactRp} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={56} />
+            <RTooltip
+              formatter={(v: any) => [formatRpAP(Number(v)), 'Cash Out']}
+              cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
+              contentStyle={{ fontSize: 12, borderRadius: 8 }}
+            />
+            <Bar dataKey="amount" name="Cash Out" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={64} />
+          </BarChart>
+        )}
+      </ResponsiveContainer>
+      <div className="mt-3 flex items-center justify-between border-t pt-3 text-sm">
+        <span className="text-muted-foreground">Total proyeksi 4 minggu</span>
+        <span className="font-semibold tabular-nums">{formatRpAP(total)}</span>
+      </div>
+    </>
   )
 }
 
