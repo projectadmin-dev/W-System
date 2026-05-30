@@ -239,11 +239,11 @@ const data = {
           url: "#finance-transactions",
           isCategoryHeader: true,
         },
-        { title: "Customer Invoices", url: "/finance/customer-invoices" },
-        { title: "Vendor Bills", url: "/finance/vendor-bills" },
+        { title: "Permintaan Uang", url: "/finance/permintaan-uang" },
+        { title: "Approval PU", url: "/finance/permintaan-uang?status=PENDING_APPROVAL" },
+        { title: "Pembayaran", url: "/finance/pembayaran" },
+        { title: "Pengelolaan Tagihan", url: "/finance/account-payable" },
         { title: "Receipts (BKM)", url: "/finance/receipts" },
-        { title: "Payments", url: "/finance/payments" },
-        { title: "Payment Vouchers", url: "/finance/payment-vouchers" },
         { title: "Expense Tracking", url: "/finance/expenses" },
 
         // ── Reconciliation ────────────────────────────────
@@ -289,6 +289,14 @@ const data = {
         { title: "Cash Flow Statement", url: "/finance/reports/cash-flow-statement" },
         { title: "All Reports", url: "/finance/reports" },
         { title: "BI Dashboard", url: "/dashboard/bi" },
+
+        // ── Quality Assurance ────────────────────────────
+        {
+          title: "🧪 Quality Assurance",
+          url: "#finance-qa",
+          isCategoryHeader: true,
+        },
+        { title: "QA Test Plan", url: "/finance/qa" },
       ],
     },
   ],
