@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const sourceType = searchParams.get('sourceType')
     const sourceId = searchParams.get('sourceId')
-    
+    const kategoriJurnal = searchParams.get('kategoriJurnal')
+    const search = searchParams.get('search')
+
     // General Ledger view for specific COA account
     if (coaId) {
       const ledger = await getGeneralLed(coaId, {
@@ -56,7 +58,9 @@ export async function GET(request: NextRequest) {
       startDate: startDate || undefined,
       endDate: endDate || undefined,
       sourceType: sourceType as any,
-      sourceId: sourceId || undefined
+      sourceId: sourceId || undefined,
+      kategoriJurnal: kategoriJurnal as any,
+      search: search || undefined
     })
     // Enrich with computed totals (not stored in DB)
     const enriched = (entries as any[]).map((entry) => {
