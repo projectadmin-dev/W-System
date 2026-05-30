@@ -21,15 +21,14 @@ export async function GET(request: NextRequest) {
       .from('projects')
       .select(`id, project_name, budget_amount, status, client_id, clients(name)`)
       .eq('tenant_id', tenantId)
-      .in('status', ['active', 'on_hold', 'planning'])
+      .eq('status', 'active')
       .is('deleted_at', null)
       .order('project_name')
 
     if (projErr) return NextResponse.json({ error: projErr.message }, { status: 500 })
 
     const data = (projects ?? []).map((p: { id: string; project_name: string; budget_amount: number | null; client_id: string | null; clients: { name: string } | { name: string }[] | null }) => {
-      const raw = p.clients ?? null
-      const clientRecord = raw === null ? null : Array.isArray(raw) ? (raw[0] ?? null) : raw
+      const clientRecord = Array.isArray(p.clients) ? p.clients[0] : p.clients
       return {
         id: p.id,
         project_name: p.project_name,
