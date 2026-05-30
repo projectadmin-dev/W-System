@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PlusIcon, Trash2Icon, CheckIcon } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
@@ -175,7 +175,7 @@ function PURefPanel({ pu, onClear }: { pu: PermintaanUang; onClear: () => void }
 }
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
-export default function PembayaranNewPage() {
+function PembayaranNewForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const preselectedPUID = searchParams.get('pu_id') ?? ''
@@ -417,5 +417,13 @@ export default function PembayaranNewPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+export default function PembayaranNewPage() {
+  return (
+    <Suspense>
+      <PembayaranNewForm />
+    </Suspense>
   )
 }
