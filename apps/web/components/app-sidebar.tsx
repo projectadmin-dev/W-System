@@ -226,6 +226,7 @@ const data = {
           isCategoryHeader: true,
         },
         { title: "Finance Dashboard", url: "/finance" },
+        { title: "Approval Dashboard", url: "/finance/approval-dashboard" },
         { title: "Chart of Accounts", url: "/finance/coa" },
         { title: "Journal Entries", url: "/finance/journal" },
         { title: "Journal (New)", url: "/finance/journal/new" },
