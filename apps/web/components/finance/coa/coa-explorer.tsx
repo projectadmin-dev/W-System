@@ -16,6 +16,7 @@ import { DeleteModal } from './delete-modal'
 import { SubChildModal, SubDlModal, type SubDlPayload } from './sub-modals'
 import { SubGlLevelModal, SubGlValueDrawer } from './sub-gl'
 import { AuditTrailModal, PendingApprovalsModal } from './quick-modals'
+import { ImportModal, ImportHistoryModal } from './import-modals'
 import { buildFullCode, type ChildRow } from '@/lib/coa-logic'
 import type { CoaNode, DbCoaRow, SubGlLevel } from './types'
 
@@ -46,6 +47,7 @@ export function CoaExplorer() {
   const [subGlModal, setSubGlModal] = useState<{ node: CoaNode; editIndex: number } | null>(null)
   const [subGlDrawer, setSubGlDrawer] = useState<CoaNode | null>(null)
   const [quickModal, setQuickModal] = useState<'approvals' | 'audit' | 'history' | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const loadCoa = useCallback(async () => {
@@ -382,7 +384,7 @@ export function CoaExplorer() {
             <ToolbarBtn icon={ChevronsUpDown} label="Expand" onClick={expandAll} subtle />
             <ToolbarBtn icon={ChevronsDownUp} label="Collapse" onClick={collapseAll} subtle />
           </div>
-          <ToolbarBtn icon={Upload} label="Import" onClick={() => toast('Import hadir pada fase berikutnya')} />
+          <ToolbarBtn icon={Upload} label="Import" onClick={() => setImportOpen(true)} />
           <ToolbarBtn icon={Download} label="Export" onClick={handleExport} />
           <ToolbarBtn icon={PanelRight} label="Inspector" onClick={() => setInspectorOpen((o) => !o)} />
           <ToolbarBtn icon={Plus} label="Akun Baru" onClick={openCreate} primary />
@@ -551,6 +553,8 @@ export function CoaExplorer() {
       {subGlDrawer && <SubGlValueDrawer node={subGlDrawer} onClose={() => setSubGlDrawer(null)} />}
       <AuditTrailModal open={quickModal === 'audit'} onClose={() => setQuickModal(null)} />
       <PendingApprovalsModal open={quickModal === 'approvals'} onClose={() => setQuickModal(null)} />
+      <ImportModal open={importOpen} allNodes={nodes} onClose={() => setImportOpen(false)} onDone={loadCoa} />
+      <ImportHistoryModal open={quickModal === 'history'} onClose={() => setQuickModal(null)} />
     </div>
   )
 }
