@@ -17,7 +17,7 @@ import { createAdminClient } from '../supabase-server'
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ReportType = 'IS' | 'BS' | 'CF' | 'EQ' | 'TB' | 'BB'
+export type ReportType = 'IS' | 'BS' | 'CF' | 'EQ' | 'TB' | 'BB' | 'GL'
 
 export type CfSection = 'OPERATING' | 'INVESTING' | 'FINANCING'
 
@@ -80,13 +80,38 @@ export interface ReportParams {
   period_id: string
   benchmark_period_id?: string
   cost_center_value_id?: string
+  account_id?: string          // General Ledger: filter to a single COA account
   report_type: ReportType
+}
+
+// ── General Ledger (Buku Besar) ──────────────────────────────────────────────
+export interface LedgerEntry {
+  journal_entry_id: string
+  date: string
+  entry_number: string
+  description: string
+  debit: number
+  credit: number
+  balance: number              // running balance, signed (positive = normal direction)
+}
+
+export interface LedgerAccount {
+  id: string
+  account_code: string
+  account_name: string
+  normal_balance: 'debit' | 'credit'
+  opening_balance: number
+  closing_balance: number
+  total_debit: number
+  total_credit: number
+  entries: LedgerEntry[]
 }
 
 export interface ReportResult {
   period: PeriodBounds
   benchmark_period?: PeriodBounds
   lines: ReportLine[]
+  ledger?: LedgerAccount[]     // populated only for report_type === 'GL'
   summary: Record<string, number>
   generated_at: string
 }
@@ -654,6 +679,109 @@ function buildBbReport(lineMap: Map<string, ReportLine>, accounts: CoaRecord[]):
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GL (GENERAL LEDGER / BUKU BESAR) — per-account transactions + running balance
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function buildGeneralLedger(
+  supabase: ReturnType<typeof createAdminClient>,
+  tenant_id: string,
+  period: PeriodBounds,
+  openingBalances: Map<string, number>,
+  account_id?: string,
+): Promise<LedgerAccount[]> {
+  // Exclude journals locked to prior periods (same rule as getJournalBalances)
+  const { data: locked } = await supabase
+    .from('fiscal_period_journal_locks')
+    .select('journal_entry_id')
+    .eq('tenant_id', tenant_id)
+    .neq('fiscal_period_id', period.id)
+  const lockedIds = (locked || []).map((r: { journal_entry_id: string }) => r.journal_entry_id)
+
+  let q = supabase
+    .from('journal_lines')
+    .select(`
+      coa_id, debit_amount, credit_amount,
+      journal_entries!inner(id, status, tenant_id, transaction_date, entry_number, description, kategori_jurnal),
+      coa!inner(account_code, account_name, normal_balance, contra_account)
+    `)
+    .eq('journal_entries.tenant_id', tenant_id)
+    .eq('journal_entries.status', 'posted')
+    .gte('journal_entries.transaction_date', period.start_date)
+    .lte('journal_entries.transaction_date', period.end_date)
+    .neq('journal_entries.kategori_jurnal', 'BEGINNING_BALANCE')
+
+  if (account_id) q = q.eq('coa_id', account_id)
+  if (lockedIds.length > 0) q = q.not('journal_entries.id', 'in', `(${lockedIds.join(',')})`)
+
+  const { data, error } = await q
+  if (error) throw new Error(`Failed to fetch general ledger: ${error.message}`)
+
+  // Group rows by account
+  const byAccount = new Map<string, LedgerAccount>()
+  for (const row of (data || [])) {
+    const r = row as any
+    const je = r.journal_entries
+    const coa = r.coa
+    if (!je || !coa) continue
+
+    let acct = byAccount.get(r.coa_id)
+    if (!acct) {
+      // Normalize opening balance to signed (positive = normal direction)
+      const openRaw = openingBalances.get(r.coa_id) ?? 0
+      let opening = coa.normal_balance === 'debit' ? openRaw : -openRaw
+      if (coa.contra_account) opening = -opening
+      acct = {
+        id: r.coa_id,
+        account_code: coa.account_code,
+        account_name: coa.account_name,
+        normal_balance: coa.normal_balance,
+        opening_balance: opening,
+        closing_balance: opening,
+        total_debit: 0,
+        total_credit: 0,
+        entries: [],
+      }
+      byAccount.set(r.coa_id, acct)
+    }
+
+    const debit = Number(r.debit_amount || 0)
+    const credit = Number(r.credit_amount || 0)
+    acct.total_debit += debit
+    acct.total_credit += credit
+    acct.entries.push({
+      journal_entry_id: je.id,
+      date: je.transaction_date,
+      entry_number: je.entry_number ?? '',
+      description: je.description ?? '',
+      debit,
+      credit,
+      balance: 0, // computed after sort
+    })
+  }
+
+  // Per account: order by date then entry number, compute running balance
+  const accounts = [...byAccount.values()]
+  for (const acct of accounts) {
+    acct.entries.sort((a, b) =>
+      a.date < b.date ? -1 : a.date > b.date ? 1 :
+      a.entry_number < b.entry_number ? -1 : a.entry_number > b.entry_number ? 1 : 0
+    )
+    let running = acct.opening_balance
+    for (const e of acct.entries) {
+      const delta = acct.normal_balance === 'debit' ? e.debit - e.credit : e.credit - e.debit
+      running += delta
+      e.balance = running
+    }
+    acct.closing_balance = running
+  }
+
+  accounts.sort((a, b) =>
+    a.account_code < b.account_code ? -1 : a.account_code > b.account_code ? 1 : 0
+  )
+  return accounts
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CURRENT-PERIOD EARNINGS (net profit) — needed to balance the balance sheet
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -678,7 +806,7 @@ async function computeCurrentEarnings(
 
 export async function buildReport(params: ReportParams): Promise<ReportResult> {
   const supabase = createAdminClient()
-  const { tenant_id, period_id, benchmark_period_id, cost_center_value_id, report_type } = params
+  const { tenant_id, period_id, benchmark_period_id, cost_center_value_id, account_id, report_type } = params
 
   const [period, benchmarkPeriod] = await Promise.all([
     resolvePeriod(supabase, period_id, tenant_id),
@@ -704,6 +832,7 @@ export async function buildReport(params: ReportParams): Promise<ReportResult> {
   const lineMap = buildCoaTree(accounts, balances, openingBalances, benchmarkBalances)
 
   let lines: ReportLine[]
+  let ledger: LedgerAccount[] | undefined
   const summary: Record<string, number> = {}
 
   if (report_type === 'IS') {
@@ -740,6 +869,13 @@ export async function buildReport(params: ReportParams): Promise<ReportResult> {
     summary.total_credit = lines.reduce((s, l) => s + Math.max(0, -l.amount), 0)
   } else if (report_type === 'BB') {
     lines = buildBbReport(lineMap, accounts)
+  } else if (report_type === 'GL') {
+    lines = []
+    ledger = await buildGeneralLedger(supabase, tenant_id, period, openingBalances, account_id)
+    summary.gl_accounts = ledger.length
+    summary.gl_entries = ledger.reduce((s, a) => s + a.entries.length, 0)
+    summary.gl_total_debit = ledger.reduce((s, a) => s + a.total_debit, 0)
+    summary.gl_total_credit = ledger.reduce((s, a) => s + a.total_credit, 0)
   } else {
     // EQ — Equity changes: show Ekuitas section of BS (incl. current earnings)
     const earnings = await computeCurrentEarnings(supabase, tenant_id, balances, openingBalances, benchmarkBalances)
@@ -752,6 +888,7 @@ export async function buildReport(params: ReportParams): Promise<ReportResult> {
     period,
     benchmark_period: benchmarkPeriod,
     lines: lines ?? [],
+    ledger,
     summary,
     generated_at: new Date().toISOString(),
   }

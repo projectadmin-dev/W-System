@@ -142,3 +142,56 @@ ALTER TABLE journal_lines   ENABLE TRIGGER prevent_posted_lines_modification;
 
 Semua bug pemblokir telah diperbaiki. Halaman dapat dibuka, keenam laporan dapat di-generate,
 angka akurat, dan Neraca seimbang. Pass rate Post-Fix: **100% (20/20)**.
+
+---
+
+## 10. Iterasi v2 — General Ledger, Tenant Fix & Kolom Pertumbuhan
+
+Tiga isu lanjutan yang dilaporkan setelah merge PR #34:
+
+### ISSUE-1 (Critical) — Semua laporan error "tenant context missing"
+- **Root cause:** API membaca `tenant_id` hanya dari klaim JWT (`user_metadata`/`app_metadata`), padahal **tidak ada user yang punya `tenant_id` di JWT** (semua null). Akibatnya `buildReport` tak pernah dipanggil → toast 403.
+- **Fakta data:** seluruh 128 `user_profiles` bertenant `00000000-0000-0000-0000-000000000001`, dan `user_profiles.id == auth.users.id`.
+- **Fix:** helper baru `lib/finance/tenant.ts → resolveTenantId(user)` dengan urutan: JWT → `user_profiles.tenant_id` (by id) → default tenant. Diterapkan di `laporan-keuangan` API dan `cost-centers/values` API (bug yang sama).
+
+### ISSUE-2 (Feature) — Laporan Buku Besar (General Ledger)
+- **Backend:** tipe laporan baru `GL` di `report-engine.ts` (`buildGeneralLedger`) — per akun: saldo awal (dinormalisasi signed) → daftar transaksi (tanggal, no. jurnal, keterangan, debit, kredit) → **saldo berjalan** → saldo akhir. Mendukung filter satu akun (`account_id`).
+- **Frontend:** item nav "Buku Besar", filter **akun** (khusus GL), dan komponen `GeneralLedgerView`.
+- **Verifikasi (FY2026-Q2):** 29 akun, 54 baris transaksi, total debit = total kredit = **624.750.000** (seimbang).
+
+### ISSUE-3 (Enhancement) — Filter periode current vs benchmark + kolom growth
+- Kolom tabel laporan saat pembanding aktif kini jelas: **Periode Ini · Pembanding · Pertumbuhan (Rp) · Pertumbuhan (%)** dengan warna hijau/merah & panah arah.
+- Filter pembanding/cost-center disembunyikan saat GL (tidak relevan); filter akun hanya muncul saat GL.
+
+**Hasil v2:** typecheck bersih, `next build` `Compiled successfully` untuk route target, render halaman OK (nav "Buku Besar" muncul). Logika tenant/GL/laporan diverifikasi via simulasi SQL. Dicatat sebagai run **"Laporan Keuangan v2 — GL + Tenant + Growth"** di `/finance/qa`.
+
+---
+
+## 11. Iterasi v3 — Seed data komparatif & uji baca semua laporan
+
+Agar laporan tampak 1:1 seperti laporan keuangan pada umumnya (punya kolom **periode berjalan vs pembanding**), ditambahkan periode komparatif **FY2026-Q1** (2026-01-01 s/d 2026-03-31, `DRAFT` agar tidak mengubah Q2) berisi 22 jurnal balanced+posted (tag `JE-Q1-%`): saldo awal, pendapatan (5 stream), HPP, OPEX (gaji/BPJS/sewa/listrik/marketing/depresiasi), pendapatan & beban lain, pajak, dan investasi.
+
+### Hasil uji baca seluruh laporan (read query)
+| Laporan | FY2026-Q1 | FY2026-Q2 | Status |
+|---|---|---|---|
+| Laba Rugi (Net) | Rp 69.000.000 | Rp 86.000.000 | PASS |
+| Neraca (selisih) | 0 | 0 | PASS |
+| Pendapatan (growth) | 150 jt | 200 jt → **+33%** | PASS |
+| Neraca Saldo (D=K) | 304 jt = 304 jt | 624,75 jt = 624,75 jt | PASS |
+| Buku Besar (akun/baris) | 27 / 42 | 29 / 54 | PASS |
+| Arus Kas / Perubahan Ekuitas / Saldo Awal | tampil | tampil | PASS |
+
+Default pemilihan periode kini **periode terbaru** (diurutkan terbaru lebih dulu). Dicatat sebagai run **"Laporan Keuangan v3 — Seed + Read All Reports"** di `/finance/qa`.
+
+### Cleanup data seed Q1 (jika perlu)
+```sql
+ALTER TABLE journal_lines   DISABLE TRIGGER prevent_posted_lines_modification;
+ALTER TABLE journal_entries DISABLE TRIGGER prevent_posted_modification;
+DELETE FROM journal_lines WHERE journal_entry_id IN (SELECT id FROM journal_entries WHERE entry_number LIKE 'JE-Q1-%');
+DELETE FROM journal_entries WHERE entry_number LIKE 'JE-Q1-%';
+ALTER TABLE journal_entries ENABLE TRIGGER prevent_posted_modification;
+ALTER TABLE journal_lines   ENABLE TRIGGER prevent_posted_lines_modification;
+-- (opsional) hapus periode komparatif jika tak ada jurnal lagi:
+-- DELETE FROM fiscal_periods WHERE period_name='FY2026-Q1' AND NOT EXISTS (
+--   SELECT 1 FROM journal_entries je WHERE je.fiscal_period_id=fiscal_periods.id AND je.deleted_at IS NULL);
+```
