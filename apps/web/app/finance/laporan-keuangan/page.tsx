@@ -515,7 +515,10 @@ export default function LaporanKeuanganPage() {
       if (!res.ok) return
       const json = await res.json()
       const raw: any[] = Array.isArray(json) ? json : (json.data ?? [])
-      const data: Period[] = raw.map(normalizePeriod)
+      // Sort most-recent first so the current period is the default selection
+      const data: Period[] = raw
+        .map(normalizePeriod)
+        .sort((a, b) => (a.start_date < b.start_date ? 1 : a.start_date > b.start_date ? -1 : 0))
       setPeriods(data)
       if (data.length > 0 && !selectedPeriod) {
         setSelectedPeriod(data[0]!.id)
