@@ -2,10 +2,15 @@
 
 **Module:** Finance & Accounting → Master Data → Chart of Account
 **Route:** `/finance/coa` (workspace) · `/finance/coa/[id]` (General Ledger drill-down)
-**Status:** Draft R1 — UI/UX Revamp Specification
+**Status:** R1 — UI/UX Revamp Specification · **Phase 0–1 implemented**
 **Author:** Engineering (generated from codebase + design handoff analysis)
-**Last updated:** 2026-05-30
+**Last updated:** 2026-05-31
 **Audience:** Frontend, Backend, Design, Finance Controller
+
+> **Stakeholder decisions (2026-05-31):** page title = **"Chart of Account - Workspace"**;
+> codes **migrate to true segments** (OQ-1); Sub GL master-data integration **deferred**
+> while source data is still nil (OQ-3); **full scope committed** — Phases 0–5 (OQ-6).
+> Phases 0–1 are implemented (`apps/web/components/finance/coa/**`); Phases 2–5 pending.
 
 > This document benchmarks the **current** Chart of Account (CoA) workspace against the
 > **IFAS / UBS Gold** design handoff (`Chart of Account (standalone).html` + `coa-standalone/*.jsx`
@@ -165,7 +170,7 @@ A **COA Explorer** workspace. Reference: `coa-standalone/app.jsx` (`CoaApp`).
 ```
 ┌─ Finance inset shell (existing AppSidebar + breadcrumb) ───────────────────────────┐
 │ ┌─ Page header card ───────────────────────────────────────────────────────────┐  │
-│ │ Breadcrumb · "Chart of Account" · subtitle                                     │  │
+│ │ Breadcrumb · "Chart of Account - Workspace" · subtitle                         │  │
 │ │ [Density] [Expand|Collapse] [Import] [Export] [Inspector] [+ Akun Baru]        │  │
 │ └───────────────────────────────────────────────────────────────────────────────┘  │
 │ ┌─ Filter & Quick Actions ─┐ ┌─ Tree-table (main) ─────────────────────────────┐   │
@@ -623,17 +628,22 @@ preview → commit with partial-failure reasons; **history** lists complete/part
 > Each phase is shippable. Phases 1–2 deliver the **UI/UX revamp** the request centers on; 3–5 add the
 > deeper subsystems. Gate features behind a flag if rolling out incrementally.
 
-### Phase 0 — Foundations (S–M)
-- Add IFAS tokens (Poppins + palette + radii + shadows) to shared globals as variables/aliases.
-- Build primitives: `LayerBadge`, `CodeChip`, `DKChip`, `StatusDot`, `SubGlChip`, `DensityToggle`,
-  `SearchableSelect` (combobox), `HierarchyPath`, density context, icon map.
-- Apply `coa_full_code`/`segment_code` migration; regenerate types; wire `GET ?tree=true`.
+### Phase 0 — Foundations (S–M) ✅ **Done**
+- IFAS tokens in `theme.ts` (palette, layer colors, density presets) + self-hosted Poppins
+  scoped to `.coa-workspace` in shared globals.
+- Primitives built: `LayerBadge`, `CodeChip`, `DKChip`, `StatusDot`, `SubGlChip`, `DensityToggle`,
+  `SearchableSelect` (self-contained combobox — UI pkg has no command/popover), `HierarchyPath`.
+- `coa_full_code`/`segment_code` + Detail-Ledger migration added
+  (`20260530000001_coa_segments_and_detail_ledger.sql`); FE also derives these client-side so the
+  page works before the migration is applied. _Type regeneration + `GET ?tree=true` wiring pending
+  (the explorer currently builds the hierarchy client-side from the flat list)._
 
-### Phase 1 — Explorer shell + tree (L)  ← *core revamp*
-- Page header card + toolbar (density, expand/collapse, inspector, +Akun Baru).
+### Phase 1 — Explorer shell + tree (L) ✅ **Done** ← *core revamp*
+- Page header card + toolbar (density, expand/collapse, import*, export, inspector, +Akun Baru).
 - Layer filter panel with counts; global search w/ auto-expand; `TreeRow` tree-table.
-- Replace flat table; keep Create/Edit/Delete but swap **raw-UUID parent → `SearchableSelect` +
-  HierarchyPath**. Restyle `/finance/coa/[id]` GL page to new tokens.
+- Replaced flat table; Create/Edit/Delete now use **`SearchableSelect` + live HierarchyPath**
+  (raw-UUID parent input removed); type-to-confirm delete. Restyled `/finance/coa/[id]` GL page.
+  _(*Import + the panel quick-actions are placeholders until Phases 4–5.)_
 
 ### Phase 2 — Inspector + Sub Akun (L)
 - Inspector drawer (properties, hierarchy path, audit mini, actions).
@@ -672,12 +682,12 @@ preview → commit with partial-failure reasons; **history** lists complete/part
 
 | ID | Item | Recommendation |
 |---|---|---|
-| OQ-1 | `account_code` (full vs segment) mismatch between WIT seed (`1-10000`) and IFAS model (`1-1-01-1-2000`) | Decide canonical: keep `account_code`=full + add `segment_code`, **or** migrate to segmented codes. FE needs both. |
-| OQ-2 | Layer vocabulary (`sub_account/general_ledger/detail_ledger` vs `sub/gl/detail`) | DB names server-side; one FE `LAYER` map. |
-| OQ-3 | Master Data sources (Karyawan/Supplier/…) — do real tables/endpoints exist to back Sub GL? | Confirm; otherwise stub the picker and defer get-or-create. |
-| OQ-4 | Should `account_type` (asset/liability/…) be **derived** from Category, or stay independent? | Prefer deriving from `enum_laporan_keuangan_category` to avoid drift. |
-| OQ-5 | Approval workflow ownership — does another module already emit "new master data" events? | Align the trigger source before building the queue. |
-| OQ-6 | Scope of this revamp — UI/UX-only (Phases 0–2) vs full (0–5)? | Confirm with stakeholders; default = land 0–2 first. |
+| OQ-1 | `account_code` (full vs segment) mismatch between WIT seed (`1-10000`) and IFAS model (`1-1-01-1-2000`) | ✅ **Resolved — migrate to true segments.** `account_code`/`coa_full_code` hold the full path; `segment_code` holds the per-layer chip code (migration added; new accounts build `parent.fullCode + '-' + segment`). |
+| OQ-2 | Layer vocabulary (`sub_account/general_ledger/detail_ledger` vs `sub/gl/detail`) | ✅ Implemented — DB names server-side; `theme.ts › toFeLayer/toDbLayer` map to short FE keys. |
+| OQ-3 | Master Data sources (Karyawan/Supplier/…) — do real tables/endpoints exist to back Sub GL? | ✅ **Resolved — defer.** Source data is still nil; Sub GL master-data integration is out of scope until the master tables exist. |
+| OQ-4 | Should `account_type` (asset/liability/…) be **derived** from Category, or stay independent? | Open — currently cascades `account_type` from the parent on create. Prefer deriving from `enum_laporan_keuangan_category` later to avoid drift. |
+| OQ-5 | Approval workflow ownership — does another module already emit "new master data" events? | Open (Phase 4) — align the trigger source before building the queue. |
+| OQ-6 | Scope of this revamp — UI/UX-only (Phases 0–2) vs full (0–5)? | ✅ **Resolved — full scope (0–5) committed.** Phases 0–1 shipped; 2–5 to follow. |
 | R-1 | Stale `database.ts` types hide existing columns → silent FE bugs | Regenerate types in Phase 0. |
 | R-2 | Deleting/altering accounts referenced by journals | Keep the journal-usage guard; surface usage counts (prototype shows them) before delete. |
 | R-3 | Tree performance at scale | Lazy values + virtualization fallback (§13). |
