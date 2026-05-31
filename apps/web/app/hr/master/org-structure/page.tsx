@@ -57,6 +57,10 @@ const API_MAP: Record<OrgTab, string> = {
 const formatRupiah = (n: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n || 0)
 
+// Sentinel for the "no selection" option. Radix <SelectItem> throws if given
+// an empty-string value, so use this and map it back to "" in onValueChange.
+const SELECT_NONE = "__none__"
+
 // ─── Add/Edit Form Configs ────────────────────────────────────────────────────
 
 function DeptForm({ data, onChange }: { data: any; onChange: (d: any) => void }) {
@@ -103,10 +107,10 @@ function DivisionForm({ data, onChange, departments }: { data: any; onChange: (d
       </div>
       <div className="space-y-1.5">
         <Label>Departemen</Label>
-        <Select value={data.department_id || ""} onValueChange={v => onChange({ ...data, department_id: v })}>
+        <Select value={data.department_id || SELECT_NONE} onValueChange={v => onChange({ ...data, department_id: v === SELECT_NONE ? "" : v })}>
           <SelectTrigger><SelectValue placeholder="Pilih departemen..." /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">— Tidak ada —</SelectItem>
+            <SelectItem value={SELECT_NONE}>— Tidak ada —</SelectItem>
             {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -135,20 +139,20 @@ function JobTitleForm({ data, onChange, departments, jobLevels }: { data: any; o
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Departemen</Label>
-          <Select value={data.department_id || ""} onValueChange={v => onChange({ ...data, department_id: v })}>
+          <Select value={data.department_id || SELECT_NONE} onValueChange={v => onChange({ ...data, department_id: v === SELECT_NONE ? "" : v })}>
             <SelectTrigger><SelectValue placeholder="Pilih departemen..." /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">— Tidak ada —</SelectItem>
+              <SelectItem value={SELECT_NONE}>— Tidak ada —</SelectItem>
               {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Level / Grade</Label>
-          <Select value={data.grade_id || ""} onValueChange={v => onChange({ ...data, grade_id: v })}>
+          <Select value={data.grade_id || SELECT_NONE} onValueChange={v => onChange({ ...data, grade_id: v === SELECT_NONE ? "" : v })}>
             <SelectTrigger><SelectValue placeholder="Pilih level..." /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">— Tidak ada —</SelectItem>
+              <SelectItem value={SELECT_NONE}>— Tidak ada —</SelectItem>
               {jobLevels.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.code})</SelectItem>)}
             </SelectContent>
           </Select>

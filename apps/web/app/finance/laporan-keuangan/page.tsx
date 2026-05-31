@@ -149,6 +149,27 @@ function fmtPct(v: number): string {
   return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`
 }
 
+// Sentinel values for "no selection" options. Radix <SelectItem> throws if
+// given an empty-string value, so we use these instead and map them back to ''.
+const BENCHMARK_NONE = '__none__'
+const CC_ALL = '__all__'
+
+// The fiscal_periods table stores `period_name` (no `name`/`fiscal_year`
+// columns), so normalize raw rows into the shape the UI expects.
+function normalizePeriod(p: any): Period {
+  const start: string = p?.start_date ?? ''
+  return {
+    ...p,
+    id: p?.id,
+    name: p?.name ?? p?.period_name ?? p?.id ?? '—',
+    start_date: start,
+    end_date: p?.end_date ?? '',
+    approval_status: p?.approval_status ?? p?.status ?? 'DRAFT',
+    fiscal_year: p?.fiscal_year ?? (start ? new Date(start).getFullYear() : 0),
+    period_number: p?.period_number ?? 0,
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // REPORT LINE ROW (recursive)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -369,10 +390,11 @@ export default function LaporanKeuanganPage() {
       const res = await fetch('/api/finance/periods')
       if (!res.ok) return
       const json = await res.json()
-      const data: Period[] = json.data ?? json ?? []
+      const raw: any[] = Array.isArray(json) ? json : (json.data ?? [])
+      const data: Period[] = raw.map(normalizePeriod)
       setPeriods(data)
       if (data.length > 0 && !selectedPeriod) {
-        setSelectedPeriod(data[0].id)
+        setSelectedPeriod(data[0]!.id)
       }
     } catch {
       toast.error('Gagal memuat daftar periode')
@@ -505,12 +527,15 @@ export default function LaporanKeuanganPage() {
             {/* Benchmark period */}
             <div className="flex items-center gap-1.5">
               <ChevronsUpDownIcon className="w-3.5 h-3.5 text-muted-foreground" />
-              <Select value={benchmarkPeriod} onValueChange={setBenchmarkPeriod}>
+              <Select
+                value={benchmarkPeriod || BENCHMARK_NONE}
+                onValueChange={(v) => setBenchmarkPeriod(v === BENCHMARK_NONE ? '' : v)}
+              >
                 <SelectTrigger className="h-8 text-xs w-[180px]">
                   <SelectValue placeholder="Bandingkan dengan…" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="" className="text-xs text-muted-foreground">— Tidak ada —</SelectItem>
+                  <SelectItem value={BENCHMARK_NONE} className="text-xs text-muted-foreground">— Tidak ada —</SelectItem>
                   {periods
                     .filter(p => p.id !== selectedPeriod)
                     .map(p => (
@@ -526,12 +551,15 @@ export default function LaporanKeuanganPage() {
             {ccLevel3.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <BuildingIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                <Select value={selectedCc} onValueChange={setSelectedCc}>
+                <Select
+                  value={selectedCc || CC_ALL}
+                  onValueChange={(v) => setSelectedCc(v === CC_ALL ? '' : v)}
+                >
                   <SelectTrigger className="h-8 text-xs w-[180px]">
                     <SelectValue placeholder="Semua Divisi" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="" className="text-xs text-muted-foreground">— Semua Divisi —</SelectItem>
+                    <SelectItem value={CC_ALL} className="text-xs text-muted-foreground">— Semua Divisi —</SelectItem>
                     {ccLevel3.map(cc => (
                       <SelectItem key={cc.id} value={cc.id} className="text-xs">
                         {cc.nama}
