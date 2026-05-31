@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-server'
+import { resolveTenantId } from '@/lib/finance/tenant'
 
 /**
  * GET /api/finance/cost-centers/values
@@ -19,15 +20,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const jwt = await supabase.auth.getSession()
-    const tenantId = (
-      jwt.data.session?.user?.user_metadata?.tenant_id ??
-      jwt.data.session?.user?.app_metadata?.tenant_id
-    ) as string | undefined
-
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant context missing' }, { status: 403 })
-    }
+    // JWTs here don't carry tenant_id — resolve via profile, fall back to default
+    const tenantId = await resolveTenantId(user)
 
     const { searchParams } = request.nextUrl
     const config_id = searchParams.get('config_id')

@@ -142,3 +142,25 @@ ALTER TABLE journal_lines   ENABLE TRIGGER prevent_posted_lines_modification;
 
 Semua bug pemblokir telah diperbaiki. Halaman dapat dibuka, keenam laporan dapat di-generate,
 angka akurat, dan Neraca seimbang. Pass rate Post-Fix: **100% (20/20)**.
+
+---
+
+## 10. Iterasi v2 — General Ledger, Tenant Fix & Kolom Pertumbuhan
+
+Tiga isu lanjutan yang dilaporkan setelah merge PR #34:
+
+### ISSUE-1 (Critical) — Semua laporan error "tenant context missing"
+- **Root cause:** API membaca `tenant_id` hanya dari klaim JWT (`user_metadata`/`app_metadata`), padahal **tidak ada user yang punya `tenant_id` di JWT** (semua null). Akibatnya `buildReport` tak pernah dipanggil → toast 403.
+- **Fakta data:** seluruh 128 `user_profiles` bertenant `00000000-0000-0000-0000-000000000001`, dan `user_profiles.id == auth.users.id`.
+- **Fix:** helper baru `lib/finance/tenant.ts → resolveTenantId(user)` dengan urutan: JWT → `user_profiles.tenant_id` (by id) → default tenant. Diterapkan di `laporan-keuangan` API dan `cost-centers/values` API (bug yang sama).
+
+### ISSUE-2 (Feature) — Laporan Buku Besar (General Ledger)
+- **Backend:** tipe laporan baru `GL` di `report-engine.ts` (`buildGeneralLedger`) — per akun: saldo awal (dinormalisasi signed) → daftar transaksi (tanggal, no. jurnal, keterangan, debit, kredit) → **saldo berjalan** → saldo akhir. Mendukung filter satu akun (`account_id`).
+- **Frontend:** item nav "Buku Besar", filter **akun** (khusus GL), dan komponen `GeneralLedgerView`.
+- **Verifikasi (FY2026-Q2):** 29 akun, 54 baris transaksi, total debit = total kredit = **624.750.000** (seimbang).
+
+### ISSUE-3 (Enhancement) — Filter periode current vs benchmark + kolom growth
+- Kolom tabel laporan saat pembanding aktif kini jelas: **Periode Ini · Pembanding · Pertumbuhan (Rp) · Pertumbuhan (%)** dengan warna hijau/merah & panah arah.
+- Filter pembanding/cost-center disembunyikan saat GL (tidak relevan); filter akun hanya muncul saat GL.
+
+**Hasil v2:** typecheck bersih, `next build` `Compiled successfully` untuk route target, render halaman OK (nav "Buku Besar" muncul). Logika tenant/GL/laporan diverifikasi via simulasi SQL. Dicatat sebagai run **"Laporan Keuangan v2 — GL + Tenant + Growth"** di `/finance/qa`.

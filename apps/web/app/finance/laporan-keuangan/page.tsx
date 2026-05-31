@@ -8,6 +8,7 @@ import {
   BarChart3,
   TableIcon,
   BookOpenCheckIcon,
+  NotebookTextIcon,
   ChevronRightIcon,
   ChevronDownIcon,
   RefreshCwIcon,
@@ -52,13 +53,20 @@ const REPORT_TYPES = [
   {
     tier: 'Tier 2 — Detail',
     items: [
+      { id: 'GL', label: 'Buku Besar', subLabel: 'General Ledger', icon: NotebookTextIcon, color: 'text-teal-500' },
       { id: 'TB', label: 'Neraca Saldo', subLabel: 'Trial Balance', icon: TableIcon, color: 'text-amber-500' },
       { id: 'BB', label: 'Saldo Awal', subLabel: 'Beginning Balance', icon: BookOpenCheckIcon, color: 'text-rose-500' },
     ],
   },
 ] as const
 
-type ReportId = 'IS' | 'BS' | 'CF' | 'EQ' | 'TB' | 'BB'
+type ReportId = 'IS' | 'BS' | 'CF' | 'EQ' | 'TB' | 'BB' | 'GL'
+
+type ReportNavItem = { id: ReportId; label: string; subLabel: string; icon: any; color: string }
+// Flattened, explicitly-typed nav list (avoids `as const` tuple inference issues)
+const ALL_REPORT_ITEMS: ReportNavItem[] = REPORT_TYPES.flatMap(
+  (g) => g.items.map((i) => ({ ...i })) as ReportNavItem[]
+)
 
 const COA_LAYER_BADGE: Record<string, { label: string; className: string }> = {
   category:      { label: 'CAT',  className: 'bg-slate-700 text-slate-100 border-slate-600' },
@@ -124,10 +132,41 @@ interface CcValue {
   parent_value_id: string | null
 }
 
+interface CoaAccount {
+  id: string
+  account_code: string
+  account_name: string
+  coa_layer: string | null
+  level: number
+}
+
+interface LedgerEntry {
+  journal_entry_id: string
+  date: string
+  entry_number: string
+  description: string
+  debit: number
+  credit: number
+  balance: number
+}
+
+interface LedgerAccount {
+  id: string
+  account_code: string
+  account_name: string
+  normal_balance: 'debit' | 'credit'
+  opening_balance: number
+  closing_balance: number
+  total_debit: number
+  total_credit: number
+  entries: LedgerEntry[]
+}
+
 interface ReportResult {
   period: Period
   benchmark_period?: Period
   lines: ReportLine[]
+  ledger?: LedgerAccount[]
   summary: Record<string, number>
   generated_at: string
 }
@@ -153,6 +192,7 @@ function fmtPct(v: number): string {
 // given an empty-string value, so we use these instead and map them back to ''.
 const BENCHMARK_NONE = '__none__'
 const CC_ALL = '__all__'
+const ACCOUNT_ALL = '__all_accounts__'
 
 // The fiscal_periods table stores `period_name` (no `name`/`fiscal_year`
 // columns), so normalize raw rows into the shape the UI expects.
@@ -261,11 +301,19 @@ function LineRow({ line, showBenchmark, depth = 0, defaultExpanded = true }: Lin
           {isNegative && <span className="text-red-400">)</span>}
         </td>
 
-        {/* Benchmark + Variance */}
+        {/* Benchmark + Growth (Rp) + Growth (%) */}
         {showBenchmark && (
           <>
             <td className="py-2 px-3 text-right text-sm font-mono text-muted-foreground whitespace-nowrap">
               {fmtIDR(line.benchmark_amount)}
+            </td>
+            <td className={cn(
+              'py-2 px-3 text-right text-sm font-mono whitespace-nowrap',
+              line.variance > 0 ? 'text-emerald-400' : line.variance < 0 ? 'text-red-400' : 'text-muted-foreground',
+            )}>
+              {line.variance < 0 ? '(' : line.variance > 0 ? '+' : ''}
+              {fmtIDR(line.variance)}
+              {line.variance < 0 ? ')' : ''}
             </td>
             <td className={cn(
               'py-2 px-3 text-right text-sm font-mono whitespace-nowrap',
@@ -334,6 +382,11 @@ function SummaryCards({ result, reportType }: { result: ReportResult; reportType
       { label: 'Total Debit', value: s.total_debit ?? 0 },
       { label: 'Total Kredit', value: s.total_credit ?? 0 },
     )
+  } else if (reportType === 'GL') {
+    cards.push(
+      { label: 'Total Debit', value: s.gl_total_debit ?? 0 },
+      { label: 'Total Kredit', value: s.gl_total_credit ?? 0 },
+    )
   }
 
   if (cards.length === 0) return null
@@ -359,6 +412,73 @@ function SummaryCards({ result, reportType }: { result: ReportResult; reportType
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GENERAL LEDGER VIEW (Buku Besar) — per-account transactions + running balance
+// ─────────────────────────────────────────────────────────────────────────────
+
+function GeneralLedgerView({ ledger }: { ledger: LedgerAccount[] }) {
+  const fmtDate = (s: string) =>
+    s ? new Date(s).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const fmtSigned = (v: number) => (v < 0 ? `(${fmtIDR(v)})` : fmtIDR(v))
+
+  return (
+    <div className="space-y-5">
+      {ledger.map(acct => (
+        <div key={acct.id} className="rounded-lg border border-border overflow-hidden">
+          {/* Account header */}
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-muted/50 px-4 py-2.5 border-b border-border">
+            <div className="flex items-center gap-2 min-w-0">
+              <Badge variant="outline" className="font-mono text-[10px]">{acct.account_code}</Badge>
+              <span className="font-medium text-sm truncate">{acct.account_name}</span>
+              <Badge variant="outline" className="text-[10px] uppercase">{acct.normal_balance === 'debit' ? 'D' : 'K'}</Badge>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-mono">
+              <span className="text-muted-foreground">Saldo Awal: <span className="text-foreground">{fmtSigned(acct.opening_balance)}</span></span>
+              <span className="text-muted-foreground">Saldo Akhir: <span className="font-semibold text-foreground">{fmtSigned(acct.closing_balance)}</span></span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-background text-muted-foreground">
+                  <th className="py-2 px-3 text-left text-xs font-medium w-28">Tanggal</th>
+                  <th className="py-2 px-3 text-left text-xs font-medium">No. Jurnal</th>
+                  <th className="py-2 px-3 text-left text-xs font-medium">Keterangan</th>
+                  <th className="py-2 px-3 text-right text-xs font-medium">Debit</th>
+                  <th className="py-2 px-3 text-right text-xs font-medium">Kredit</th>
+                  <th className="py-2 px-3 text-right text-xs font-medium">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-border/40 text-xs text-muted-foreground italic">
+                  <td className="py-1.5 px-3" colSpan={5}>Saldo Awal</td>
+                  <td className="py-1.5 px-3 text-right font-mono">{fmtSigned(acct.opening_balance)}</td>
+                </tr>
+                {acct.entries.map((e, i) => (
+                  <tr key={`${e.journal_entry_id}-${i}`} className="border-b border-border/40 hover:bg-muted/30">
+                    <td className="py-1.5 px-3 whitespace-nowrap text-xs">{fmtDate(e.date)}</td>
+                    <td className="py-1.5 px-3 font-mono text-xs whitespace-nowrap">{e.entry_number || '—'}</td>
+                    <td className="py-1.5 px-3 text-xs">{e.description || '—'}</td>
+                    <td className="py-1.5 px-3 text-right font-mono">{e.debit ? fmtIDR(e.debit) : '—'}</td>
+                    <td className="py-1.5 px-3 text-right font-mono">{e.credit ? fmtIDR(e.credit) : '—'}</td>
+                    <td className="py-1.5 px-3 text-right font-mono">{fmtSigned(e.balance)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-muted/40 font-semibold text-xs">
+                  <td className="py-2 px-3" colSpan={3}>Total / Saldo Akhir</td>
+                  <td className="py-2 px-3 text-right font-mono">{fmtIDR(acct.total_debit)}</td>
+                  <td className="py-2 px-3 text-right font-mono">{fmtIDR(acct.total_credit)}</td>
+                  <td className="py-2 px-3 text-right font-mono">{fmtSigned(acct.closing_balance)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -366,16 +486,20 @@ export default function LaporanKeuanganPage() {
   const [activeReport, setActiveReport] = useState<ReportId>('IS')
   const [periods, setPeriods] = useState<Period[]>([])
   const [ccValues, setCcValues] = useState<CcValue[]>([])
+  const [accounts, setAccounts] = useState<CoaAccount[]>([])
   const [selectedPeriod, setSelectedPeriod] = useState<string>('')
   const [benchmarkPeriod, setBenchmarkPeriod] = useState<string>('')
   const [selectedCc, setSelectedCc] = useState<string>('')
+  const [selectedAccount, setSelectedAccount] = useState<string>('')
   const [result, setResult] = useState<ReportResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
 
-  // Load periods and cost center values on mount
+  const isGL = activeReport === 'GL'
+
+  // Load periods, cost centers, and COA accounts on mount
   useEffect(() => {
-    Promise.all([loadPeriods(), loadCostCenters()]).finally(() => setInitialLoading(false))
+    Promise.all([loadPeriods(), loadCostCenters(), loadAccounts()]).finally(() => setInitialLoading(false))
   }, [])
 
   // Auto-load when filter changes
@@ -383,7 +507,7 @@ export default function LaporanKeuanganPage() {
     if (selectedPeriod) {
       loadReport()
     }
-  }, [activeReport, selectedPeriod, benchmarkPeriod, selectedCc])
+  }, [activeReport, selectedPeriod, benchmarkPeriod, selectedCc, selectedAccount])
 
   async function loadPeriods() {
     try {
@@ -412,13 +536,40 @@ export default function LaporanKeuanganPage() {
     }
   }
 
+  async function loadAccounts() {
+    try {
+      const res = await fetch('/api/finance/coa')
+      if (!res.ok) return
+      const json = await res.json()
+      const raw: any[] = Array.isArray(json) ? json : (json.data ?? [])
+      // Postable (leaf-ish) accounts only — used for the General Ledger filter
+      const list: CoaAccount[] = raw
+        .filter((a) => a && (Number(a.level) >= 3 ||
+          ['general_ledger', 'detail_ledger', 'sub_account'].includes(a.coa_layer)))
+        .map((a) => ({
+          id: a.id,
+          account_code: a.account_code,
+          account_name: a.account_name,
+          coa_layer: a.coa_layer ?? null,
+          level: Number(a.level ?? 0),
+        }))
+      setAccounts(list)
+    } catch {
+      // optional — silent fail
+    }
+  }
+
   const loadReport = useCallback(async () => {
     if (!selectedPeriod) return
     setLoading(true)
     try {
       const params = new URLSearchParams({ type: activeReport, period_id: selectedPeriod })
-      if (benchmarkPeriod) params.set('benchmark_period_id', benchmarkPeriod)
-      if (selectedCc) params.set('cost_center_value_id', selectedCc)
+      if (activeReport !== 'GL') {
+        if (benchmarkPeriod) params.set('benchmark_period_id', benchmarkPeriod)
+        if (selectedCc) params.set('cost_center_value_id', selectedCc)
+      } else if (selectedAccount) {
+        params.set('account_id', selectedAccount)
+      }
 
       const res = await fetch(`/api/finance/laporan-keuangan?${params}`)
       if (!res.ok) {
@@ -433,9 +584,9 @@ export default function LaporanKeuanganPage() {
     } finally {
       setLoading(false)
     }
-  }, [activeReport, selectedPeriod, benchmarkPeriod, selectedCc])
+  }, [activeReport, selectedPeriod, benchmarkPeriod, selectedCc, selectedAccount])
 
-  const showBenchmark = !!benchmarkPeriod && !!result?.benchmark_period
+  const showBenchmark = !isGL && !!benchmarkPeriod && !!result?.benchmark_period
 
   // Build period label
   const periodLabel = (p: Period) =>
@@ -524,7 +675,8 @@ export default function LaporanKeuanganPage() {
               </Select>
             </div>
 
-            {/* Benchmark period */}
+            {/* Benchmark period (comparison) — not applicable to General Ledger */}
+            {!isGL && (
             <div className="flex items-center gap-1.5">
               <ChevronsUpDownIcon className="w-3.5 h-3.5 text-muted-foreground" />
               <Select
@@ -546,9 +698,10 @@ export default function LaporanKeuanganPage() {
                 </SelectContent>
               </Select>
             </div>
+            )}
 
-            {/* Cost center filter */}
-            {ccLevel3.length > 0 && (
+            {/* Cost center filter — not applicable to General Ledger */}
+            {!isGL && ccLevel3.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <BuildingIcon className="w-3.5 h-3.5 text-muted-foreground" />
                 <Select
@@ -563,6 +716,29 @@ export default function LaporanKeuanganPage() {
                     {ccLevel3.map(cc => (
                       <SelectItem key={cc.id} value={cc.id} className="text-xs">
                         {cc.nama}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Account filter — General Ledger only */}
+            {isGL && (
+              <div className="flex items-center gap-1.5">
+                <NotebookTextIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                <Select
+                  value={selectedAccount || ACCOUNT_ALL}
+                  onValueChange={(v) => setSelectedAccount(v === ACCOUNT_ALL ? '' : v)}
+                >
+                  <SelectTrigger className="h-8 text-xs w-[260px]">
+                    <SelectValue placeholder="Semua Akun" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ACCOUNT_ALL} className="text-xs text-muted-foreground">— Semua Akun —</SelectItem>
+                    {accounts.map(a => (
+                      <SelectItem key={a.id} value={a.id} className="text-xs">
+                        {a.account_code} · {a.account_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -596,7 +772,7 @@ export default function LaporanKeuanganPage() {
           <div className="px-4 py-4">
             {/* Mobile report type selector */}
             <div className="flex gap-2 overflow-x-auto pb-2 mb-4 lg:hidden">
-              {REPORT_TYPES.flatMap(g => g.items).map(item => {
+              {ALL_REPORT_ITEMS.map(item => {
                 const Icon = item.icon
                 const active = activeReport === item.id
                 return (
@@ -621,7 +797,7 @@ export default function LaporanKeuanganPage() {
             {result && (
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-base font-semibold">
-                  {REPORT_TYPES.flatMap(g => g.items).find(i => i.id === activeReport)?.label}
+                  {ALL_REPORT_ITEMS.find(i => i.id === activeReport)?.label}
                 </h2>
                 <Badge variant="outline" className="text-xs">
                   {result.period.name}
@@ -670,8 +846,22 @@ export default function LaporanKeuanganPage() {
               </div>
             )}
 
-            {/* Report table */}
-            {result && !loading && result.lines.length > 0 && (
+            {/* General Ledger view */}
+            {isGL && result && !loading && (result.ledger?.length ?? 0) > 0 && (
+              <GeneralLedgerView ledger={result.ledger!} />
+            )}
+            {isGL && result && !loading && (result.ledger?.length ?? 0) === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border border-dashed border-border">
+                <NotebookTextIcon className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground text-sm">Tidak ada transaksi pada periode ini</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Pilih periode/akun lain, atau posting jurnal terlebih dahulu
+                </p>
+              </div>
+            )}
+
+            {/* Report table (tree reports) */}
+            {!isGL && result && !loading && result.lines.length > 0 && (
               <div className="rounded-lg border border-border overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -684,7 +874,7 @@ export default function LaporanKeuanganPage() {
                           Kode
                         </th>
                         <th className="py-2.5 px-3 text-right text-xs font-medium text-muted-foreground">
-                          {activeReport === 'TB' ? 'Saldo' : 'Jumlah'}
+                          {showBenchmark ? 'Periode Ini' : activeReport === 'TB' ? 'Saldo' : 'Jumlah'}
                         </th>
                         {showBenchmark && (
                           <>
@@ -692,7 +882,10 @@ export default function LaporanKeuanganPage() {
                               Pembanding
                             </th>
                             <th className="py-2.5 px-3 text-right text-xs font-medium text-muted-foreground">
-                              Δ%
+                              Pertumbuhan (Rp)
+                            </th>
+                            <th className="py-2.5 px-3 text-right text-xs font-medium text-muted-foreground">
+                              Pertumbuhan (%)
                             </th>
                           </>
                         )}
@@ -720,7 +913,7 @@ export default function LaporanKeuanganPage() {
             )}
 
             {/* Empty lines */}
-            {result && !loading && result.lines.length === 0 && (
+            {!isGL && result && !loading && result.lines.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border border-dashed border-border">
                 <TableIcon className="w-10 h-10 text-muted-foreground/30 mb-3" />
                 <p className="text-muted-foreground text-sm">Tidak ada data untuk periode ini</p>

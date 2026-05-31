@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase-server'
 import { buildReport, type ReportType } from '@/lib/services/report-engine'
+import { resolveTenantId } from '@/lib/finance/tenant'
 
-const VALID_REPORT_TYPES: ReportType[] = ['IS', 'BS', 'CF', 'EQ', 'TB', 'BB']
+const VALID_REPORT_TYPES: ReportType[] = ['IS', 'BS', 'CF', 'EQ', 'TB', 'BB', 'GL']
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     const period_id = searchParams.get('period_id')
     const benchmark_period_id = searchParams.get('benchmark_period_id') ?? undefined
     const cost_center_value_id = searchParams.get('cost_center_value_id') ?? undefined
+    const account_id = searchParams.get('account_id') ?? undefined
 
     if (!VALID_REPORT_TYPES.includes(report_type)) {
       return NextResponse.json(
@@ -30,20 +32,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'period_id is required' }, { status: 400 })
     }
 
-    // Extract tenant_id from JWT
-    const jwt = await supabase.auth.getSession()
-    const tenantId = (jwt.data.session?.user?.user_metadata?.tenant_id
-      ?? jwt.data.session?.user?.app_metadata?.tenant_id) as string | undefined
-
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant context missing' }, { status: 403 })
-    }
+    // Resolve tenant (JWTs here don't carry tenant_id — fall back to profile/default)
+    const tenantId = await resolveTenantId(user)
 
     const result = await buildReport({
       tenant_id: tenantId,
       period_id,
       benchmark_period_id,
       cost_center_value_id,
+      account_id,
       report_type,
     })
 
