@@ -23,6 +23,8 @@ export async function getJournalEntries(filters?: {
   endDate?: string
   sourceType?: JournalEntry['source_type']
   sourceId?: string
+  kategoriJurnal?: string
+  search?: string
 }) {
   const supabase = await createAdminClient()
   let query = supabase
@@ -53,6 +55,15 @@ export async function getJournalEntries(filters?: {
   if (filters?.endDate) query = query.lte('transaction_date', filters.endDate)
   if (filters?.sourceType) query = query.eq('source_type', filters.sourceType)
   if (filters?.sourceId) query = query.eq('source_id', filters.sourceId)
+  if (filters?.kategoriJurnal) query = query.eq('kategori_jurnal', filters.kategoriJurnal)
+  if (filters?.search) {
+    const term = filters.search.replace(/[%,]/g, '').trim()
+    if (term) {
+      query = query.or(
+        `entry_number.ilike.%${term}%,description.ilike.%${term}%,reference_number.ilike.%${term}%`,
+      )
+    }
+  }
 
   const { data, error } = await query
   if (error) throw new Error(`Failed to fetch journal entries: ${error.message}`)
