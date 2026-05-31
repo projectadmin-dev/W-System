@@ -20,6 +20,7 @@ import {
   ChevronsUpDownIcon,
   ArrowUpIcon,
   ArrowDownIcon,
+  AlertTriangleIcon,
 } from 'lucide-react'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
@@ -193,6 +194,19 @@ function fmtPct(v: number): string {
 const BENCHMARK_NONE = '__none__'
 const CC_ALL = '__all__'
 const ACCOUNT_ALL = '__all_accounts__'
+
+// Pull a human-readable message out of a failed API Response. Finance APIs
+// return either { error } or { error, message }; surface whichever exists so
+// the real cause (e.g. a missing service-role key → HTTP 500) is visible
+// instead of failing silently into a blank page.
+async function extractError(res: Response): Promise<string> {
+  try {
+    const body = await res.json()
+    return body?.message ?? body?.error ?? res.statusText ?? 'Unknown error'
+  } catch {
+    return res.statusText || `HTTP ${res.status}`
+  }
+}
 
 // The fiscal_periods table stores `period_name` (no `name`/`fiscal_year`
 // columns), so normalize raw rows into the shape the UI expects.
@@ -494,6 +508,8 @@ export default function LaporanKeuanganPage() {
   const [result, setResult] = useState<ReportResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
+  // Surfaced reason the page can't show data (instead of a silent blank state)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const isGL = activeReport === 'GL'
 
@@ -512,7 +528,11 @@ export default function LaporanKeuanganPage() {
   async function loadPeriods() {
     try {
       const res = await fetch('/api/finance/periods')
-      if (!res.ok) return
+      if (!res.ok) {
+        const msg = await extractError(res)
+        setLoadError(`Gagal memuat daftar periode (HTTP ${res.status}): ${msg}`)
+        return
+      }
       const json = await res.json()
       const raw: any[] = Array.isArray(json) ? json : (json.data ?? [])
       // Sort most-recent first so the current period is the default selection
@@ -520,10 +540,16 @@ export default function LaporanKeuanganPage() {
         .map(normalizePeriod)
         .sort((a, b) => (a.start_date < b.start_date ? 1 : a.start_date > b.start_date ? -1 : 0))
       setPeriods(data)
-      if (data.length > 0 && !selectedPeriod) {
+      if (data.length === 0) {
+        setLoadError('Tidak ada periode fiskal aktif yang terbaca. Pastikan periode sudah dibuat/diaktifkan dan server terhubung ke database yang benar.')
+        return
+      }
+      setLoadError(null)
+      if (!selectedPeriod) {
         setSelectedPeriod(data[0]!.id)
       }
-    } catch {
+    } catch (e) {
+      setLoadError(`Gagal memuat daftar periode: ${e instanceof Error ? e.message : 'kesalahan jaringan'}`)
       toast.error('Gagal memuat daftar periode')
     }
   }
@@ -576,13 +602,16 @@ export default function LaporanKeuanganPage() {
 
       const res = await fetch(`/api/finance/laporan-keuangan?${params}`)
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error ?? 'Failed to load report')
+        const msg = await extractError(res)
+        throw new Error(`HTTP ${res.status}: ${msg}`)
       }
       const data: ReportResult = await res.json()
       setResult(data)
+      setLoadError(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gagal memuat laporan')
+      const m = err instanceof Error ? err.message : 'Gagal memuat laporan'
+      toast.error(m)
+      setLoadError(`Gagal memuat laporan: ${m}`)
       setResult(null)
     } finally {
       setLoading(false)
@@ -841,8 +870,21 @@ export default function LaporanKeuanganPage() {
               </div>
             )}
 
-            {/* Empty state */}
-            {!loading && !initialLoading && !result && (
+            {/* Load error — surfaces the real cause (e.g. SUPABASE_SERVICE_ROLE_KEY
+                not configured on the server) instead of a silent blank page. */}
+            {!loading && !initialLoading && loadError && (
+              <div className="mx-auto max-w-xl my-10 rounded-lg border border-destructive/40 bg-destructive/5 p-5 text-center">
+                <AlertTriangleIcon className="w-10 h-10 text-destructive mx-auto mb-3" />
+                <p className="font-medium text-destructive">Laporan tidak dapat dimuat</p>
+                <p className="text-sm text-muted-foreground mt-1.5 break-words">{loadError}</p>
+                <p className="text-xs text-muted-foreground/70 mt-3">
+                  Periksa konfigurasi server (env <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code>) lalu muat ulang.
+                </p>
+              </div>
+            )}
+
+            {/* Empty state (only when there is no error to show) */}
+            {!loading && !initialLoading && !result && !loadError && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <TableIcon className="w-12 h-12 text-muted-foreground/30 mb-4" />
                 <p className="text-muted-foreground">Pilih periode untuk menampilkan laporan</p>
