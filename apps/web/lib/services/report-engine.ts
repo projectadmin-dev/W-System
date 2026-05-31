@@ -100,16 +100,30 @@ async function resolvePeriod(
   period_id: string,
   tenant_id: string,
 ): Promise<PeriodBounds> {
+  // NOTE: fiscal_periods stores `period_name`; there are no `name`,
+  // `fiscal_year` or `period_number` columns. Select the real columns and
+  // map them into PeriodBounds so the report API doesn't 500.
   const { data, error } = await supabase
     .from('fiscal_periods')
-    .select('id, name, start_date, end_date, approval_status, fiscal_year, period_number')
+    .select('id, period_name, start_date, end_date, approval_status, status')
     .eq('id', period_id)
     .eq('tenant_id', tenant_id)
     .is('deleted_at', null)
     .single()
 
   if (error || !data) throw new Error(`Period not found: ${period_id}`)
-  return data as PeriodBounds
+
+  const row = data as Record<string, any>
+  const start = row.start_date as string
+  return {
+    id: row.id,
+    name: row.period_name ?? row.id,
+    start_date: start,
+    end_date: row.end_date,
+    approval_status: row.approval_status ?? row.status ?? 'DRAFT',
+    fiscal_year: start ? new Date(start).getFullYear() : 0,
+    period_number: 0,
+  } as PeriodBounds
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -322,7 +336,13 @@ function buildCoaTree(
   for (const acct of accounts) {
     const bal = balances.get(acct.id)
     const bmark = benchmarkBalances.get(acct.id)
-    const opening = openingBalances.get(acct.id) ?? 0
+    // openingBalances are stored as raw (debit - credit). Normalize to the
+    // same signed convention as `amount` (positive = normal direction) so the
+    // two can be combined (e.g. ending balance = amount + opening) and so
+    // credit-normal accounts (equity/liability) read correctly.
+    const openingRaw = openingBalances.get(acct.id) ?? 0
+    let opening = acct.normal_balance === 'debit' ? openingRaw : -openingRaw
+    if (acct.contra_account) opening = -opening
 
     const amount = bal
       ? applySignMultiplier(bal.debit, bal.credit, acct.normal_balance, acct.contra_account)
@@ -497,7 +517,27 @@ function buildIsReport(lineMap: Map<string, ReportLine>, accounts: CoaRecord[]):
 // BS (BALANCE SHEET) REPORT
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildBsReport(lineMap: Map<string, ReportLine>, accounts: CoaRecord[]): ReportLine[] {
+interface CurrentEarnings {
+  amount: number
+  benchmark: number
+}
+
+// Recursively fold opening balance into the displayed amount so every node
+// shows its ENDING balance (opening + period activity) — the correct figure
+// for a balance sheet "as of" the period end.
+function toEndingBalance(line: ReportLine): ReportLine {
+  return {
+    ...line,
+    amount: line.amount + line.opening_balance,
+    children: line.children.map(toEndingBalance),
+  }
+}
+
+function buildBsReport(
+  lineMap: Map<string, ReportLine>,
+  accounts: CoaRecord[],
+  currentEarnings: CurrentEarnings = { amount: 0, benchmark: 0 },
+): ReportLine[] {
   const bsRoots = accounts
     .filter(a => a.level === 1 && a.enum_laporan_keuangan === 'BALANCE_SHEET')
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -506,29 +546,40 @@ function buildBsReport(lineMap: Map<string, ReportLine>, accounts: CoaRecord[]):
 
   for (const root of bsRoots) {
     const line = lineMap.get(root.id)
-    if (line) lines.push(line)
+    if (line) lines.push(toEndingBalance(line))
   }
 
-  // Totals for balancing check
-  const totalAssets = bsRoots
-    .filter(r => r.enum_laporan_keuangan_category === 'ASSET')
-    .reduce((s, r) => s + (lineMap.get(r.id)?.amount ?? 0), 0)
-  const totalLiab = bsRoots
-    .filter(r => r.enum_laporan_keuangan_category === 'LIABILITY')
-    .reduce((s, r) => s + (lineMap.get(r.id)?.amount ?? 0), 0)
-  const totalEquity = bsRoots
-    .filter(r => r.enum_laporan_keuangan_category === 'EQUITY')
-    .reduce((s, r) => s + (lineMap.get(r.id)?.amount ?? 0), 0)
+  const sumCat = (cat: string, field: 'amount' | 'benchmark_amount') =>
+    lines
+      .filter(l => l.enum_laporan_keuangan_category === cat)
+      .reduce((s, l) => s + (l[field] as number), 0)
 
-  const totalAssetsBm = bsRoots
-    .filter(r => r.enum_laporan_keuangan_category === 'ASSET')
-    .reduce((s, r) => s + (lineMap.get(r.id)?.benchmark_amount ?? 0), 0)
-  const totalLiabBm = bsRoots
-    .filter(r => r.enum_laporan_keuangan_category === 'LIABILITY')
-    .reduce((s, r) => s + (lineMap.get(r.id)?.benchmark_amount ?? 0), 0)
-  const totalEquityBm = bsRoots
-    .filter(r => r.enum_laporan_keuangan_category === 'EQUITY')
-    .reduce((s, r) => s + (lineMap.get(r.id)?.benchmark_amount ?? 0), 0)
+  const totalAssets = sumCat('ASSET', 'amount')
+  const totalAssetsBm = sumCat('ASSET', 'benchmark_amount')
+  let totalLiab = sumCat('LIABILITY', 'amount')
+  let totalEquity = sumCat('EQUITY', 'amount')
+  const totalLiabBm = sumCat('LIABILITY', 'benchmark_amount')
+  let totalEquityBm = sumCat('EQUITY', 'benchmark_amount')
+
+  // Interim balance sheets must surface current-period profit/loss as part of
+  // equity (it has not yet been closed to retained earnings). Without this the
+  // sheet is out of balance by exactly the period's net profit.
+  if (Math.abs(currentEarnings.amount) > 0.5 || Math.abs(currentEarnings.benchmark) > 0.5) {
+    const earningsLine = makeComputedRow(
+      'computed_current_earnings',
+      'Laba (Rugi) Periode Berjalan',
+      currentEarnings.amount,
+      currentEarnings.benchmark,
+    )
+    earningsLine.enum_laporan_keuangan_category = 'EQUITY'
+    const lastEquityIdx = lines
+      .map(l => l.enum_laporan_keuangan_category)
+      .lastIndexOf('EQUITY')
+    if (lastEquityIdx >= 0) lines.splice(lastEquityIdx + 1, 0, earningsLine)
+    else lines.push(earningsLine)
+    totalEquity += currentEarnings.amount
+    totalEquityBm += currentEarnings.benchmark
+  }
 
   lines.push(makeComputedRow('computed_total_assets', 'TOTAL AKTIVA', totalAssets, totalAssetsBm))
   lines.push(makeComputedRow('computed_total_liab_equity', 'TOTAL KEWAJIBAN & EKUITAS', totalLiab + totalEquity, totalLiabBm + totalEquityBm))
@@ -603,6 +654,25 @@ function buildBbReport(lineMap: Map<string, ReportLine>, accounts: CoaRecord[]):
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CURRENT-PERIOD EARNINGS (net profit) — needed to balance the balance sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function computeCurrentEarnings(
+  supabase: ReturnType<typeof createAdminClient>,
+  tenant_id: string,
+  balances: Map<string, RawLineBalance>,
+  openingBalances: Map<string, number>,
+  benchmarkBalances: Map<string, RawLineBalance>,
+): Promise<CurrentEarnings> {
+  const allAccounts = await fetchCoa(supabase, tenant_id)
+  const allMap = buildCoaTree(allAccounts, balances, openingBalances, benchmarkBalances)
+  const isAccts = allAccounts.filter(a => a.enum_laporan_keuangan === 'INCOME_STATEMENT')
+  const isLines = buildIsReport(allMap, isAccts)
+  const np = isLines.find(l => l.id === 'computed_net_profit')
+  return { amount: np?.amount ?? 0, benchmark: np?.benchmark_amount ?? 0 }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN ORCHESTRATOR
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -645,7 +715,8 @@ export async function buildReport(params: ReportParams): Promise<ReportResult> {
     summary.net_before_tax = findComputed('computed_net_before_tax')
     summary.net_profit = findComputed('computed_net_profit')
   } else if (report_type === 'BS') {
-    lines = buildBsReport(lineMap, accounts)
+    const earnings = await computeCurrentEarnings(supabase, tenant_id, balances, openingBalances, benchmarkBalances)
+    lines = buildBsReport(lineMap, accounts, earnings)
     summary.total_assets = lines.find(l => l.id === 'computed_total_assets')?.amount ?? 0
     summary.total_liab_equity = lines.find(l => l.id === 'computed_total_liab_equity')?.amount ?? 0
     summary.balance_check = summary.total_assets - summary.total_liab_equity
@@ -670,8 +741,9 @@ export async function buildReport(params: ReportParams): Promise<ReportResult> {
   } else if (report_type === 'BB') {
     lines = buildBbReport(lineMap, accounts)
   } else {
-    // EQ — Equity changes: show Ekuitas section of BS
-    lines = buildBsReport(lineMap, accounts).filter(
+    // EQ — Equity changes: show Ekuitas section of BS (incl. current earnings)
+    const earnings = await computeCurrentEarnings(supabase, tenant_id, balances, openingBalances, benchmarkBalances)
+    lines = buildBsReport(lineMap, accounts, earnings).filter(
       l => l.enum_laporan_keuangan_category === 'EQUITY' || l.id === 'computed_total_liab_equity'
     )
   }
