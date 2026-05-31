@@ -14,8 +14,9 @@ import { DensityToggle } from './density-toggle'
 import { AccountFormModal, type AccountFormValues } from './account-form-modal'
 import { DeleteModal } from './delete-modal'
 import { SubChildModal, SubDlModal, type SubDlPayload } from './sub-modals'
+import { SubGlLevelModal, SubGlValueDrawer } from './sub-gl'
 import { buildFullCode, type ChildRow } from '@/lib/coa-logic'
-import type { CoaNode, DbCoaRow } from './types'
+import type { CoaNode, DbCoaRow, SubGlLevel } from './types'
 
 /** Sibling code: replace the parent's last segment (self-referencing sub-account / GL children). */
 function siblingFullCode(parentFullCode: string, code: string): string {
@@ -41,6 +42,8 @@ export function CoaExplorer() {
   const [subChild, setSubChild] = useState<{ parent: CoaNode; layer: 'sub' | 'gl' } | null>(null)
   const [subDl, setSubDl] = useState<CoaNode | null>(null)
   const [savingSub, setSavingSub] = useState(false)
+  const [subGlModal, setSubGlModal] = useState<{ node: CoaNode; editIndex: number } | null>(null)
+  const [subGlDrawer, setSubGlDrawer] = useState<CoaNode | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const loadCoa = useCallback(async () => {
@@ -289,6 +292,56 @@ export function CoaExplorer() {
     }
   }
 
+  // ─── Sub GL (Phase 3) ────────────────────────────────────────────────
+  async function putAccount(id: string, patch: Record<string, unknown>) {
+    const res = await fetch(`/api/finance/coa?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || err.message || 'Gagal menyimpan')
+    }
+  }
+
+  async function toggleSubGlRequired(node: CoaNode, required: boolean) {
+    try {
+      await putAccount(node.id, { required_sub_gl: required, sub_gl_config: required ? node.subGlConfig ?? [] : node.subGlConfig ?? null })
+      toast.success(required ? 'Sub GL diaktifkan' : 'Sub GL dinonaktifkan')
+      await loadCoa()
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  async function saveSubGlLevel(level: SubGlLevel) {
+    if (!subGlModal) return
+    const { node, editIndex } = subGlModal
+    const current = [...(node.subGlConfig ?? [])]
+    if (editIndex === -1) current.push(level)
+    else current[editIndex] = level
+    const reindexed = current.map((l, i) => ({ ...l, attributeLevel: i + 1 }))
+    setSavingSub(true)
+    try {
+      await putAccount(node.id, { sub_gl_config: reindexed, required_sub_gl: true })
+      toast.success(editIndex === -1 ? `Attribute level ${reindexed.length} ditambah` : 'Attribute level diperbarui')
+      setSubGlModal(null)
+      await loadCoa()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingSub(false)
+    }
+  }
+
+  async function deleteSubGlLevel(node: CoaNode, index: number) {
+    const next = (node.subGlConfig ?? []).filter((_, i) => i !== index).map((l, i) => ({ ...l, attributeLevel: i + 1 }))
+    try {
+      await putAccount(node.id, { sub_gl_config: next })
+      toast.success('Attribute level dihapus')
+      await loadCoa()
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
   function handleExport() {
     const headers = ['ID', 'Layer', 'Parent ID', 'Code', 'COA Full Code', 'Name', 'D/K', 'Active']
     const csvRows = nodes.map((n) => [n.id, toDbLayer(n.layer), n.parentId || '', n.code, n.coaFullCode, n.name, n.dk, n.isActive ? 'Yes' : 'No'])
@@ -435,6 +488,11 @@ export function CoaExplorer() {
             onAddSubChild={(parent, layer) => setSubChild({ parent, layer })}
             onAddSubDl={(parent) => setSubDl(parent)}
             onSelectChild={(child) => setSelectedId(child.id)}
+            onToggleSubGlRequired={toggleSubGlRequired}
+            onAddSubGlLevel={(n) => setSubGlModal({ node: n, editIndex: -1 })}
+            onEditSubGlLevel={(n, index) => setSubGlModal({ node: n, editIndex: index })}
+            onDeleteSubGlLevel={deleteSubGlLevel}
+            onViewSubGlValues={(n) => setSubGlDrawer(n)}
           />
         )}
       </div>
@@ -480,6 +538,15 @@ export function CoaExplorer() {
         onClose={() => setSubDl(null)}
         onSubmit={submitSubDl}
       />
+      <SubGlLevelModal
+        open={!!subGlModal}
+        node={subGlModal?.node ?? null}
+        editIndex={subGlModal?.editIndex ?? -1}
+        saving={savingSub}
+        onClose={() => setSubGlModal(null)}
+        onSubmit={saveSubGlLevel}
+      />
+      {subGlDrawer && <SubGlValueDrawer node={subGlDrawer} onClose={() => setSubGlDrawer(null)} />}
     </div>
   )
 }

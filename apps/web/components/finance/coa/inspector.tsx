@@ -5,6 +5,8 @@ import { IFAS, DENSITY, type Density } from './theme'
 import { LayerBadge, DKChip, StatusDot, Chip } from './primitives'
 import { HierarchyPath } from './hierarchy-path'
 import { SubChildrenSection, SubDlSection } from './sub-sections'
+import { SubGlConfigSection } from './sub-gl'
+import { isDeepestDetailLedger } from '@/lib/coa-logic'
 import type { CoaNode } from './types'
 
 function PropRow({ label, children, density }: { label: string; children: React.ReactNode; density: Density }) {
@@ -38,10 +40,19 @@ interface Props {
   onAddSubChild: (parent: CoaNode, layer: 'sub' | 'gl') => void
   onAddSubDl: (parent: CoaNode) => void
   onSelectChild: (child: CoaNode) => void
+  onToggleSubGlRequired: (node: CoaNode, required: boolean) => void
+  onAddSubGlLevel: (node: CoaNode) => void
+  onEditSubGlLevel: (node: CoaNode, index: number) => void
+  onDeleteSubGlLevel: (node: CoaNode, index: number) => void
+  onViewSubGlValues: (node: CoaNode) => void
 }
 
-export function Inspector({ node, trail, density, allNodes, onClose, onEdit, onDelete, onAddSubChild, onAddSubDl, onSelectChild }: Props) {
+export function Inspector({
+  node, trail, density, allNodes, onClose, onEdit, onDelete, onAddSubChild, onAddSubDl, onSelectChild,
+  onToggleSubGlRequired, onAddSubGlLevel, onEditSubGlLevel, onDeleteSubGlLevel, onViewSubGlValues,
+}: Props) {
   const isDL = node?.layer === 'detail'
+  const isDeepestDL = !!node && isDeepestDetailLedger(node.layer, allNodes.filter((n) => n.parentId === node.id).map((n) => n.layer))
   return (
     <div
       role="dialog"
@@ -153,6 +164,16 @@ export function Inspector({ node, trail, density, allNodes, onClose, onEdit, onD
             )}
             {isDL && (
               <SubDlSection node={node} allNodes={allNodes} density={density} onAddSubDl={onAddSubDl} onSelectChild={onSelectChild} onEditChild={onEdit} />
+            )}
+            {isDeepestDL && (
+              <SubGlConfigSection
+                node={node}
+                onToggleRequired={onToggleSubGlRequired}
+                onAddLevel={onAddSubGlLevel}
+                onEditLevel={onEditSubGlLevel}
+                onDeleteLevel={onDeleteSubGlLevel}
+                onViewValues={onViewSubGlValues}
+              />
             )}
 
             <div style={{ marginBottom: 20 }}>

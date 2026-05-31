@@ -3,7 +3,7 @@
 // module maps DB rows into the UI `CoaNode` model and re-exports the engine so
 // components keep importing from './tree'.
 import { toFeLayer, deriveSegment } from '@/lib/coa-logic'
-import type { CoaNode, DbCoaRow } from './types'
+import type { CoaNode, DbCoaRow, SubGlLevel } from './types'
 
 export { deriveSegment, buildHierarchy, flatten, trimByLayer, filterByQuery, ancestryOf, allParentIds } from '@/lib/coa-logic'
 
@@ -32,6 +32,7 @@ export function mapRow(row: DbCoaRow): CoaNode {
     requiredSubGl: !!row.required_sub_gl,
     washedOut: !!row.is_washed_out_account,
     requiredChild: !!row.required_child,
+    subGlConfig: (row.sub_gl_config as SubGlLevel[] | null) ?? null,
     description: row.description ?? null,
     cashFlowCategory: (row.cash_flow_category as string) ?? null,
     sortOrder: row.sort_order ?? 0,

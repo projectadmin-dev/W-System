@@ -1,6 +1,15 @@
 // Chart of Account — node model used by the explorer.
 import type { Layer } from './theme'
 
+/** One Sub GL attribute level (deepest detail ledger only). */
+export interface SubGlLevel {
+  attributeLevel: number
+  isPullMasterData: boolean
+  sourceMasterData?: string
+  sourceColumn?: string
+  keyInRows?: { kode: string; nama: string }[]
+}
+
 export interface CoaAuditMini {
   createdAt: string | null
   createdBy: string | null
@@ -30,6 +39,7 @@ export interface CoaNode {
   requiredSubGl: boolean
   washedOut: boolean
   requiredChild: boolean
+  subGlConfig: SubGlLevel[] | null
   description: string | null
   cashFlowCategory: string | null
   sortOrder: number
@@ -64,6 +74,7 @@ export interface DbCoaRow {
   required_sub_gl?: boolean | null
   is_washed_out_account?: boolean | null
   required_child?: boolean | null
+  sub_gl_config?: unknown
   created_at?: string | null
   created_by?: string | null
   updated_at?: string | null
