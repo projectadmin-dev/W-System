@@ -15,6 +15,7 @@ import { AccountFormModal, type AccountFormValues } from './account-form-modal'
 import { DeleteModal } from './delete-modal'
 import { SubChildModal, SubDlModal, type SubDlPayload } from './sub-modals'
 import { SubGlLevelModal, SubGlValueDrawer } from './sub-gl'
+import { AuditTrailModal, PendingApprovalsModal } from './quick-modals'
 import { buildFullCode, type ChildRow } from '@/lib/coa-logic'
 import type { CoaNode, DbCoaRow, SubGlLevel } from './types'
 
@@ -44,6 +45,7 @@ export function CoaExplorer() {
   const [savingSub, setSavingSub] = useState(false)
   const [subGlModal, setSubGlModal] = useState<{ node: CoaNode; editIndex: number } | null>(null)
   const [subGlDrawer, setSubGlDrawer] = useState<CoaNode | null>(null)
+  const [quickModal, setQuickModal] = useState<'approvals' | 'audit' | 'history' | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const loadCoa = useCallback(async () => {
@@ -395,7 +397,7 @@ export function CoaExplorer() {
             activeLayer={activeLayer}
             onSelect={setActiveLayer}
             onClose={() => setLayerPanelOpen(false)}
-            onQuickAction={(kind) => toast(`${kind === 'approvals' ? 'Pending approvals' : kind === 'history' ? 'Import/Export history' : 'Audit trail'} hadir pada fase berikutnya`)}
+            onQuickAction={(kind) => setQuickModal(kind)}
           />
         )}
 
@@ -547,6 +549,8 @@ export function CoaExplorer() {
         onSubmit={saveSubGlLevel}
       />
       {subGlDrawer && <SubGlValueDrawer node={subGlDrawer} onClose={() => setSubGlDrawer(null)} />}
+      <AuditTrailModal open={quickModal === 'audit'} onClose={() => setQuickModal(null)} />
+      <PendingApprovalsModal open={quickModal === 'approvals'} onClose={() => setQuickModal(null)} />
     </div>
   )
 }
