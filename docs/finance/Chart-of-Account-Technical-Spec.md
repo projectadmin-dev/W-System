@@ -2,7 +2,7 @@
 
 **Module:** Finance & Accounting → Master Data → Chart of Account
 **Route:** `/finance/coa` (workspace) · `/finance/coa/[id]` (General Ledger drill-down)
-**Status:** R1 — UI/UX Revamp Specification · **Phase 0–1 implemented**
+**Status:** R1 — UI/UX Revamp Specification · **Phases 0–5 implemented + QA logged** (`/finance/qa`)
 **Author:** Engineering (generated from codebase + design handoff analysis)
 **Last updated:** 2026-05-31
 **Audience:** Frontend, Backend, Design, Finance Controller
