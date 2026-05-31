@@ -4,6 +4,7 @@ import { X, Pencil, Trash2, Clock, PlusCircle, Eye, ArrowUpDown, Ban } from 'luc
 import { IFAS, DENSITY, type Density } from './theme'
 import { LayerBadge, DKChip, StatusDot, Chip } from './primitives'
 import { HierarchyPath } from './hierarchy-path'
+import { SubChildrenSection, SubDlSection } from './sub-sections'
 import type { CoaNode } from './types'
 
 function PropRow({ label, children, density }: { label: string; children: React.ReactNode; density: Density }) {
@@ -30,12 +31,16 @@ interface Props {
   node: CoaNode | null
   trail: CoaNode[]
   density: Density
+  allNodes: CoaNode[]
   onClose: () => void
   onEdit: (node: CoaNode) => void
   onDelete: (node: CoaNode) => void
+  onAddSubChild: (parent: CoaNode, layer: 'sub' | 'gl') => void
+  onAddSubDl: (parent: CoaNode) => void
+  onSelectChild: (child: CoaNode) => void
 }
 
-export function Inspector({ node, trail, density, onClose, onEdit, onDelete }: Props) {
+export function Inspector({ node, trail, density, allNodes, onClose, onEdit, onDelete, onAddSubChild, onAddSubDl, onSelectChild }: Props) {
   const isDL = node?.layer === 'detail'
   return (
     <div
@@ -130,6 +135,25 @@ export function Inspector({ node, trail, density, onClose, onEdit, onDelete }: P
                 </PropRow>
               )}
             </div>
+
+            {/* Sub Akun — per-layer child management */}
+            {node.layer === 'sub' && (
+              <SubChildrenSection
+                node={node} allNodes={allNodes} density={density} layer="sub" maxItems={99}
+                headerLabel="Sub Akun" addLabel="Tambah Sub Akun" codeHint="Kode 2 digit (01–99). Maksimal 99 sub akun."
+                onAdd={(p) => onAddSubChild(p, 'sub')} onSelect={onSelectChild} onEdit={onEdit}
+              />
+            )}
+            {node.layer === 'gl' && (
+              <SubChildrenSection
+                node={node} allNodes={allNodes} density={density} layer="gl" maxItems={9}
+                headerLabel="Sub Akun GL" addLabel="Tambah Sub Akun" codeHint="Kode 1 digit (1–9). Maksimal 9 sub akun."
+                onAdd={(p) => onAddSubChild(p, 'gl')} onSelect={onSelectChild} onEdit={onEdit}
+              />
+            )}
+            {isDL && (
+              <SubDlSection node={node} allNodes={allNodes} density={density} onAddSubDl={onAddSubDl} onSelectChild={onSelectChild} onEditChild={onEdit} />
+            )}
 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: IFAS.text.tertiary, textTransform: 'uppercase', marginBottom: 8 }}>Audit Trail</div>

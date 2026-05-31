@@ -13,7 +13,16 @@ import { Inspector } from './inspector'
 import { DensityToggle } from './density-toggle'
 import { AccountFormModal, type AccountFormValues } from './account-form-modal'
 import { DeleteModal } from './delete-modal'
+import { SubChildModal, SubDlModal, type SubDlPayload } from './sub-modals'
+import { buildFullCode, type ChildRow } from '@/lib/coa-logic'
 import type { CoaNode, DbCoaRow } from './types'
+
+/** Sibling code: replace the parent's last segment (self-referencing sub-account / GL children). */
+function siblingFullCode(parentFullCode: string, code: string): string {
+  const segs = parentFullCode.split('-')
+  segs[segs.length - 1] = code
+  return segs.join('-')
+}
 
 type ModalState = { kind: 'create' | 'edit' | 'delete' | null; node: CoaNode | null }
 
@@ -29,6 +38,9 @@ export function CoaExplorer() {
   const [inspectorOpen, setInspectorOpen] = useState(false)
   const [modal, setModal] = useState<ModalState>({ kind: null, node: null })
   const [saving, setSaving] = useState(false)
+  const [subChild, setSubChild] = useState<{ parent: CoaNode; layer: 'sub' | 'gl' } | null>(null)
+  const [subDl, setSubDl] = useState<CoaNode | null>(null)
+  const [savingSub, setSavingSub] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const loadCoa = useCallback(async () => {
@@ -195,6 +207,88 @@ export function CoaExplorer() {
     }
   }
 
+  // ─── Sub Akun (Phase 2) ──────────────────────────────────────────────
+  async function postAccount(payload: Record<string, unknown>): Promise<string | null> {
+    const res = await fetch('/api/finance/coa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || err.message || 'Gagal menyimpan akun')
+    }
+    const created = await res.json()
+    return created?.id ?? null
+  }
+
+  async function submitSubChild(rows: ChildRow[]) {
+    if (!subChild) return
+    const { parent, layer } = subChild
+    const siblings = nodes.filter((n) => n.parentId === parent.id && n.layer === layer)
+    let order = siblings.reduce((m, n) => Math.max(m, n.sortOrder), 0)
+    setSavingSub(true)
+    try {
+      let firstId: string | null = null
+      for (const r of rows) {
+        const id = await postAccount({
+          account_code: siblingFullCode(parent.coaFullCode, r.kode),
+          account_name: r.nama,
+          account_type: parent.accountType,
+          level: parent.level,
+          normal_balance: parent.normalBalance,
+          parent_account_id: parent.id,
+          coa_layer: toDbLayer(layer),
+          sort_order: ++order,
+          is_active: true,
+        })
+        firstId ??= id
+      }
+      toast.success(`${rows.length} sub akun ditambahkan di bawah ${parent.name}`)
+      setSubChild(null)
+      setExpanded((prev) => new Set([...prev, parent.id]))
+      await loadCoa()
+      if (firstId) setSelectedId(firstId)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingSub(false)
+    }
+  }
+
+  async function submitSubDl(payload: SubDlPayload) {
+    if (!subDl) return
+    const parent = subDl
+    const siblings = nodes.filter((n) => n.parentId === parent.id && n.layer === 'detail')
+    let order = siblings.reduce((m, n) => Math.max(m, n.sortOrder), 0)
+    setSavingSub(true)
+    try {
+      let firstId: string | null = null
+      for (const r of payload.rows) {
+        const id = await postAccount({
+          account_code: buildFullCode(parent.coaFullCode, r.kode),
+          account_name: r.nama,
+          account_type: parent.accountType,
+          level: 5,
+          normal_balance: parent.normalBalance,
+          parent_account_id: parent.id,
+          coa_layer: 'detail_ledger',
+          child_upstream_id: parent.id,
+          required_sub_gl: payload.requiredSubGl,
+          is_washed_out_account: payload.washedOut,
+          sort_order: ++order,
+          is_active: true,
+        })
+        firstId ??= id
+      }
+      toast.success(`${payload.rows.length} sub akun (DL) ditambahkan di bawah ${parent.name}`)
+      setSubDl(null)
+      setExpanded((prev) => new Set([...prev, parent.id]))
+      await loadCoa()
+      if (firstId) setSelectedId(firstId)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingSub(false)
+    }
+  }
+
   function handleExport() {
     const headers = ['ID', 'Layer', 'Parent ID', 'Code', 'COA Full Code', 'Name', 'D/K', 'Active']
     const csvRows = nodes.map((n) => [n.id, toDbLayer(n.layer), n.parentId || '', n.code, n.coaFullCode, n.name, n.dk, n.isActive ? 'Yes' : 'No'])
@@ -330,7 +424,18 @@ export function CoaExplorer() {
 
         {/* Inspector overlay */}
         {inspectorOpen && (
-          <Inspector node={selected} trail={trail} density={density} onClose={() => setInspectorOpen(false)} onEdit={openEdit} onDelete={openDelete} />
+          <Inspector
+            node={selected}
+            trail={trail}
+            density={density}
+            allNodes={nodes}
+            onClose={() => setInspectorOpen(false)}
+            onEdit={openEdit}
+            onDelete={openDelete}
+            onAddSubChild={(parent, layer) => setSubChild({ parent, layer })}
+            onAddSubDl={(parent) => setSubDl(parent)}
+            onSelectChild={(child) => setSelectedId(child.id)}
+          />
         )}
       </div>
 
@@ -357,6 +462,23 @@ export function CoaExplorer() {
         deleting={deleting}
         onClose={closeModal}
         onConfirm={confirmDelete}
+      />
+      <SubChildModal
+        open={!!subChild}
+        parent={subChild?.parent ?? null}
+        layer={subChild?.layer ?? 'sub'}
+        allNodes={nodes}
+        saving={savingSub}
+        onClose={() => setSubChild(null)}
+        onSubmit={submitSubChild}
+      />
+      <SubDlModal
+        open={!!subDl}
+        parent={subDl}
+        allNodes={nodes}
+        saving={savingSub}
+        onClose={() => setSubDl(null)}
+        onSubmit={submitSubDl}
       />
     </div>
   )
