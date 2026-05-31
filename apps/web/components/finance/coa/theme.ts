@@ -42,7 +42,11 @@ export const IFAS = {
   },
 } as const
 
-export type Layer = 'category' | 'type' | 'sub' | 'gl' | 'detail'
+// Layer vocabulary, mapping, and MAX_SUB_DL_LEVEL live in the pure logic module
+// (testable via node:test); re-exported here so UI code keeps importing from './theme'.
+import type { CoaLayer } from '@/lib/coa-logic'
+export type Layer = CoaLayer
+export { toFeLayer, toDbLayer, MAX_SUB_DL_LEVEL } from '@/lib/coa-logic'
 
 // Distinct color per hierarchy level (used by code chips, layer badges, filter dots).
 export const LAYER_COLOR: Record<Layer, string> = {
@@ -65,32 +69,6 @@ export const LAYER_LABEL: Record<Layer, string> = {
   sub: 'Sub Account Type',
   gl: 'General Ledger',
   detail: 'Detail Ledger',
-}
-
-// DB `coa_layer` ↔ short FE key (the spec standardizes on DB names server-side).
-const DB_TO_FE: Record<string, Layer> = {
-  category: 'category',
-  type: 'type',
-  sub_account: 'sub',
-  general_ledger: 'gl',
-  detail_ledger: 'detail',
-}
-const FE_TO_DB: Record<Layer, string> = {
-  category: 'category',
-  type: 'type',
-  sub: 'sub_account',
-  gl: 'general_ledger',
-  detail: 'detail_ledger',
-}
-const LEVEL_TO_FE: Record<number, Layer> = { 1: 'category', 2: 'type', 3: 'sub', 4: 'gl', 5: 'detail' }
-
-export function toFeLayer(coaLayer: string | null | undefined, level?: number): Layer {
-  if (coaLayer && DB_TO_FE[coaLayer]) return DB_TO_FE[coaLayer]
-  if (level && LEVEL_TO_FE[level]) return LEVEL_TO_FE[level]
-  return 'detail'
-}
-export function toDbLayer(layer: Layer): string {
-  return FE_TO_DB[layer]
 }
 
 // Density presets — drive row/chip/button paddings, font sizes and tree indent.
@@ -116,5 +94,3 @@ export const DENSITY: Record<Density, DensityPreset> = {
     chipPadY: 2, chipPadX: 7, chipFont: 10, indentStep: 18,
   },
 }
-
-export const MAX_SUB_DL_LEVEL = 2
