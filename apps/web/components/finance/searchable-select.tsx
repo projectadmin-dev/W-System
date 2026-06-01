@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckIcon, ChevronsUpDownIcon, XIcon } from 'lucide-react'
 import { Input } from '@workspace/ui/components/input'
 import { cn } from '@workspace/ui/lib/utils'
@@ -14,8 +15,18 @@ export interface SearchableOption {
   keywords?: string
 }
 
+interface DropdownRect {
+  top: number
+  bottom: number
+  left: number
+  width: number
+  openUpward: boolean
+}
+
 /**
  * SearchableSelect — accessible, searchable single-select dropdown.
+ * Renders the dropdown via a React Portal so it is never clipped by
+ * parent overflow:hidden or a low z-index stacking context.
  * Every dropdown across the finance module should use this (project convention).
  */
 export function SearchableSelect({
@@ -43,7 +54,13 @@ export function SearchableSelect({
 }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const [rect, setRect] = useState<DropdownRect | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   const needle = q.trim().toLowerCase()
   const filtered = needle
@@ -53,20 +70,115 @@ export function SearchableSelect({
     : options
   const selected = options.find((o) => o.value === value)
 
+  const calcRect = useCallback(() => {
+    if (!triggerRef.current) return
+    const r = triggerRef.current.getBoundingClientRect()
+    const DROPDOWN_MAX_H = 340
+    const spaceBelow = window.innerHeight - r.bottom
+    const openUpward = spaceBelow < DROPDOWN_MAX_H && r.top > spaceBelow
+    setRect({
+      top: r.bottom + 4,
+      bottom: window.innerHeight - r.top + 4,
+      left: r.left,
+      width: r.width,
+      openUpward,
+    })
+  }, [])
+
   useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+    if (!open) return
+    calcRect()
+
+    const onOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (
+        !triggerRef.current?.contains(target) &&
+        !dropdownRef.current?.contains(target)
+      ) {
         setOpen(false)
         setQ('')
       }
     }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
+    const onScroll = () => calcRect()
+
+    document.addEventListener('mousedown', onOutside)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', calcRect)
+    return () => {
+      document.removeEventListener('mousedown', onOutside)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', calcRect)
+    }
+  }, [open, calcRect])
+
+  const dropdown = open && rect && mounted && (
+    <div
+      ref={dropdownRef}
+      style={{
+        position: 'fixed',
+        ...(rect.openUpward
+          ? { bottom: rect.bottom }
+          : { top: rect.top }),
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      }}
+      className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
+    >
+      <div className="p-2">
+        <Input
+          placeholder={searchPlaceholder}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="h-8 text-sm"
+          autoFocus
+        />
+      </div>
+      <div role="listbox" className="max-h-72 overflow-y-auto pb-1">
+        {filtered.length === 0 ? (
+          <p className="px-3 py-4 text-center text-sm text-muted-foreground">{emptyText}</p>
+        ) : (
+          filtered.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              role="option"
+              aria-selected={value === o.value}
+              className={cn(
+                'flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent',
+                value === o.value && 'bg-accent/60',
+              )}
+              onClick={() => {
+                onValueChange(o.value)
+                setOpen(false)
+                setQ('')
+              }}
+            >
+              <CheckIcon
+                className={cn(
+                  'mt-0.5 h-3.5 w-3.5 shrink-0',
+                  value === o.value ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">{o.label}</span>
+                {o.description && (
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {o.description}
+                  </span>
+                )}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  )
 
   return (
-    <div ref={ref} className={cn('relative w-full', className)}>
+    <div className={cn('relative w-full', className)}>
       <button
+        ref={triggerRef}
         type="button"
         id={id}
         disabled={disabled}
@@ -96,57 +208,7 @@ export function SearchableSelect({
         </span>
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
-          <div className="p-2">
-            <Input
-              placeholder={searchPlaceholder}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="h-8 text-sm"
-              autoFocus
-            />
-          </div>
-          <div role="listbox" className="max-h-60 overflow-y-auto pb-1">
-            {filtered.length === 0 ? (
-              <p className="px-3 py-4 text-center text-sm text-muted-foreground">{emptyText}</p>
-            ) : (
-              filtered.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  role="option"
-                  aria-selected={value === o.value}
-                  className={cn(
-                    'flex w-full items-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent',
-                    value === o.value && 'bg-accent/60',
-                  )}
-                  onClick={() => {
-                    onValueChange(o.value)
-                    setOpen(false)
-                    setQ('')
-                  }}
-                >
-                  <CheckIcon
-                    className={cn(
-                      'mt-0.5 h-3.5 w-3.5 shrink-0',
-                      value === o.value ? 'opacity-100' : 'opacity-0',
-                    )}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{o.label}</span>
-                    {o.description && (
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {o.description}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      {mounted && createPortal(dropdown, document.body)}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { PlusIcon, Trash2Icon, CheckIcon } from 'lucide-react'
+import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
@@ -10,58 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { cn } from '@workspace/ui/lib/utils'
 import type { EmployeeOption, MataUang } from '@/types/fund-request'
-
-// ─── Searchable Select ────────────────────────────────────────────────────────
-function SearchableSelect({
-  options, value, onValueChange, placeholder = 'Pilih...', disabled,
-}: {
-  options: { value: string; label: string }[]
-  value: string
-  onValueChange: (v: string) => void
-  placeholder?: string
-  disabled?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
-  const filtered = options.filter(o => o.label.toLowerCase().includes(q.toLowerCase()))
-  const selected = options.find(o => o.value === value)
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
-  return (
-    <div ref={ref} className="relative w-full">
-      <button type="button" disabled={disabled}
-        className={cn('w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
-          disabled && 'opacity-50 cursor-not-allowed')}
-        onClick={() => setOpen(p => !p)}>
-        <span className={selected ? '' : 'text-muted-foreground'}>{selected?.label ?? placeholder}</span>
-        <span className="text-muted-foreground">▾</span>
-      </button>
-      {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-          <div className="p-2">
-            <Input placeholder="Cari..." value={q} onChange={e => setQ(e.target.value)} className="h-8 text-sm" autoFocus />
-          </div>
-          <div className="max-h-52 overflow-y-auto">
-            {filtered.length === 0 ? <p className="px-3 py-2 text-sm text-muted-foreground">Tidak ditemukan</p> :
-              filtered.map(o => (
-                <button key={o.value} type="button"
-                  className={cn('w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left',
-                    value === o.value && 'bg-accent/60 font-medium')}
-                  onClick={() => { onValueChange(o.value); setOpen(false); setQ('') }}>
-                  <CheckIcon className={cn('h-3.5 w-3.5 shrink-0', value === o.value ? 'opacity-100' : 'opacity-0')} />
-                  {o.label}
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
+import { SearchableSelect } from '@/components/finance/searchable-select'
 
 // ─── Employee Picker ──────────────────────────────────────────────────────────
 function EmployeePicker({
