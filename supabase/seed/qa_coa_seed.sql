@@ -1,14 +1,18 @@
 -- ============================================================================
 -- QA seed - Chart of Account (5-Layer Revamp) Test Plan results (re-runnable, ASCII-safe)
 -- Jalankan di Supabase SQL Editor. Tampil di /finance/qa (module 'chart-of-account').
--- Ringkasan: 52 cases . 49 pass . 0 fail . 3 blocked . 94.23% . PARTIAL
+-- Ringkasan v2: 59 cases . 56 pass . 0 fail . 3 blocked . 94.92% . PARTIAL
 --   36 Automated (node:test on lib/coa-logic.ts) . 6 Integration (live schema) .
---   7 Code Review (tsc + review) . 3 Blocked (manual/browser, verify post-deploy).
+--   14 Code Review (tsc + review, includes 7 bug-fix verifications) .
+--   3 Blocked (manual/browser, verify post-deploy).
 -- ============================================================================
 DELETE FROM public.qa_test_runs
  WHERE tenant_id = '00000000-0000-0000-0000-000000000001'
    AND module = 'chart-of-account'
-   AND title = 'Chart of Account Workspace (5-Layer Revamp) - Test Plan v1';
+   AND title IN (
+     'Chart of Account Workspace (5-Layer Revamp) - Test Plan v1',
+     'Chart of Account Workspace (5-Layer Revamp) - Test Plan v2'
+   );
 
 WITH r AS (
   INSERT INTO public.qa_test_runs
@@ -16,11 +20,11 @@ WITH r AS (
      total, passed, failed, blocked, skipped, pass_rate, status)
   VALUES
     ('00000000-0000-0000-0000-000000000001', 'chart-of-account',
-     'Chart of Account Workspace (5-Layer Revamp) - Test Plan v1',
-     'Eksekusi 52 test case untuk revamp COA 5-layer (Category > Type > Sub Account > General Ledger > Detail Ledger). 36 otomatis via node:test pada lib/coa-logic.ts (kode/full-code, batch sub akun, sub-DL depth, NB cascade/contra, tree engine); 6 integration pada schema Supabase live (DL flags, Sub-DL FK, sub_gl_config JSONB, audit, approvals, backfill 169 rows); 7 code review (tsc 0 error + wiring explorer/inspector/modal); 3 blocked (parity visual/keyboard di browser - verifikasi pasca-deploy).',
+     'Chart of Account Workspace (5-Layer Revamp) - Test Plan v2',
+     'v2 menambahkan 7 bug-fix cases: Download Template di ImportModal, hapus tombol Inspector dari toolbar, hapus PendingApprovals dari UI, verifikasi Audit Trail filter (action/severity/search), verifikasi CRUD menulis audit log, Import menulis entri IMPORT ke audit log + tampil di ImportHistoryModal, Export menghasilkan CSV valid. Total 59 cases (36 automated + 6 integration + 14 code review + 3 blocked manual).',
      'Node 22 + node:test (logic) / Supabase Postgres 17 (schema) / Next.js 16 tsc + code review (UI/API)',
      'QA Engineer (Claude)', NOW(),
-     52, 49, 0, 3, 0, 94.23, 'PARTIAL')
+     59, 56, 0, 3, 0, 94.92, 'PARTIAL')
   RETURNING id
 )
 INSERT INTO public.qa_test_cases
@@ -70,7 +74,7 @@ FROM r,
     ('TC-038','US-COA-08','Sub-DL inserts with child_upstream_id FK to parent DL','integration','Integration','High','FK link resolves','Inserted & verified (subdl_linked=1)','PASS','Self-referencing FK',38),
     ('TC-039','US-COA-09','sub_gl_config JSONB (key-in level) persists on deepest DL','integration','Integration','High','jsonb_array_length=1','Inserted & verified','PASS',NULL,39),
     ('TC-040','US-COA-10','coa_audit_log accepts CONFIG (high) entry','integration','Integration','High','Row inserted','Inserted & verified','PASS',NULL,40),
-    ('TC-041','US-COA-10','coa_pending_approval accepts PENDING row','integration','Integration','Medium','Row inserted','Inserted & verified','PASS',NULL,41),
+    ('TC-041','US-COA-10','coa_pending_approval table present in schema (DB layer only)','integration','Integration','Medium','Row inserted','Inserted & verified','PASS','UI entry removed - DB table retained',41),
     ('TC-042','US-COA-01','Segments migration backfilled coa_full_code/segment_code','integration','Integration','High','All rows backfilled','169/169 rows backfilled','PASS',NULL,42),
     ('TC-043','US-COA-06','Explorer renders 5-layer tree-table (indent, expand/collapse, code chips)','functional','Code Review','High','Matches design + tsc clean','Verified by review + tsc 0 error','PASS',NULL,43),
     ('TC-044','US-COA-06','Layer filter panel with live counts + density toggle + search auto-expand','functional','Code Review','High','Implemented per spec','Verified by review','PASS',NULL,44),
@@ -79,6 +83,15 @@ FROM r,
     ('TC-047','US-COA-08','Sub Akun sections gated per layer (sub<=99, gl<=9, Sub-DL<=2)','functional','Code Review','High','Per-layer gating','Verified by review','PASS',NULL,47),
     ('TC-048','US-COA-09','Sub GL Config shown only on deepest detail ledger','functional','Code Review','High','isDeepestDetailLedger gate','Verified by review','PASS',NULL,48),
     ('TC-049','US-COA-10','Audit row written on every create/update/delete (best-effort)','functional','Code Review','High','Severity mapped CONFIG/STATUS/EDIT','Verified by review','PASS',NULL,49),
+    -- Bug fixes v2 (TC-053 to TC-059)
+    ('TC-053','US-COA-10','ImportModal: Download Template button downloads sample CSV with 5-layer rows','functional','Code Review','High','downloadTemplate() triggers .csv Blob download with correct headers','downloadTemplate() present in import-modals.tsx; button in DialogFooter','PASS','Bug #1 fix - v2',53),
+    ('TC-054','US-COA-06','Inspector toolbar button removed; inspector still opens on row click','functional','Code Review','High','PanelRight ToolbarBtn absent from header; selectNode() still calls setInspectorOpen(true)','Verified: PanelRight removed from imports + toolbar; row-click path unchanged','PASS','Bug #2 fix - v2',54),
+    ('TC-055','US-COA-10','PendingApprovalsModal removed from UI (toolbar, layer-panel, quick-modals)','functional','Code Review','High','No PendingApprovals import/render in coa-explorer; no approvals QuickAction in layer-panel','Verified: removed from coa-explorer.tsx, layer-panel.tsx, quick-modals.tsx','PASS','Bug #3 fix - v2',55),
+    ('TC-056','US-COA-10','GET /api/finance/coa/audit returns rows; action+severity filters narrow results','functional','Code Review','High','Response {data:[...]} with action/severity/q params forwarded to Supabase','audit/route.ts passes all 3 params as .eq() / .ilike(); degrades to [] if table absent','PASS','Bug #3 verification',56),
+    ('TC-057','US-COA-10','AuditTrailModal re-fetches on filter change via useCallback deps','functional','Code Review','High','useEffect re-runs when action/severity/q change','load() in useCallback([action,severity,q]); useEffect([open,load])','PASS','Bug #3 verification',57),
+    ('TC-058','US-COA-10','POST /api/finance/coa/import writes action=IMPORT entry to coa_audit_log','functional','Code Review','High','Audit row with action=IMPORT present after import','import/route.ts calls logCoaAudit({action:''IMPORT'',...}) best-effort after bulk insert','PASS','Bug #3 verification',58),
+    ('TC-059','US-COA-10','ImportHistoryModal fetches audit?action=IMPORT and renders filename + stats','functional','Code Review','High','Modal shows file rows with success/total counts','ImportHistoryModal fetches /api/finance/coa/audit?action=IMPORT; renders after_data.success/total','PASS','Bug #3 verification',59),
+    -- Blocked (manual/browser) - unchanged
     ('TC-050','US-COA-06','Visual/interaction parity vs IFAS prototype (Poppins, layer colors, motion)','functional','Manual','Medium','Parity in browser','Not executed (no browser env)','BLOCKED','Verify post-deploy',50),
     ('TC-051','US-COA-07','Keyboard tree navigation in browser','functional','Manual','Low','Arrow/Enter nav works','Not executed (no browser env)','BLOCKED','Verify post-deploy',51),
     ('TC-052','US-COA-09','Sub GL value-catalog drawer empty-state in browser','functional','Manual','Low','Drawer renders empty-state','Not executed (no browser env)','BLOCKED','Verify post-deploy',52)
