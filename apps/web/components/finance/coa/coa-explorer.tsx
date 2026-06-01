@@ -346,17 +346,72 @@ export function CoaExplorer() {
     }
   }
 
-  function handleExport() {
-    const headers = ['ID', 'Layer', 'Parent ID', 'Code', 'COA Full Code', 'Name', 'D/K', 'Active']
-    const csvRows = nodes.map((n) => [n.id, toDbLayer(n.layer), n.parentId || '', n.code, n.coaFullCode, n.name, n.dk, n.isActive ? 'Yes' : 'No'])
-    const csv = [headers, ...csvRows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `coa-export-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success(`Exported ${nodes.length} akun ke CSV`)
+  async function handleExport() {
+    if (rows.length === 0) return toast.error('Tidak ada data untuk diekspor')
+    try {
+      const XLSX = await import('xlsx')
+      // Use raw DB rows so all financial-reporting columns are present.
+      const nodeById = new Map(nodes.map((n) => [n.id, n]))
+      const data = rows.map((r) => {
+        const parent = r.parent_account_id ? nodeById.get(r.parent_account_id) : null
+        return {
+          account_code: r.account_code || r.coa_full_code || '',
+          account_name: r.account_name,
+          name_en: r.name_en ?? '',
+          coa_layer: r.coa_layer ?? '',
+          account_type: r.account_type,
+          normal_balance: r.normal_balance ?? '',
+          sort_order: r.sort_order ?? 0,
+          enum_laporan_keuangan: (r as Record<string, unknown>)['enum_laporan_keuangan'] ?? '',
+          enum_laporan_keuangan_category: (r as Record<string, unknown>)['enum_laporan_keuangan_category'] ?? '',
+          cash_flow_category: r.cash_flow_category ?? '',
+          enum_cf_section: (r as Record<string, unknown>)['enum_cf_section'] ?? '',
+          enum_cf_line: (r as Record<string, unknown>)['enum_cf_line'] ?? '',
+          direct_indirect_cost: (r as Record<string, unknown>)['direct_indirect_cost'] ?? '',
+          enum_cost_category: (r as Record<string, unknown>)['enum_cost_category'] ?? '',
+          tax_code: (r as Record<string, unknown>)['tax_code'] ?? '',
+          contra_account: r.contra_account ? 'TRUE' : 'FALSE',
+          is_working_capital: (r as Record<string, unknown>)['is_working_capital'] ? 'TRUE' : 'FALSE',
+          is_non_cash_item: (r as Record<string, unknown>)['is_non_cash_item'] ? 'TRUE' : 'FALSE',
+          is_budgeted: (r as Record<string, unknown>)['is_budgeted'] ? 'TRUE' : 'FALSE',
+          is_tax_deductible: (r as Record<string, unknown>)['is_tax_deductible'] !== false ? 'TRUE' : 'FALSE',
+          is_restricted: r.is_restricted ? 'TRUE' : 'FALSE',
+          is_trial_balance: (r as Record<string, unknown>)['is_trial_balance'] !== false ? 'TRUE' : 'FALSE',
+          is_taxation_report: (r as Record<string, unknown>)['is_taxation_report'] ? 'TRUE' : 'FALSE',
+          required_sub_gl: r.required_sub_gl ? 'TRUE' : 'FALSE',
+          is_washed_out_account: r.is_washed_out_account ? 'TRUE' : 'FALSE',
+          required_child: r.required_child ? 'TRUE' : 'FALSE',
+          is_active: r.is_active ? 'TRUE' : 'FALSE',
+          description: r.description ?? '',
+          // Read-only reference columns (not imported)
+          _parent_code: parent?.coaFullCode ?? '',
+          _id: r.id,
+        }
+      })
+      const ws = XLSX.utils.json_to_sheet(data)
+      ws['!cols'] = [
+        { wch: 20 }, { wch: 28 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 10 },
+        { wch: 22 }, { wch: 30 }, { wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 12 },
+        { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 },
+        { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 10 }, { wch: 36 },
+        { wch: 20 }, { wch: 36 },
+      ]
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Chart of Account')
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([wbout], { type: 'application/octet-stream' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `coa-export-${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success(`Exported ${rows.length} akun ke Excel`)
+    } catch {
+      toast.error('Gagal membuat file Excel')
+    }
   }
 
   const childCountOf = (id: string) => nodes.filter((n) => n.parentId === id).length
