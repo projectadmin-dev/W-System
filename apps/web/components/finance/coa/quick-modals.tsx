@@ -1,16 +1,11 @@
 'use client'
 
-// Quick-action modals: Audit Trail (immutable log + before/after diff) and
-// Pending Approvals (master-data → Detail-Ledger queue). Ported from the
-// prototype (modals.jsx › AuditTrailModal / PendingApprovalsModal).
+// Quick-action modals: Audit Trail (immutable log + before/after diff).
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@workspace/ui/components/dialog'
-import { Button } from '@workspace/ui/components/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@workspace/ui/components/dialog'
 import { Input } from '@workspace/ui/components/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui/components/select'
-import { Checkbox } from '@workspace/ui/components/checkbox'
-import { ScrollText, ClipboardList, ShieldCheck, Loader2 } from 'lucide-react'
+import { ScrollText, ShieldCheck, Loader2 } from 'lucide-react'
 
 const SEVERITY_CLS: Record<string, string> = {
   high: 'bg-red-100 text-red-800', medium: 'bg-amber-100 text-amber-800', low: 'bg-emerald-100 text-emerald-800',
@@ -110,99 +105,3 @@ export function AuditTrailModal({ open, onClose }: { open: boolean; onClose: () 
   )
 }
 
-interface Approval {
-  id: string; source_type: string; name: string; code: string | null
-  requested_by: string | null; requested_at: string; target_parent: string | null
-  generates_count: number; risk_level: string | null; risk_note: string | null
-}
-
-export function PendingApprovalsModal({ open, onClose, onResolved }: { open: boolean; onClose: () => void; onResolved?: () => void }) {
-  const [rows, setRows] = useState<Approval[]>([])
-  const [loading, setLoading] = useState(false)
-  const [sel, setSel] = useState<Set<string>>(new Set())
-  const [busy, setBusy] = useState(false)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/finance/coa/approvals', { cache: 'no-store' })
-      const json = await res.json()
-      setRows(json.data ?? [])
-      setSel(new Set())
-    } catch {
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (open) load()
-  }, [open, load])
-
-  const toggle = (id: string) => setSel((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
-
-  const resolve = async (action: 'approve' | 'reject') => {
-    const ids = [...sel]
-    if (ids.length === 0) return toast.error('Pilih minimal 1 item')
-    setBusy(true)
-    try {
-      const res = await fetch('/api/finance/coa/approvals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ids }) })
-      if (!res.ok) throw new Error((await res.json()).error || 'Gagal')
-      toast.success(`${ids.length} item ${action === 'approve' ? 'di-approve' : 'ditolak'}`)
-      await load()
-      onResolved?.()
-    } catch (e) {
-      toast.error((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="coa-workspace sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><ClipboardList className="size-5" /> Pending Approvals</DialogTitle>
-          <DialogDescription>Master data baru → review &amp; approve untuk auto-generate Detail Ledger.</DialogDescription>
-        </DialogHeader>
-
-        <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
-          {loading ? (
-            <div className="flex justify-center py-10 text-muted-foreground"><Loader2 className="size-6 animate-spin" /></div>
-          ) : rows.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              Tidak ada approval menunggu. (Sumber master data belum tersedia — OQ-3.)
-            </div>
-          ) : (
-            rows.map((r) => (
-              <label key={r.id} className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm">
-                <Checkbox checked={sel.has(r.id)} onCheckedChange={() => toggle(r.id)} className="mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{r.name}</span>
-                    <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800">{r.source_type}</span>
-                    {r.risk_level && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">risk: {r.risk_level}</span>}
-                  </div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
-                    {r.code ?? ''} · {r.generates_count} akun akan dibuat · {r.requested_by ?? '—'}
-                  </div>
-                </div>
-              </label>
-            ))
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={busy}>Tutup</Button>
-          {rows.length > 0 && (
-            <>
-              <Button variant="outline" onClick={() => resolve('reject')} disabled={busy || sel.size === 0}>Reject ({sel.size})</Button>
-              <Button onClick={() => resolve('approve')} disabled={busy || sel.size === 0}>Approve ({sel.size})</Button>
-            </>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}

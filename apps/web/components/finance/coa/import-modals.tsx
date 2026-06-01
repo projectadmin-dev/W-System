@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@workspace/ui/components/dialog'
 import { Button } from '@workspace/ui/components/button'
-import { UploadCloud, History, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { UploadCloud, History, Loader2, CheckCircle2, XCircle, FileDown } from 'lucide-react'
 import { LAYER_ORDER, toDbLayer, type CoaLayer } from '@/lib/coa-logic'
 import type { CoaNode } from './types'
 
@@ -61,6 +61,28 @@ function resolveParent(fullCode: string, byFullCode: Map<string, CoaNode>): CoaN
     if (hit) return hit
   }
   return null
+}
+
+function downloadTemplate() {
+  const csv = [
+    'account_code,account_name,coa_layer,account_type',
+    '1,Aset,category,asset',
+    '1-1,Aset Lancar,type,asset',
+    '1-1-01,Kas & Setara Kas,sub,asset',
+    '1-1-01-1,Kas Besar,gl,asset',
+    '1-1-01-1-0001,Kas Operasional,detail,asset',
+    '2,Kewajiban,category,liability',
+    '2-1,Kewajiban Jangka Pendek,type,liability',
+    '2-1-01,Hutang Usaha,sub,liability',
+    '2-1-01-1,Hutang Dagang,gl,liability',
+    '2-1-01-1-0001,Hutang Dagang Lokal,detail,liability',
+  ].join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'coa-import-template.csv'
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export function ImportModal({ open, allNodes, onClose, onDone }: { open: boolean; allNodes: CoaNode[]; onClose: () => void; onDone: () => void }) {
@@ -180,6 +202,9 @@ export function ImportModal({ open, allNodes, onClose, onDone }: { open: boolean
         </div>
 
         <DialogFooter>
+          <Button variant="outline" onClick={downloadTemplate} disabled={busy} className="mr-auto">
+            <FileDown className="mr-2 size-4" /> Download Template
+          </Button>
           <Button variant="outline" onClick={onClose} disabled={busy}>Tutup</Button>
           <Button onClick={commit} disabled={busy || validRows.length === 0}>
             {busy && <Loader2 className="mr-2 size-4 animate-spin" />} Import {validRows.length} baris
