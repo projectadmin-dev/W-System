@@ -229,8 +229,6 @@ const data = {
         { title: "Approval Dashboard", url: "/finance/approval-dashboard" },
         { title: "Chart of Accounts", url: "/finance/coa" },
         { title: "Journal Entries", url: "/finance/journal" },
-        { title: "Journal (New)", url: "/finance/journal/new" },
-        { title: "Money Requests", url: "/finance/money-requests" },
         { title: "Petty Cash", url: "/finance/petty-cash" },
         { title: "Fiscal Periods", url: "/finance/periods" },
 
@@ -244,8 +242,6 @@ const data = {
         { title: "Approval PU", url: "/finance/permintaan-uang?status=PENDING_APPROVAL" },
         { title: "Pembayaran", url: "/finance/pembayaran" },
         { title: "Pengelolaan Tagihan", url: "/finance/account-payable" },
-        { title: "Receipts (BKM)", url: "/finance/receipts" },
-        { title: "Expense Tracking", url: "/finance/expenses" },
 
         // ── Reconciliation ────────────────────────────────
         {
