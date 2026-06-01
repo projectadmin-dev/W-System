@@ -121,14 +121,39 @@ export function computeAging(rows: APRow[], today: Date): AgingBucket[] {
 
 // ── Cash-out forecast (US-004) ──────────────────────────────────────────────
 export interface ForecastBucket { label: string; date_from: string; date_to: string; amount: number }
-export function computeForecast(rows: APRow[], today: Date, weeks = 4): ForecastBucket[] {
+export interface ForecastOptions { dateFrom?: Date; dateTo?: Date }
+
+export function computeForecast(rows: APRow[], today: Date, weeks = 4, options?: ForecastOptions): ForecastBucket[] {
   const active = rows.filter((r) => r.status !== 'REJECTED')
+  const approved = active.filter((r) => !isPaid(r) && r.status === 'APPROVED')
+
+  // Custom date range: split into weekly buckets from dateFrom to dateTo
+  if (options?.dateFrom && options?.dateTo) {
+    const rangeStart = startOfDay(options.dateFrom)
+    const rangeEnd = startOfDay(options.dateTo)
+    const out: ForecastBucket[] = []
+    let cursor = new Date(rangeStart)
+    while (cursor <= rangeEnd) {
+      const weekEnd = addDays(cursor, 6)
+      const bucketEnd = weekEnd > rangeEnd ? rangeEnd : weekEnd
+      const amount = approved
+        .filter((r) => {
+          const due = new Date(r.tgl_jatuh_tempo)
+          return due >= cursor && due <= bucketEnd
+        })
+        .reduce((s, r) => s + n(r.amount_due), 0)
+      out.push({ label: `${dlabel(cursor)} - ${dlabel(bucketEnd)}`, date_from: ymd(cursor), date_to: ymd(bucketEnd), amount })
+      cursor = addDays(cursor, 7)
+    }
+    return out
+  }
+
+  // Default: 4 weekly buckets from today
   const out: ForecastBucket[] = []
   for (let w = 0; w < weeks; w++) {
     const from = addDays(today, w * 7)
     const to = addDays(today, w * 7 + 6)
-    const amount = active
-      .filter((r) => !isPaid(r) && r.status === 'APPROVED')
+    const amount = approved
       .filter((r) => {
         const due = new Date(r.tgl_jatuh_tempo)
         return due >= from && due <= to
@@ -148,7 +173,7 @@ export interface APSummary {
   aging: AgingBucket[]
   forecast: ForecastBucket[]
 }
-export function computeSummary(rows: APRow[], today: Date): APSummary {
+export function computeSummary(rows: APRow[], today: Date, forecastOptions?: ForecastOptions): APSummary {
   const active = rows.filter((r) => r.status !== 'REJECTED')
   return {
     open_count: active.filter((r) => isOpen(r, today)).length,
@@ -156,7 +181,7 @@ export function computeSummary(rows: APRow[], today: Date): APSummary {
     paid_total: active.reduce((s, r) => s + n(r.amount_paid), 0),
     total_due: active.filter((r) => !isPaid(r)).reduce((s, r) => s + n(r.amount_due), 0),
     aging: computeAging(rows, today),
-    forecast: computeForecast(rows, today),
+    forecast: computeForecast(rows, today, 4, forecastOptions),
   }
 }
 

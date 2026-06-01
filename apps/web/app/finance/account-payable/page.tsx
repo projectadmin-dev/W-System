@@ -17,7 +17,7 @@ import {
 import {
   ChevronDownIcon, ChevronRightIcon, PlusIcon, XIcon, SearchIcon, RefreshCwIcon,
   WalletIcon, AlertTriangleIcon, CheckCircle2Icon, SendIcon, FileDownIcon, Loader2Icon,
-  FilterIcon, RotateCcwIcon, AreaChartIcon, BarChart3Icon, TrendingUpIcon,
+  FilterIcon, RotateCcwIcon, AreaChartIcon, BarChart3Icon, TrendingUpIcon, CalendarIcon,
 } from 'lucide-react'
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
@@ -103,6 +103,8 @@ export default function AccountPayablePage() {
 
   // chart + advanced filters
   const [forecastChart, setForecastChart] = useState<'area' | 'bar'>('area')
+  const [forecastFrom, setForecastFrom] = useState('')
+  const [forecastTo, setForecastTo] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [terimaFrom, setTerimaFrom] = useState('')
@@ -111,6 +113,7 @@ export default function AccountPayablePage() {
   const [jatuhTo, setJatuhTo] = useState('')
   const activeFilterCount =
     [statusFilter !== 'all', !!terimaFrom, !!terimaTo, !!jatuhFrom, !!jatuhTo].filter(Boolean).length
+  const forecastFiltered = !!(forecastFrom && forecastTo)
 
   // modals
   const [createOpen, setCreateOpen] = useState(false)
@@ -129,13 +132,14 @@ export default function AccountPayablePage() {
       if (terimaTo) params.set('terima_to', terimaTo)
       if (jatuhFrom) params.set('jatuh_from', jatuhFrom)
       if (jatuhTo) params.set('jatuh_to', jatuhTo)
+      if (forecastFrom && forecastTo) { params.set('forecast_from', forecastFrom); params.set('forecast_to', forecastTo) }
       const res = await fetch(`/api/finance/account-payable?${params}`)
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(json.error ?? `Error ${res.status}`); return }
       setRows(json.data ?? [])
       setSummary(json.summary ?? null)
     } catch { toast.error('Gagal memuat data tagihan') } finally { setLoading(false) }
-  }, [filter, search, statusFilter, terimaFrom, terimaTo, jatuhFrom, jatuhTo])
+  }, [filter, search, statusFilter, terimaFrom, terimaTo, jatuhFrom, jatuhTo, forecastFrom, forecastTo])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -189,31 +193,68 @@ export default function AccountPayablePage() {
 
       {/* ── Forecast Cash Out ── */}
       <div className="rounded-xl border bg-card p-5">
-        <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold">Forecast Cash Out</h2>
-            <p className="text-xs text-muted-foreground">Proyeksi kas keluar 4 minggu ke depan (tagihan disetujui &amp; belum lunas).</p>
+            <p className="text-xs text-muted-foreground">
+              {forecastFiltered
+                ? `Proyeksi kas keluar ${forecastFrom} s/d ${forecastTo} (tagihan disetujui & belum lunas).`
+                : 'Proyeksi kas keluar 4 minggu ke depan (tagihan disetujui & belum lunas).'}
+            </p>
           </div>
-          <div className="flex items-center gap-1 rounded-md border p-0.5">
-            <button
-              type="button"
-              onClick={() => setForecastChart('area')}
-              className={cn('inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors',
-                forecastChart === 'area' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
-            >
-              <AreaChartIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Area</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setForecastChart('bar')}
-              className={cn('inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors',
-                forecastChart === 'bar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
-            >
-              <BarChart3Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Bar</span>
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Date range filter */}
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/30 px-3 py-1.5">
+              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Jatuh Tempo:</label>
+              <input
+                type="date"
+                value={forecastFrom}
+                max={forecastTo || undefined}
+                onChange={e => setForecastFrom(e.target.value)}
+                className="h-7 w-32 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <span className="text-xs text-muted-foreground">–</span>
+              <input
+                type="date"
+                value={forecastTo}
+                min={forecastFrom || undefined}
+                onChange={e => setForecastTo(e.target.value)}
+                className="h-7 w-32 rounded border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {forecastFiltered && (
+                <button
+                  type="button"
+                  onClick={() => { setForecastFrom(''); setForecastTo('') }}
+                  className="ml-1 text-muted-foreground hover:text-destructive"
+                  title="Reset filter"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {/* Chart type toggle */}
+            <div className="flex items-center gap-1 rounded-md border p-0.5">
+              <button
+                type="button"
+                onClick={() => setForecastChart('area')}
+                className={cn('inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors',
+                  forecastChart === 'area' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+              >
+                <AreaChartIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Area</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setForecastChart('bar')}
+                className={cn('inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors',
+                  forecastChart === 'bar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+              >
+                <BarChart3Icon className="h-3.5 w-3.5" /><span className="hidden sm:inline">Bar</span>
+              </button>
+            </div>
           </div>
         </div>
-        <ForecastChart buckets={summary?.forecast ?? []} loading={loading} chartType={forecastChart} />
+        <ForecastChart buckets={summary?.forecast ?? []} loading={loading} chartType={forecastChart} forecastFiltered={forecastFiltered} />
       </div>
 
       {/* ── Daftar Tagihan ── */}
@@ -375,13 +416,15 @@ function fmtCompactRp(n: number): string {
   return String(v)
 }
 
-function ForecastChart({ buckets, loading, chartType }: { buckets: APSummary['forecast']; loading: boolean; chartType: 'area' | 'bar' }) {
+function ForecastChart({ buckets, loading, chartType, forecastFiltered }: { buckets: APSummary['forecast']; loading: boolean; chartType: 'area' | 'bar'; forecastFiltered?: boolean }) {
   if (loading) return <Skeleton className="h-[240px] w-full" />
   if (buckets.length === 0 || buckets.every(b => (b.amount || 0) === 0)) {
     return (
       <div className="flex h-[240px] flex-col items-center justify-center gap-1 text-center text-sm text-muted-foreground">
         <TrendingUpIcon className="h-6 w-6 opacity-40" />
-        Belum ada tagihan disetujui yang jatuh tempo dalam 4 minggu ke depan.
+        {forecastFiltered
+          ? 'Tidak ada tagihan disetujui yang jatuh tempo dalam rentang tanggal yang dipilih.'
+          : 'Belum ada tagihan disetujui yang jatuh tempo dalam 4 minggu ke depan.'}
       </div>
     )
   }
@@ -422,7 +465,7 @@ function ForecastChart({ buckets, loading, chartType }: { buckets: APSummary['fo
         )}
       </ResponsiveContainer>
       <div className="mt-3 flex items-center justify-between border-t pt-3 text-sm">
-        <span className="text-muted-foreground">Total proyeksi 4 minggu</span>
+        <span className="text-muted-foreground">{forecastFiltered ? 'Total proyeksi periode yang dipilih' : 'Total proyeksi 4 minggu'}</span>
         <span className="font-semibold tabular-nums">{formatRpAP(total)}</span>
       </div>
     </>

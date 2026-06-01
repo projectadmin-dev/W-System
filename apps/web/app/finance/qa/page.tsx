@@ -135,7 +135,7 @@ export default function QADashboardPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        {['US-001', 'US-002', 'US-003', 'US-004', 'US-005'].map((us) => (
+        {['US-001', 'US-002', 'US-003', 'US-004', 'US-005', 'US-006', 'US-007'].map((us) => (
           <Button
             key={us}
             size="sm"

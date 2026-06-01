@@ -27,10 +27,12 @@ export async function GET(request: NextRequest) {
     const search  = searchParams.get('search') ?? ''
     const dateFrom = searchParams.get('date_from')
     const dateTo   = searchParams.get('date_to')
-    const terimaFrom = searchParams.get('terima_from')   // tgl_terima >=
-    const terimaTo   = searchParams.get('terima_to')     // tgl_terima <=
-    const jatuhFrom  = searchParams.get('jatuh_from')    // tgl_jatuh_tempo >=
-    const jatuhTo    = searchParams.get('jatuh_to')      // tgl_jatuh_tempo <=
+    const terimaFrom = searchParams.get('terima_from')     // tgl_terima >=
+    const terimaTo   = searchParams.get('terima_to')       // tgl_terima <=
+    const jatuhFrom  = searchParams.get('jatuh_from')      // tgl_jatuh_tempo >=
+    const jatuhTo    = searchParams.get('jatuh_to')        // tgl_jatuh_tempo <=
+    const forecastFrom = searchParams.get('forecast_from') // forecast date range start
+    const forecastTo   = searchParams.get('forecast_to')   // forecast date range end
 
     let q = db
       .from('ap_invoices')
@@ -85,8 +87,13 @@ export async function GET(request: NextRequest) {
 
     const today = startOfDay()
 
+    // ── Build optional forecast date-range filter ──
+    const forecastOptions = (forecastFrom && forecastTo)
+      ? { dateFrom: new Date(forecastFrom), dateTo: new Date(forecastTo) }
+      : undefined
+
     // ── Summary over the full (unfiltered-by-display) set ──
-    const summary = computeSummary(rows, today)
+    const summary = computeSummary(rows, today, forecastOptions)
 
     // ── Apply display filter to returned rows ──
     let outRows = rows
