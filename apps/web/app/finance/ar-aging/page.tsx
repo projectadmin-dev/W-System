@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, ChevronsDownUp } from "lucide-react";
 
 interface Invoice {
   invoice_number: string;
@@ -41,6 +41,7 @@ interface ARAgingData {
 }
 
 type BucketKey = "days_1_30" | "days_31_60" | "days_61_90" | "days_91_180" | "over_180" | "current" | "total";
+type Density = "comfortable" | "compact";
 
 export default function ARAgingPage() {
   const [search, setSearch] = useState("");
@@ -48,6 +49,7 @@ export default function ARAgingPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ClientInvoices[]>([]);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [density, setDensity] = useState<Density>("comfortable");
   const [asOfDate, setAsOfDate] = useState(new Date().toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "2-digit" }));
 
   useEffect(() => {
@@ -128,6 +130,14 @@ export default function ARAgingPage() {
     setExpandedClients(newExpanded);
   };
 
+  const expandAll = () => {
+    setExpandedClients(new Set(filtered.map((c) => c.client_id)));
+  };
+
+  const collapseAll = () => {
+    setExpandedClients(new Set());
+  };
+
   const Row = ({ label, current, d1, d2, d3, d4, d5, total, bold }: any) => (
     <tr className={`${bold ? "bg-card font-semibold" : "hover:bg-muted/40"}`}>
       <td className="px-4 py-3">{label}</td>
@@ -140,6 +150,9 @@ export default function ARAgingPage() {
       <td className="px-4 py-3 text-right font-bold">{total ? fmt(total) : "-"}</td>
     </tr>
   );
+
+  const rowPadding = density === "compact" ? "py-2" : "py-3";
+  const headerPadding = density === "compact" ? "py-2" : "py-3";
 
   if (loading) {
     return (
@@ -211,15 +224,63 @@ export default function ARAgingPage() {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="mb-4">
+        {/* Toolbar with Density Toggle & Expand/Collapse */}
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <input
             type="text"
             placeholder="Cari customer..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-80 bg-card border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+            className="flex-1 sm:max-w-xs bg-card border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
           />
+
+          <div className="flex items-center gap-2">
+            {/* Density Toggle */}
+            <div className="inline-flex items-center gap-1 bg-muted rounded-lg p-1">
+              <button
+                onClick={() => setDensity("comfortable")}
+                className={`px-3 py-2 text-sm font-medium rounded transition-all ${
+                  density === "comfortable"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Comfortable spacing"
+              >
+                <span className="hidden sm:inline">Comfortable</span>
+                <span className="sm:hidden">☰</span>
+              </button>
+              <button
+                onClick={() => setDensity("compact")}
+                className={`px-3 py-2 text-sm font-medium rounded transition-all ${
+                  density === "compact"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Compact spacing"
+              >
+                <span className="hidden sm:inline">Compact</span>
+                <span className="sm:hidden">▪</span>
+              </button>
+            </div>
+
+            {/* Expand/Collapse Buttons */}
+            <div className="inline-flex items-center gap-1 bg-muted rounded-lg p-1">
+              <button
+                onClick={expandAll}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-card rounded transition-all"
+                title="Expand all"
+              >
+                <ChevronsUpDown size={18} />
+              </button>
+              <button
+                onClick={collapseAll}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-card rounded transition-all"
+                title="Collapse all"
+              >
+                <ChevronsDownUp size={18} />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Table with Drill-down */}
@@ -228,14 +289,14 @@ export default function ARAgingPage() {
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-card border-b border-border">
-                  <th className="px-4 py-3 text-left font-medium">Customer</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Current</th>
-                  <th className="px-4 py-3 text-right font-medium text-amber-600">1 – 30</th>
-                  <th className="px-4 py-3 text-right font-medium text-orange-400">31 – 60</th>
-                  <th className="px-4 py-3 text-right font-medium text-destructive">61 – 90</th>
-                  <th className="px-4 py-3 text-right font-medium text-orange-600">91 – 180</th>
-                  <th className="px-4 py-3 text-right font-medium text-red-500">&gt; 180</th>
-                  <th className="px-4 py-3 text-right font-medium">Total</th>
+                  <th className={`px-4 ${headerPadding} text-left font-medium`}>Customer</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium text-muted-foreground`}>Current</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium text-amber-600`}>1 – 30</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium text-orange-400`}>31 – 60</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium text-destructive`}>61 – 90</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium text-orange-600`}>91 – 180</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium text-red-500`}>&gt; 180</th>
+                  <th className={`px-4 ${headerPadding} text-right font-medium`}>Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -253,45 +314,45 @@ export default function ARAgingPage() {
                       onClick={() => toggleClientExpand(client.client_id)}
                       className="cursor-pointer hover:bg-muted/40 border-b border-border"
                     >
-                      <td className="px-4 py-3 flex items-center gap-2">
+                      <td className={`px-4 ${rowPadding} flex items-center gap-2`}>
                         <ChevronDown
                           size={16}
                           className={`transition-transform flex-shrink-0 ${expandedClients.has(client.client_id) ? "rotate-180" : ""}`}
                         />
                         <span className="font-medium">{client.client_name || `Client ${client.client_id.substring(0, 8)}`}</span>
                       </td>
-                      <td className="px-4 py-3 text-right">{client.current ? fmt(client.current) : "-"}</td>
-                      <td className="px-4 py-3 text-right">{client.days_1_30 ? fmt(client.days_1_30) : "-"}</td>
-                      <td className="px-4 py-3 text-right">{client.days_31_60 ? fmt(client.days_31_60) : "-"}</td>
-                      <td className="px-4 py-3 text-right">{client.days_61_90 ? fmt(client.days_61_90) : "-"}</td>
-                      <td className="px-4 py-3 text-right">{client.days_91_180 ? fmt(client.days_91_180) : "-"}</td>
-                      <td className="px-4 py-3 text-right text-destructive">{client.over_180 ? fmt(client.over_180) : "-"}</td>
-                      <td className="px-4 py-3 text-right font-bold">{client.total ? fmt(client.total) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right`}>{client.current ? fmt(client.current) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right`}>{client.days_1_30 ? fmt(client.days_1_30) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right`}>{client.days_31_60 ? fmt(client.days_31_60) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right`}>{client.days_61_90 ? fmt(client.days_61_90) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right`}>{client.days_91_180 ? fmt(client.days_91_180) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right text-destructive`}>{client.over_180 ? fmt(client.over_180) : "-"}</td>
+                      <td className={`px-4 ${rowPadding} text-right font-bold`}>{client.total ? fmt(client.total) : "-"}</td>
                     </tr>
 
                     {expandedClients.has(client.client_id) &&
                       client.invoices.map((inv) => (
                         <tr key={`${client.client_id}-${inv.invoice_number}`} className="bg-muted/30 border-b border-border">
-                          <td colSpan={8} className="px-4 py-3">
-                            <div className="ml-8 py-2">
-                              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                          <td colSpan={8} className={`px-4 ${rowPadding}`}>
+                            <div className="ml-8 py-1">
+                              <div className={`grid ${density === "compact" ? "grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2" : "grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4"}`}>
                                 <div>
                                   <p className="text-xs text-muted-foreground uppercase font-medium">Invoice</p>
                                   <p className="font-mono font-semibold text-sm">{inv.invoice_number}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground uppercase font-medium">Issue Date</p>
-                                  <p className="text-sm">
+                                  <p className={density === "compact" ? "text-xs" : "text-sm"}>
                                     {inv.issue_date ? new Date(inv.issue_date).toLocaleDateString("id-ID") : "—"}
                                   </p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground uppercase font-medium">Due Date</p>
-                                  <p className="text-sm">{new Date(inv.due_date).toLocaleDateString("id-ID")}</p>
+                                  <p className={density === "compact" ? "text-xs" : "text-sm"}>{new Date(inv.due_date).toLocaleDateString("id-ID")}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground uppercase font-medium">AR Status</p>
-                                  <p className={`text-sm font-semibold ${getAgingBucketColor(inv.days_overdue)}`}>
+                                  <p className={`${density === "compact" ? "text-xs" : "text-sm"} font-semibold ${getAgingBucketColor(inv.days_overdue)}`}>
                                     {getAgingBucketLabel(inv.days_overdue)}
                                   </p>
                                   {inv.days_overdue > 0 && (
@@ -300,7 +361,7 @@ export default function ARAgingPage() {
                                 </div>
                                 <div className="text-right">
                                   <p className="text-xs text-muted-foreground uppercase font-medium">Amount</p>
-                                  <p className="text-sm font-bold">{fmt(inv.amount)}</p>
+                                  <p className={`${density === "compact" ? "text-xs" : "text-sm"} font-bold`}>{fmt(inv.amount)}</p>
                                   <p className={`text-xs ${inv.status === "paid" ? "text-emerald-600" : "text-orange-600"}`}>
                                     {inv.status === "paid" ? "Paid" : "Outstanding"}
                                   </p>
