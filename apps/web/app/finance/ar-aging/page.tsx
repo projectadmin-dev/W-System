@@ -1,117 +1,97 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
-interface ARCustomer {
-  id: string;
-  name: string;
-  invoices: {
-    id: string;
-    date: string;     // invoice date (YYYY-MM-DD)
-    dueDate: string;  // due date
-    amount: number;
-    paid: number;
-  }[];
+interface Invoice {
+  invoice_number: string;
+  issue_date?: string;
+  due_date: string;
+  amount: number;
+  days_overdue: number;
+  status: string;
+  client_id: string;
 }
 
-/* ── Mock Data (tgl hari ini = 2026-04-22) ─────────────────────── */
-const NOW = new Date("2026-04-22");
-
-function diffDays(a: string, b: string) {
-  return Math.max(0, Math.round((new Date(a).getTime() - new Date(b).getTime()) / (1000 * 60 * 60 * 24)));
+interface ClientInvoices {
+  client_id: string;
+  client_name: string;
+  invoices: Invoice[];
+  current: number;
+  days_1_30: number;
+  days_31_60: number;
+  days_61_90: number;
+  days_91_180: number;
+  over_180: number;
+  total: number;
 }
 
-const MOCK: ARCustomer[] = [
-  {
-    id: "c1",
-    name: "PT Maju Jaya Sentosa",
-    invoices: [
-      { id: "INV-1001", date: "2026-04-02", dueDate: "2026-04-12", amount: 12_500_000, paid: 0 },
-      { id: "INV-1002", date: "2026-03-15", dueDate: "2026-03-30", amount: 28_000_000, paid: 5_000_000 },
-    ],
-  },
-  {
-    id: "c2",
-    name: "PT Sukses Abadi",
-    invoices: [
-      { id: "INV-1003", date: "2026-03-01", dueDate: "2026-03-15", amount: 45_000_000, paid: 0 },
-    ],
-  },
-  {
-    id: "c3",
-    name: "CV Delta Prima",
-    invoices: [
-      { id: "INV-1004", date: "2026-04-10", dueDate: "2026-04-20", amount: 8_500_000, paid: 8_500_000 },         // paid in full
-      { id: "INV-1005", date: "2026-01-20", dueDate: "2026-02-05", amount: 15_000_000, paid: 0 },             // >90
-    ],
-  },
-  {
-    id: "c4",
-    name: "PT Mitra Sejahtera",
-    invoices: [
-      { id: "INV-1006", date: "2026-03-20", dueDate: "2026-04-05", amount: 33_750_000, paid: 10_000_000 },
-    ],
-  },
-  {
-    id: "c5",
-    name: "UD Sumber Rejeki",
-    invoices: [
-      { id: "INV-1007", date: "2026-04-18", dueDate: "2026-05-01", amount: 5_200_000, paid: 0 },                // belum jatuh tempo
-    ],
-  },
-];
+interface ARAgingData {
+  data: {
+    current: number;
+    days_1_30: number;
+    days_31_60: number;
+    days_61_90: number;
+    days_91_180: number;
+    over_180: number;
+    total: number;
+    clients: ClientInvoices[];
+  };
+}
 
-type BucketKey = "bucket1" | "bucket2" | "bucket3" | "bucket4" | "current" | "total";
+type BucketKey = "days_1_30" | "days_31_60" | "days_61_90" | "days_91_180" | "over_180" | "current" | "total";
 
 export default function ARAgingPage() {
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<ClientInvoices[]>([]);
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [asOfDate, setAsOfDate] = useState(new Date().toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "2-digit" }));
+
+  useEffect(() => {
+    const fetchARAgingData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("/api/finance/ar-aging");
+        if (!response.ok) {
+          throw new Error(`Failed to fetch AR Aging data: ${response.statusText}`);
+        }
+        const result: ARAgingData = await response.json();
+        setData(result.data.clients);
+        setError(null);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        console.error("Error fetching AR Aging data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchARAgingData();
+  }, []);
 
   const filtered = useMemo(
     () =>
-      MOCK.filter((c) =>
-        c.name.toLowerCase().includes(search.toLowerCase())
+      data.filter((c) =>
+        c.client_name.toLowerCase().includes(search.toLowerCase())
       ),
-    [search]
+    [data, search]
   );
 
-  /* ── hitung bucket per customer ─────────────────────────────── */
-  const rows = filtered.map((c) => {
-    const out: Record<Exclude<BucketKey, "total">, number> = {
-      current: 0,
-      bucket1: 0,
-      bucket2: 0,
-      bucket3: 0,
-      bucket4: 0,
-    };
-
-    c.invoices.forEach((inv) => {
-      const outstanding = inv.amount - inv.paid;
-      if (outstanding <= 0) return;
-
-      const daysOverdue = diffDays("2026-04-22", inv.dueDate);
-      if (daysOverdue <= 0) out.current += outstanding;
-      else if (daysOverdue <= 30) out.bucket1 += outstanding;
-      else if (daysOverdue <= 60) out.bucket2 += outstanding;
-      else if (daysOverdue <= 90) out.bucket3 += outstanding;
-      else out.bucket4 += outstanding;
-    });
-
-    const total = Object.values(out).reduce((a, b) => a + b, 0);
-    return { customer: c, ...out, total };
-  });
-
-  /* ── grand total per kolom ─────────────────────────────────── */
-  const grand = rows.reduce<Record<BucketKey, number>>(
+  const grand = filtered.reduce<Record<BucketKey, number>>(
     (acc, r) => ({
       current: acc.current + r.current,
-      bucket1: acc.bucket1 + r.bucket1,
-      bucket2: acc.bucket2 + r.bucket2,
-      bucket3: acc.bucket3 + r.bucket3,
-      bucket4: acc.bucket4 + r.bucket4,
-      total:   acc.total   + r.total,
+      days_1_30: acc.days_1_30 + r.days_1_30,
+      days_31_60: acc.days_31_60 + r.days_31_60,
+      days_61_90: acc.days_61_90 + r.days_61_90,
+      days_91_180: acc.days_91_180 + r.days_91_180,
+      over_180: acc.over_180 + r.over_180,
+      total: acc.total + r.total,
     }),
-    { current: 0, bucket1: 0, bucket2: 0, bucket3: 0, bucket4: 0, total: 0 }
+    { current: 0, days_1_30: 0, days_31_60: 0, days_61_90: 0, days_91_180: 0, over_180: 0, total: 0 }
   );
 
   const fmt = (n: number) =>
@@ -121,21 +101,81 @@ export default function ARAgingPage() {
       minimumFractionDigits: 0,
     }).format(n);
 
-  const Row = ({ label, current, b1, b2, b3, b4, total, bold }: any) => (
+  const getAgingBucketColor = (daysOverdue: number): string => {
+    if (daysOverdue <= 0) return "text-emerald-600";
+    if (daysOverdue <= 30) return "text-amber-600";
+    if (daysOverdue <= 60) return "text-orange-400";
+    if (daysOverdue <= 90) return "text-destructive";
+    return "text-red-500";
+  };
+
+  const getAgingBucketLabel = (daysOverdue: number): string => {
+    if (daysOverdue <= 0) return "Current";
+    if (daysOverdue <= 30) return "1-30 hari";
+    if (daysOverdue <= 60) return "31-60 hari";
+    if (daysOverdue <= 90) return "61-90 hari";
+    if (daysOverdue <= 180) return "91-180 hari";
+    return ">180 hari";
+  };
+
+  const toggleClientExpand = (clientId: string) => {
+    const newExpanded = new Set(expandedClients);
+    if (newExpanded.has(clientId)) {
+      newExpanded.delete(clientId);
+    } else {
+      newExpanded.add(clientId);
+    }
+    setExpandedClients(newExpanded);
+  };
+
+  const Row = ({ label, current, d1, d2, d3, d4, d5, total, bold }: any) => (
     <tr className={`${bold ? "bg-card font-semibold" : "hover:bg-muted/40"}`}>
       <td className="px-4 py-3">{label}</td>
       <td className="px-4 py-3 text-right">{current ? fmt(current) : "-"}</td>
-      <td className="px-4 py-3 text-right">{b1 ? fmt(b1) : "-"}</td>
-      <td className="px-4 py-3 text-right">{b2 ? fmt(b2) : "-"}</td>
-      <td className="px-4 py-3 text-right">{b3 ? fmt(b3) : "-"}</td>
-      <td className="px-4 py-3 text-right text-destructive">{b4 ? fmt(b4) : "-"}</td>
+      <td className="px-4 py-3 text-right">{d1 ? fmt(d1) : "-"}</td>
+      <td className="px-4 py-3 text-right">{d2 ? fmt(d2) : "-"}</td>
+      <td className="px-4 py-3 text-right">{d3 ? fmt(d3) : "-"}</td>
+      <td className="px-4 py-3 text-right">{d4 ? fmt(d4) : "-"}</td>
+      <td className="px-4 py-3 text-right text-destructive">{d5 ? fmt(d5) : "-"}</td>
       <td className="px-4 py-3 text-right font-bold">{total ? fmt(total) : "-"}</td>
     </tr>
   );
 
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">AR Aging</h1>
+              <p className="text-muted-foreground text-sm mt-1">Piutang Usaha per Customer — umur piutang</p>
+            </div>
+          </div>
+          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">AR Aging</h1>
+              <p className="text-muted-foreground text-sm mt-1">Piutang Usaha per Customer — umur piutang</p>
+            </div>
+          </div>
+          <div className="text-center py-8 text-destructive">Error: {error}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -143,7 +183,7 @@ export default function ARAgingPage() {
             <p className="text-muted-foreground text-sm mt-1">Piutang Usaha per Customer — umur piutang</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">As of: 22 Apr 2026</span>
+            <span className="text-sm text-muted-foreground">As of: {asOfDate}</span>
             <Link
               href="/finance"
               className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm font-medium transition-colors"
@@ -153,15 +193,16 @@ export default function ARAgingPage() {
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
           {[
             { label: "Total Piutang", value: grand.total, cls: "text-foreground" },
             { label: "Current (≤0 hari)", value: grand.current, cls: "text-emerald-600" },
-            { label: "1-30 hari", value: grand.bucket1, cls: "text-amber-600" },
-            { label: "31-60 hari", value: grand.bucket2, cls: "text-orange-400" },
-            { label: "61-90 hari", value: grand.bucket3, cls: "text-destructive" },
-            { label: ">90 hari", value: grand.bucket4, cls: "text-red-500" },
+            { label: "1-30 hari", value: grand.days_1_30, cls: "text-amber-600" },
+            { label: "31-60 hari", value: grand.days_31_60, cls: "text-orange-400" },
+            { label: "61-90 hari", value: grand.days_61_90, cls: "text-destructive" },
+            { label: "91-180 hari", value: grand.days_91_180, cls: "text-orange-600" },
+            { label: ">180 hari", value: grand.over_180, cls: "text-red-500" },
           ].map((s) => (
             <div key={s.label} className="bg-card border border-border rounded-lg p-4">
               <p className="text-xs text-muted-foreground uppercase font-medium">{s.label}</p>
@@ -181,50 +222,106 @@ export default function ARAgingPage() {
           />
         </div>
 
-        {/* Table */}
-        <div>
+        {/* Table with Drill-down */}
+        <div className="border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-collapse">
               <thead>
-                <tr>
+                <tr className="bg-card border-b border-border">
                   <th className="px-4 py-3 text-left font-medium">Customer</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">Current</th>
                   <th className="px-4 py-3 text-right font-medium text-amber-600">1 – 30</th>
                   <th className="px-4 py-3 text-right font-medium text-orange-400">31 – 60</th>
                   <th className="px-4 py-3 text-right font-medium text-destructive">61 – 90</th>
-                  <th className="px-4 py-3 text-right font-medium text-red-500">&gt; 90</th>
+                  <th className="px-4 py-3 text-right font-medium text-orange-600">91 – 180</th>
+                  <th className="px-4 py-3 text-right font-medium text-red-500">&gt; 180</th>
                   <th className="px-4 py-3 text-right font-medium">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
-                {rows.length === 0 && (
+              <tbody className="divide-y divide-border">
+                {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                       Tidak ada data
                     </td>
                   </tr>
                 )}
-                {rows.map((r) => (
-                  <Row
-                    key={r.customer.id}
-                    label={r.customer.name}
-                    current={r.current}
-                    b1={r.bucket1}
-                    b2={r.bucket2}
-                    b3={r.bucket3}
-                    b4={r.bucket4}
-                    total={r.total}
-                    bold={false}
-                  />
+                {filtered.map((client) => (
+                  <>
+                    <tr
+                      key={client.client_id}
+                      onClick={() => toggleClientExpand(client.client_id)}
+                      className="cursor-pointer hover:bg-muted/40 border-b border-border"
+                    >
+                      <td className="px-4 py-3 flex items-center gap-2">
+                        <ChevronDown
+                          size={16}
+                          className={`transition-transform flex-shrink-0 ${expandedClients.has(client.client_id) ? "rotate-180" : ""}`}
+                        />
+                        <span className="font-medium">{client.client_name || `Client ${client.client_id.substring(0, 8)}`}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">{client.current ? fmt(client.current) : "-"}</td>
+                      <td className="px-4 py-3 text-right">{client.days_1_30 ? fmt(client.days_1_30) : "-"}</td>
+                      <td className="px-4 py-3 text-right">{client.days_31_60 ? fmt(client.days_31_60) : "-"}</td>
+                      <td className="px-4 py-3 text-right">{client.days_61_90 ? fmt(client.days_61_90) : "-"}</td>
+                      <td className="px-4 py-3 text-right">{client.days_91_180 ? fmt(client.days_91_180) : "-"}</td>
+                      <td className="px-4 py-3 text-right text-destructive">{client.over_180 ? fmt(client.over_180) : "-"}</td>
+                      <td className="px-4 py-3 text-right font-bold">{client.total ? fmt(client.total) : "-"}</td>
+                    </tr>
+
+                    {expandedClients.has(client.client_id) &&
+                      client.invoices.map((inv) => (
+                        <tr key={`${client.client_id}-${inv.invoice_number}`} className="bg-muted/30 border-b border-border">
+                          <td colSpan={8} className="px-4 py-3">
+                            <div className="ml-8 py-2">
+                              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase font-medium">Invoice</p>
+                                  <p className="font-mono font-semibold text-sm">{inv.invoice_number}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase font-medium">Issue Date</p>
+                                  <p className="text-sm">
+                                    {inv.issue_date ? new Date(inv.issue_date).toLocaleDateString("id-ID") : "—"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase font-medium">Due Date</p>
+                                  <p className="text-sm">{new Date(inv.due_date).toLocaleDateString("id-ID")}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase font-medium">AR Status</p>
+                                  <p className={`text-sm font-semibold ${getAgingBucketColor(inv.days_overdue)}`}>
+                                    {getAgingBucketLabel(inv.days_overdue)}
+                                  </p>
+                                  {inv.days_overdue > 0 && (
+                                    <p className="text-xs text-muted-foreground">{inv.days_overdue} hari overdue</p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-muted-foreground uppercase font-medium">Amount</p>
+                                  <p className="text-sm font-bold">{fmt(inv.amount)}</p>
+                                  <p className={`text-xs ${inv.status === "paid" ? "text-emerald-600" : "text-orange-600"}`}>
+                                    {inv.status === "paid" ? "Paid" : "Outstanding"}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </>
                 ))}
-                {/* Grand total */}
+
+                {/* Grand Total */}
                 <Row
                   label="GRAND TOTAL"
                   current={grand.current}
-                  b1={grand.bucket1}
-                  b2={grand.bucket2}
-                  b3={grand.bucket3}
-                  b4={grand.bucket4}
+                  d1={grand.days_1_30}
+                  d2={grand.days_31_60}
+                  d3={grand.days_61_90}
+                  d4={grand.days_91_180}
+                  d5={grand.over_180}
                   total={grand.total}
                   bold={true}
                 />
