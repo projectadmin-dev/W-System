@@ -1,6 +1,6 @@
 'use client'
 
-import { List, X, ClipboardList, History, ScrollText, ShieldCheck } from 'lucide-react'
+import { List, X, History, ScrollText, ShieldCheck } from 'lucide-react'
 import { IFAS, LAYER_COLOR, type Layer } from './theme'
 
 export interface LayerCount {
@@ -14,7 +14,7 @@ interface Props {
   activeLayer: Layer | 'all'
   onSelect: (id: Layer | 'all') => void
   onClose: () => void
-  onQuickAction: (kind: 'approvals' | 'history' | 'audit') => void
+  onQuickAction: (kind: 'history' | 'audit') => void
 }
 
 export function LayerPanel({ layers, activeLayer, onSelect, onClose, onQuickAction }: Props) {
@@ -87,7 +87,6 @@ export function LayerPanel({ layers, activeLayer, onSelect, onClose, onQuickActi
       <div style={{ height: 1, background: IFAS.border.subtle, margin: '16px 6px' }} />
 
       <SectionLabel>Quick Actions</SectionLabel>
-      <QuickAction icon={ClipboardList} color={IFAS.warning} label="Pending approvals" onClick={() => onQuickAction('approvals')} />
       <QuickAction icon={History} color={IFAS.text.secondary} label="Import/Export history" onClick={() => onQuickAction('history')} />
       <QuickAction icon={ScrollText} color={IFAS.text.secondary} label="Audit trail" onClick={() => onQuickAction('audit')} />
 
