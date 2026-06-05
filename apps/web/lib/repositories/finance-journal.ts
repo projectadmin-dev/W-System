@@ -261,7 +261,9 @@ export async function createReversalEntry(originalEntryId: string, reason: strin
     credit_amount: line.debit_amount, // Swap
     line_description: `Reversal: ${line.line_description || ''}`,
     project_id: line.project_id,
-    client_id: line.client_id
+    client_id: line.client_id,
+    tenant_id: original.tenant_id,   // journal_lines.tenant_id is NOT NULL
+    created_by: preparedBy,          // journal_lines.created_by is NOT NULL
   }))
   
   const reversalEntry: JournalEntryInsert = {

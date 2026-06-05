@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
+import { reverseJournalsForSource } from '@/lib/finance/journal-engine'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
+const SYSTEM_USER = '812558af-8be8-4c53-b581-e6a4f1c91147'
 
 export async function GET(
   _req: NextRequest,
@@ -126,7 +128,23 @@ export async function DELETE(
       .eq('id', id).eq('tenant_id', TENANT)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
+
+    // Reverse any journals tied to this bill and its payments (non-blocking).
+    let reversed = 0
+    try {
+      const r1 = await reverseJournalsForSource('ap_invoice', id, 'Tagihan dibatalkan/dihapus', SYSTEM_USER)
+      reversed += r1.reversed
+      const { data: pays } = await db
+        .from('ap_payment_history').select('id').eq('ap_invoice_id', id)
+      for (const p of pays || []) {
+        const r2 = await reverseJournalsForSource('ap_payment', p.id, 'Tagihan dibatalkan/dihapus', SYSTEM_USER)
+        reversed += r2.reversed
+      }
+    } catch (e) {
+      console.error('[AP delete reversal]', e)
+    }
+
+    return NextResponse.json({ success: true, journals_reversed: reversed })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

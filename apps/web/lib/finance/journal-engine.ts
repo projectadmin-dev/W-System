@@ -295,6 +295,99 @@ export async function processJournalAutomation(
   }
 }
 
+export interface ReversalResult {
+  reversed: number
+  entryIds: string[]
+  errors: string[]
+}
+
+/**
+ * Reverse all active (posted, non-reversal) journals for a source document.
+ * Used when a source is cancelled/voided. Idempotent: an entry already reversed
+ * is skipped. Each reversal swaps Dr/Cr, is dated today (the cancellation date),
+ * and is posted. Never throws.
+ */
+export async function reverseJournalsForSource(
+  sourceType: string,
+  sourceId: string,
+  reason: string,
+  userId: string,
+): Promise<ReversalResult> {
+  const db: any = await createAdminClient()
+  const out: ReversalResult = { reversed: 0, entryIds: [], errors: [] }
+
+  const { data: entries } = await db
+    .from('journal_entries')
+    .select('id, entry_number, currency, tenant_id, description')
+    .eq('source_type', sourceType)
+    .eq('source_id', sourceId)
+    .eq('status', 'posted')
+    .eq('is_reversal', false)
+    .is('deleted_at', null)
+
+  for (const e of entries || []) {
+    // Idempotency: skip if a reversal already exists for this entry.
+    const { data: already } = await db
+      .from('journal_entries')
+      .select('id')
+      .eq('reversal_of_id', e.id)
+      .limit(1)
+      .maybeSingle()
+    if (already) continue
+
+    const { data: lines } = await db
+      .from('journal_lines')
+      .select('coa_id, debit_amount, credit_amount, line_description')
+      .eq('journal_entry_id', e.id)
+      .is('deleted_at', null)
+    if (!lines || lines.length === 0) continue
+
+    const today = new Date().toISOString().slice(0, 10)
+    const revLines = lines.map((l: any) => ({
+      coa_id: l.coa_id,
+      debit_amount: Number(l.credit_amount || 0), // swap
+      credit_amount: Number(l.debit_amount || 0), // swap
+      line_description: `Reversal: ${l.line_description || ''}`,
+      tenant_id: e.tenant_id,
+      created_by: userId,
+    }))
+    const revEntry = {
+      entry_number: generateEntryNumber(today),
+      transaction_date: today,
+      posting_date: today,
+      source_type: sourceType,
+      source_id: sourceId,
+      description: `REVERSAL: ${e.description || e.entry_number} — ${reason}`,
+      reference_number: e.entry_number,
+      currency: e.currency || 'IDR',
+      status: 'draft',
+      kategori_jurnal: 'ADJUSTMENT',
+      is_reversal: true,
+      reversal_of_id: e.id,
+      reversal_reason: reason,
+      prepared_by: userId,
+      created_by: userId,
+      tenant_id: e.tenant_id,
+    }
+    try {
+      const created = await createJournalEntry(revEntry as any, revLines as any)
+      await postJournalEntry(created.id, userId)
+      out.reversed++
+      out.entryIds.push(created.id)
+    } catch (err) {
+      const message = (err as Error).message
+      out.errors.push(message)
+      await logJournalError(
+        db,
+        { triggerCode: 'REVERSAL', sourceType, sourceId, tenantId: e.tenant_id, createdBy: userId } as any,
+        'PERSIST_FAILED',
+        `Reversal failed for ${e.entry_number}: ${message}`,
+      )
+    }
+  }
+  return out
+}
+
 function generateEntryNumber(transactionDate: string): string {
   const date = new Date(transactionDate || new Date())
   const valid = isNaN(date.getTime()) ? new Date() : date
