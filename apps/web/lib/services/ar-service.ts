@@ -2,6 +2,8 @@
 // Business logic for AR invoices, payments, and KPI summaries.
 
 import { createAdminClient } from '@/lib/supabase-server'
+import { processJournalAutomation } from '@/lib/finance/journal-engine'
+import { getCoaIdByCode, DEFAULT_REVENUE_CODE, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
 import type {
   ARBankAccount,
   ARInvoice,
@@ -399,6 +401,7 @@ export async function createInvoice(
       deadline_bayar: payload.deadline_bayar || null,
       status_bayar: i === 0 ? payload.status_bayar : 'belum',
       status_kirim: payload.tipe_invoice === 'recurring' ? 'reminder' : 'sent',
+      revenue_coa_id: payload.revenue_coa_id || null,
       created_by: userId,
     }
 
@@ -414,11 +417,45 @@ export async function createInvoice(
       parentId = inserted.id
     }
 
+    // UC#1: auto-journal Dr Piutang / Cr Pendapatan + PPN Keluaran (non-blocking).
+    await emitArInvoiceJournal(db, tenantId, userId, inserted)
+
     const detail = await getInvoiceDetail(tenantId, inserted.id)
     if (detail) created.push(detail)
   }
 
   return created
+}
+
+/** UC#1 — fire AR-INV-ISSUE for a freshly inserted invoice. Never throws. */
+async function emitArInvoiceJournal(
+  db: any,
+  tenantId: string,
+  userId: string,
+  inv: any,
+): Promise<void> {
+  try {
+    const revenueCoaId =
+      inv.revenue_coa_id || (await getCoaIdByCode(db, tenantId, DEFAULT_REVENUE_CODE))
+    await processJournalAutomation({
+      triggerCode: 'AR-INV-ISSUE',
+      sourceType: 'ar_invoice',
+      sourceId: inv.id,
+      tenantId,
+      transactionDate: inv.tgl_invoice,
+      createdBy: userId,
+      description: `Invoice ${inv.no_invoice} — ${inv.client_name}`,
+      referenceNumber: inv.no_invoice,
+      nominals: {
+        total_piutang: Number(inv.total_piutang || 0),
+        subtotal: Number(inv.subtotal || 0),
+        pajak: Number(inv.ppn_amount || 0),
+      },
+      dynamicAccounts: { invoice_revenue_coa: revenueCoaId },
+    })
+  } catch (err) {
+    console.error('[AR-INV-ISSUE journal]', err)
+  }
 }
 
 // ─── Update Payment ───────────────────────────────────────────────────────────
@@ -434,7 +471,7 @@ export async function updatePayment(
 
   const { data: inv, error: fetchErr } = await db
     .from('ar_invoices')
-    .select('id, sudah_dibayar, sisa_piutang, total_piutang, is_archived, tenant_id')
+    .select('id, no_invoice, sudah_dibayar, sisa_piutang, total_piutang, is_archived, tenant_id')
     .eq('id', invoiceId)
     .eq('tenant_id', tenantId)
     .single()
@@ -446,22 +483,27 @@ export async function updatePayment(
   if (payload.bayar_sekarang <= 0) throw new Error('Bayar sekarang harus > 0')
   if (payload.bayar_sekarang > sisaLama) throw new Error('AR_OVERPAY')
 
-  // Fetch bank label if bank_id provided
+  // Fetch bank label + cash COA if bank_id provided
   let bankLabel: string | null = null
+  let bankCoaId: string | null = null
   if (payload.bank_id) {
     const { data: bank } = await db
       .from('ar_bank_accounts')
-      .select('kode, nama_bank, nama_akun')
+      .select('kode, nama_bank, nama_akun, coa_id')
       .eq('id', payload.bank_id)
       .single()
-    if (bank) bankLabel = `${bank.kode} - ${bank.nama_bank} ${bank.nama_akun}`
+    if (bank) {
+      bankLabel = `${bank.kode} - ${bank.nama_bank} ${bank.nama_akun}`
+      bankCoaId = bank.coa_id ?? null
+    }
   }
+  if (!bankCoaId) bankCoaId = await getCoaIdByCode(db, tenantId, DEFAULT_CASH_CODE)
 
   const sudahDibayarLama = Number(inv.sudah_dibayar)
   const newSudahDibayar = sudahDibayarLama + payload.bayar_sekarang
 
   // Save to payment history
-  await db.from('ar_payment_history').insert({
+  const { data: payHist } = await db.from('ar_payment_history').insert({
     tenant_id: tenantId,
     invoice_id: invoiceId,
     sudah_dibayar_lama: sudahDibayarLama,
@@ -474,7 +516,7 @@ export async function updatePayment(
     catatan_pembayaran: payload.catatan_pembayaran || null,
     created_by: userId,
     actor_name: actorName,
-  })
+  }).select('id').single()
 
   // Update invoice
   const updateData: Record<string, unknown> = {
@@ -490,6 +532,26 @@ export async function updatePayment(
   }
 
   await db.from('ar_invoices').update(updateData).eq('id', invoiceId)
+
+  // UC#2: auto-journal Dr Kas/Bank / Cr Piutang (non-blocking).
+  if (payHist?.id) {
+    try {
+      await processJournalAutomation({
+        triggerCode: 'AR-PAY-RCV',
+        sourceType: 'ar_payment',
+        sourceId: payHist.id,
+        tenantId,
+        transactionDate: new Date().toISOString().slice(0, 10),
+        createdBy: userId,
+        description: `Pembayaran ${inv.no_invoice}`,
+        referenceNumber: inv.no_invoice,
+        nominals: { bayar_sekarang: Number(payload.bayar_sekarang) },
+        dynamicAccounts: { ar_bank_coa: bankCoaId },
+      })
+    } catch (err) {
+      console.error('[AR-PAY-RCV journal]', err)
+    }
+  }
 
   const detail = await getInvoiceDetail(tenantId, invoiceId)
   if (!detail) throw new Error('Invoice not found after update')

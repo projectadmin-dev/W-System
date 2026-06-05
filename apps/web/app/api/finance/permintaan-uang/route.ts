@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const { tanggal_permintaan, tanggal_kebutuhan, nominal, mata_uang = 'IDR',
       dasar_pengajuan, project_id, internal_items = [], requestor_id,
       requestor_nik, requestor_name, requestor_dept, requestor_position, requestor_grade,
-      catatan, submit = false } = body
+      catatan, expense_coa_id, submit = false } = body
 
     if (!tanggal_kebutuhan || !nominal || !dasar_pengajuan || !requestor_id) {
       return NextResponse.json({ error: 'Wajib: tanggal_kebutuhan, nominal, dasar_pengajuan, requestor_id' }, { status: 400 })
@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
         requestor_position: requestor_position || null,
         requestor_grade: requestor_grade || null,
         catatan: catatan || null,
+        expense_coa_id: expense_coa_id || null,
         submitted_at: submit ? new Date().toISOString() : null,
         created_by: requestor_id,
       })

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
+import { processJournalAutomation } from '@/lib/finance/journal-engine'
+import { getCoaIdByCode, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
+const SYSTEM_USER = '812558af-8be8-4c53-b581-e6a4f1c91147'
 
 // Record a (partial or full) payment against an approved bill.
+// Body: { amount?, bank_coa_id?, bank_label?, actor_id?, actor_name?, notes? }
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,7 +16,7 @@ export async function POST(
     const db = createAdminClient()
     const { id } = await params
     const body = await request.json().catch(() => ({}))
-    const { amount, actor_id, actor_name, notes } = body
+    const { amount, bank_coa_id, bank_label, actor_id, actor_name, notes } = body
 
     const { data: inv } = await db
       .from('ap_invoices').select('*')
@@ -30,7 +34,8 @@ export async function POST(
       return NextResponse.json({ error: `Nominal melebihi sisa tagihan (${due})` }, { status: 400 })
     }
 
-    const newPaid = Number(inv.amount_paid || 0) + payAmt
+    const paidBefore = Number(inv.amount_paid || 0)
+    const newPaid = paidBefore + payAmt
     const fullyPaid = newPaid >= Number(inv.grand_total || 0) - 0.009
 
     const { data, error } = await db
@@ -51,7 +56,48 @@ export async function POST(
       notes: notes || `Pembayaran ${payAmt.toLocaleString('id-ID')}${fullyPaid ? ' (LUNAS)' : ' (sebagian)'}`,
     })
 
-    return NextResponse.json({ data })
+    // Record the payment (carries the bank/cash COA) — becomes the journal source.
+    const { data: payHist } = await db.from('ap_payment_history').insert({
+      tenant_id: TENANT,
+      ap_invoice_id: id,
+      amount_paid_lama: paidBefore,
+      amount_due_lama: due,
+      bayar_sekarang: payAmt,
+      status_baru: fullyPaid ? 'PAID' : 'APPROVED',
+      bank_coa_id: bank_coa_id || null,
+      bank_label: bank_label || null,
+      catatan_pembayaran: notes || null,
+      created_by: actor_id || null,
+      actor_name: actor_name || null,
+    }).select('id').single()
+
+    // UC#4: auto-journal Dr Hutang / Cr Kas/Bank (non-blocking).
+    let journal_entry_id: string | null = null
+    let warning: string | null = null
+    if (payHist?.id) {
+      try {
+        const bankCoaId = bank_coa_id || (await getCoaIdByCode(db, TENANT, DEFAULT_CASH_CODE))
+        const result = await processJournalAutomation({
+          triggerCode: 'AP-PAY',
+          sourceType: 'ap_payment',
+          sourceId: payHist.id,
+          tenantId: TENANT,
+          transactionDate: new Date().toISOString().slice(0, 10),
+          createdBy: actor_id || SYSTEM_USER,
+          description: `Pembayaran AP ${inv.ap_number} — ${inv.pihak_ketiga}`,
+          referenceNumber: inv.no_invoice,
+          currency: inv.mata_uang || 'IDR',
+          nominals: { bayar_sekarang: payAmt },
+          dynamicAccounts: { ap_bank_coa: bankCoaId },
+        })
+        journal_entry_id = result.journalEntryId ?? null
+        if (!result.success) warning = `Journal entry dilewati: ${result.errorCode} — ${result.message}`
+      } catch (e) {
+        warning = `Journal entry error: ${String(e)}`
+      }
+    }
+
+    return NextResponse.json({ data, journal_entry_id, warning })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }

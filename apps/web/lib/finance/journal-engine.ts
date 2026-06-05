@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-server'
-import { createJournalEntry } from '@/lib/repositories/finance-journal'
+import { createJournalEntry, postJournalEntry } from '@/lib/repositories/finance-journal'
 
 /**
  * Journal Automation Engine (Phase 2)
@@ -244,7 +244,10 @@ export async function processJournalAutomation(
       description: payload.description ?? `Auto-journal ${payload.triggerCode}`,
       reference_number: payload.referenceNumber ?? null,
       currency: payload.currency ?? 'IDR',
-      status: 'posted',
+      // Insert as draft, then post — the DB's validate_journal_balance_on_post
+      // trigger checks balance against the lines, and a draft can be rolled back
+      // if line insertion fails (posted entries are immutable).
+      status: 'draft',
       kategori_jurnal: 'REGULAR',
       fiscal_period_id: await resolveFiscalPeriod(db, payload.tenantId, payload.transactionDate),
       prepared_by: payload.createdBy,
@@ -271,7 +274,16 @@ export async function processJournalAutomation(
       return { success: false, errorCode: 'PERSIST_FAILED', message }
     }
 
-    // [6] Best-effort write-back of journal_entry_id to the source document.
+    // [6] Post the draft (balance re-validated by DB trigger against the lines).
+    try {
+      await postJournalEntry(created.id, payload.createdBy)
+    } catch (err) {
+      const message = (err as Error).message
+      await logJournalError(db, payload, 'PERSIST_FAILED', `Post failed: ${message}`, config.kode_konfigurasi, { entryId: created.id })
+      return { success: false, errorCode: 'PERSIST_FAILED', message, journalEntryId: created.id }
+    }
+
+    // [7] Best-effort write-back of journal_entry_id to the source document.
     await linkSourceDocument(db, payload.sourceType, payload.sourceId, created.id)
 
     return { success: true, journalEntryId: created.id, entryNumber }
