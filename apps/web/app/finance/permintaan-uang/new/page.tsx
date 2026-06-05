@@ -124,6 +124,7 @@ export default function PermintaanUangNewPage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [projects, setProjects] = useState<{ value: string; label: string }[]>([])
+  const [expenseAccounts, setExpenseAccounts] = useState<{ value: string; label: string; keywords?: string }[]>([])
   const [requestor, setRequestor] = useState<EmployeeOption | null>(null)
   const [internalItems, setInternalItems] = useState<InternalItem[]>([])
 
@@ -135,6 +136,7 @@ export default function PermintaanUangNewPage() {
     dasar_pengajuan: 'PROJECT' as 'PROJECT' | 'INTERNAL',
     project_id: '',
     catatan: '',
+    expense_coa_id: '',
   })
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
@@ -146,6 +148,16 @@ export default function PermintaanUangNewPage() {
         value: p.id,
         label: `${p.project_name}${p.client_name && p.client_name !== '—' ? ` — ${p.client_name}` : ''}`,
       }))))
+      .catch(() => {})
+
+    // Expense accounts for the disbursement journal (UC#5)
+    fetch('/api/finance/coa?type=expense')
+      .then(r => r.json())
+      .then(d => setExpenseAccounts(Array.isArray(d)
+        ? d.filter((a: any) => a.is_active).map((a: any) => ({
+            value: a.id, label: `${a.account_code} - ${a.account_name}`, keywords: a.account_code,
+          }))
+        : []))
       .catch(() => {})
   }, [])
 
@@ -249,6 +261,14 @@ export default function PermintaanUangNewPage() {
           ) : (
             <InternalItemsBuilder items={internalItems} onChange={setInternalItems} />
           )}
+
+          <div>
+            <label className="text-sm font-medium">Akun Beban (Jurnal, Opsional)</label>
+            <div className="mt-1">
+              <SearchableSelect options={expenseAccounts} value={form.expense_coa_id}
+                onValueChange={v => set('expense_coa_id', v)} placeholder="Default: akun beban utama..." />
+            </div>
+          </div>
 
           <div>
             <label className="text-sm font-medium">Catatan (Opsional)</label>

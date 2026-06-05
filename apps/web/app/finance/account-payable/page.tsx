@@ -795,14 +795,29 @@ function PayDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () => vo
   const [amount, setAmount] = useState(String(inv.amount_due))
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
+  const [bankCoaId, setBankCoaId] = useState('')
+  const [cashAccounts, setCashAccounts] = useState<{ id: string; account_code: string; account_name: string }[]>([])
+  useEffect(() => {
+    fetch('/api/finance/coa?type=asset')
+      .then(r => r.json())
+      .then(d => setCashAccounts(Array.isArray(d)
+        ? d.filter((a: any) => a.is_active && typeof a.account_code === 'string' && a.account_code.startsWith('1-100'))
+        : []))
+      .catch(() => {})
+  }, [])
   const go = async () => {
     const a = Number(amount)
     if (a <= 0) { toast.error('Nominal harus > 0'); return }
     setBusy(true)
     try {
+      const bank = cashAccounts.find(c => c.id === bankCoaId)
       const res = await fetch(`/api/finance/account-payable/${inv.id}/pay`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: a, notes }),
+        body: JSON.stringify({
+          amount: a, notes,
+          bank_coa_id: bankCoaId || undefined,
+          bank_label: bank ? `${bank.account_code} - ${bank.account_name}` : undefined,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(json.error ?? 'Gagal'); return }
@@ -824,6 +839,16 @@ function PayDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () => vo
             <div><p className="text-xs text-muted-foreground">Sisa</p><p className="font-semibold tabular-nums text-red-600">{formatRpAP(inv.amount_due, inv.mata_uang)}</p></div>
           </div>
           <Field label="Nominal Bayar" req><Input type="number" value={amount} onChange={e => setAmount(e.target.value)} /></Field>
+          <Field label="Bayar Dari (Kas/Bank)">
+            <Select value={bankCoaId} onValueChange={setBankCoaId}>
+              <SelectTrigger><SelectValue placeholder="Default: Bank..." /></SelectTrigger>
+              <SelectContent>
+                {cashAccounts.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.account_code} - {c.account_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
           <Field label="Catatan (opsional)"><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} /></Field>
         </div>
         <DialogFooter>
