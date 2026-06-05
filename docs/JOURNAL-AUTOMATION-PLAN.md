@@ -1,6 +1,7 @@
 # Journal Automation — Implementation Plan
 
-> Status: **Approved for build** · Branch: `claude/serene-galileo-kwyFL`
+> Status: **Phases 1–7 implemented & DB-verified** (live HTTP route execution pending deployed-env). Branch: `claude/serene-galileo-kwyFL`
+> See `JOURNAL-AUTOMATION-REVISION-SPEC.md` for deviations from this plan.
 > Scope: 5 finance use cases + reversal/void · Engine: full config-driven (DB-stored mappings) · Posting: auto-post, non-blocking
 
 ## 1. Goal
