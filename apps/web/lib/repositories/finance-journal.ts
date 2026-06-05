@@ -167,12 +167,22 @@ export async function createJournalEntry(entry: JournalEntryInsert, lines: Journ
   
   if (entryError) throw new Error(`Failed to create journal entry: ${entryError.message}`)
   
-  // Add line numbers and link to entry
-  const linesWithEntryId = lines.map((line, idx) => ({
-    ...line,
-    journal_entry_id: entryData.id,
-    line_number: idx + 1
-  }))
+  // Add line numbers and link to entry. Default the base-currency amounts to
+  // the transaction amounts when not supplied — the DB balance trigger
+  // (validate_journal_entry_balance) sums *_amount_base on post, so leaving
+  // them null/0 would let an unbalanced entry post undetected.
+  const rate = Number((entry as any).exchange_rate ?? 1) || 1
+  const linesWithEntryId = lines.map((line, idx) => {
+    const debit = Number((line as any).debit_amount || 0)
+    const credit = Number((line as any).credit_amount || 0)
+    return {
+      ...line,
+      journal_entry_id: entryData.id,
+      line_number: idx + 1,
+      debit_amount_base: (line as any).debit_amount_base ?? debit * rate,
+      credit_amount_base: (line as any).credit_amount_base ?? credit * rate,
+    }
+  })
   
   const { data: linesData, error: linesError } = await supabase
     .from('journal_lines')
