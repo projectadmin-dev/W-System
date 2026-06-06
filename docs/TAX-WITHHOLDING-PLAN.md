@@ -95,8 +95,53 @@ Maka record pembayaran harus menyimpan **dua angka**:
 
 `amount_paid` modul tetap bertambah sebesar **gross** (`bayar_sekarang`), bukan kas neto — agar status lunas akurat.
 
-### 3.2 DPP (dasar pengenaan)
-PPh 23 dihitung dari **DPP = subtotal jasa** (tanpa PPN). Sistem sudah punya `subtotal` di AR & AP, jadi DPP tersedia. Perlu penegasan per dokumen apakah seluruh subtotal kena PPh atau hanya komponen jasa (lihat §7 open question).
+### 3.2 DPP Dinamis (kategori + override manual) — **enhancement struktural**
+
+DPP **tidak selalu = subtotal**. Dasar hukumnya nyata di Indonesia:
+- **PPN — "DPP Nilai Lain"** (PMK Nilai Lain): mis. jasa biro perjalanan/pariwisata, jasa pengiriman paket, freight forwarding → **DPP = 10%** dari nilai (PPN efektif ±1,1%); pemakaian sendiri/cuma-cuma; emas perhiasan; dll.
+- **PPh 23 — "jumlah bruto"**: untuk jasa tertentu DPP hanya **komponen jasa** (tidak termasuk reimbursement/material yang dipisah & dibuktikan), mis. catering, konstruksi, freight forwarding.
+
+Karena itu DPP dirancang **scalable**: berbasis **kategori data-driven** + dapat **di-override manual** oleh finance saat input.
+
+**Tabel referensi `dpp_kategori`** (data, bukan kode — tambah kategori tanpa ubah engine):
+
+| Kolom | Arti |
+|---|---|
+| `kode`, `nama` | mis. `PENUH`, `NL-10`, `MANUAL` |
+| `jenis_pajak` | `ppn` · `pph` · `both` |
+| `metode` | `nilai_penuh` · `persentase` · `manual` |
+| `faktor` | untuk `persentase`, mis. `0.10` (=10%); `1.00` untuk penuh |
+| `keterangan`, `is_aktif` | — |
+
+**Seed awal:**
+| kode | metode | faktor | contoh penggunaan |
+|---|---|---|---|
+| `PENUH` *(default)* | nilai_penuh | 1.00 | DPP = subtotal penuh |
+| `NL-10` | persentase | 0.10 | jasa biro perjalanan / pengiriman / freight forwarding |
+| `MANUAL` | manual | — | finance isi DPP langsung (kasus khusus) |
+
+**Logika resolve (engine/module):**
+```
+base = subtotal (exclude PPN)                       -- default dasar
+dpp  = metode='nilai_penuh' → base
+       metode='persentase'  → round(base × faktor)
+       metode='manual'      → input_finance (default = base)
+pph_amount = round(dpp × pph_tarif / 100)           -- dibulatkan ke rupiah penuh
+```
+
+**Pemisahan:** kategori DPP **PPN** dan **PPh** independen (bisa beda kategori di satu transaksi).
+
+**Yang disimpan per transaksi (snapshot, untuk audit & immutability):**
+- `pph_dpp_kategori_id` (FK) + `pph_dpp` (nilai ter-resolve)
+- *(opsional, fase PPN lanjut)* `ppn_dpp_kategori_id` + `ppn_dpp`
+
+**UI saat input data (finance):**
+- Dropdown **Kategori DPP** (default `PENUH`).
+- Field **DPP**: auto-terisi & read-only untuk `PENUH`/`persentase`; **editable** bila `MANUAL`.
+- Tampilkan **DPP & PPh terhitung real-time** sebelum simpan.
+- Validasi lunak: DPP manual > subtotal → peringatan (tidak diblok; akomodasi kasus gross-up).
+
+> **Catatan:** kolom `pph_dpp` dari Fase A tetap dipakai sebagai *nilai ter-resolve*. Yang ditambah di enhancement ini adalah **tabel `dpp_kategori` + kolom `*_dpp_kategori_id`** dan logika resolve — sehingga DPP jadi dinamis & dapat diatur stakeholder, bukan konstanta.
 
 ---
 
@@ -123,13 +168,22 @@ pph_jenis           VARCHAR(12)  NULL               CHECK (pph23|pph42|pph21| ..
 lawan_punya_npwp    BOOLEAN      DEFAULT true       -- false → tarif naik (PPh 23: 2%→4%)
 pph_tarif           NUMERIC(5,2) NULL               -- auto dari (jenis,npwp); bisa di-override
 pph_dipotong_oleh   VARCHAR(16)  DEFAULT 'tidak_ada' CHECK (kita|lawan_transaksi|tidak_ada)
-pph_dpp             NUMERIC(20,2) NULL               -- default = subtotal
+pph_dpp             NUMERIC(20,2) NULL               -- nilai DPP ter-resolve (snapshot)
 pph_amount          NUMERIC(20,2) DEFAULT 0          -- computed: dpp × tarif/100
 ```
+*(✅ kolom di atas sudah dibuat di **Fase A**.)*
+
+**Tambahan enhancement DPP dinamis** (lihat §3.2):
+```
+pph_dpp_kategori_id  UUID NULL  REFERENCES dpp_kategori(id)   -- kategori DPP PPh (default = PENUH)
+-- (fase PPN lanjut) ppn_dpp_kategori_id, ppn_dpp
+```
+
 - Default `pph_dipotong_oleh = 'tidak_ada'` → **zero-impact** untuk semua data lama (backward-compatible; jurnal existing tak berubah).
 - `ppn_dipungut_oleh` default `'kita'` → cocok dengan perilaku PPN saat ini.
 - `lawan_punya_npwp` default `true` (tarif 2%); set `false` untuk vendor/customer tanpa NPWP → engine isi `pph_tarif = 4.00`. Tarif tetap bisa di-override manual.
 - **Tabel referensi tarif** `pph_tarif_default(pph_jenis, ber_npwp, tarif)` (data, bukan kode) → menambah jenis/tarif baru tanpa ubah engine.
+- **Tabel referensi DPP** `dpp_kategori(kode, jenis_pajak, metode, faktor)` (data, bukan kode) → kategori DPP baru tanpa ubah engine; default kategori `PENUH` (faktor 1.00) menjaga perilaku Fase A.
 
 ### 4.3 Engine vocabulary (CHECK `chk_sumber_nominal`)
 Tambah token: `pph_amount`, `kas_neto`. (Sudah ada: `grand_total, subtotal, pajak, total_piutang, bayar_sekarang, nominal_bayar, line_amount, line_tax, biaya_lain_amount`.)
@@ -226,7 +280,7 @@ Kedua jurnal tetap **balanced** dan memakai mekanisme skip-zero yang ada.
 | 1 | **Tarif PPh 23** & non-NPWP | ✅ **Resolved** — default **2% ber-NPWP**, **4% tanpa NPWP** (di-handle agar scalable; rate per-transaksi + tabel default) |
 | 2 | **PPN WAPU/DTP** | ✅ **Resolved** — belum ada customer WAPU → **ditunda** (Fase D dirancang, tak diimplementasi dulu) |
 | 3 | **Sisi AR** — customer memotong PPh dari kita? | ✅ **Resolved** — **Ya**, customer memotong → Fase C **masuk scope** (PPh 23 Dibayar Dimuka saat terima bayar) |
-| 4 | **DPP PPh**: seluruh `subtotal` atau hanya komponen jasa (invoice campur barang+jasa)? | ⏳ Perlu konfirmasi konsultan |
+| 4 | **DPP PPh** (seluruh subtotal vs sebagian / DPP Nilai Lain) | ✅ **Resolved (desain)** — dibuat **dinamis**: kategori DPP data-driven (`PENUH`/`NL-10`/`MANUAL`) + override manual saat input (Fase A.2, §3.2). Tarif & kategori spesifik tetap dikonfirmasi konsultan |
 | 5 | **PPh 4(2) final** (sewa bangunan/konstruksi) dipakai? | ⏳ Di luar scope sekarang (fase lanjut) |
 | 6 | **Pembulatan** PPh ke rupiah penuh | ⏳ Asumsi default: dibulatkan; konfirmasi |
 
@@ -234,9 +288,10 @@ Kedua jurnal tetap **balanced** dan memakai mekanisme skip-zero yang ada.
 
 ## 10. Rencana implementasi bertahap (setelah validasi)
 
-- **Fase A — Fondasi:** tambah COA `1-10400-3`; tabel `pph_tarif_default`; kolom premis pajak (Opsi A) + default backward-compatible; token engine `pph_amount`, `kas_neto`.
-- **Fase B — Modul AP** *(prioritas — kita memotong vendor)*: logic hitung `pph_amount`/`kas_neto` + auto-tarif via NPWP di AP pay; UI input flag PPh 23 + NPWP + tarif; baris config `AP-PAY`.
-- **Fase C — Modul AR** *(in scope — customer memotong PPh dari kita)*: sisi terima bayar; catat `1-10400-3` PPh 23 Dibayar Dimuka (kredit pajak); UI flag; baris config `AR-PAY-RCV`.
+- **Fase A — Fondasi:** ✅ **selesai** — COA `1-10400-3`; tabel `pph_tarif_default`; kolom premis pajak + default backward-compatible; token engine `pph_amount`, `kas_neto`.
+- **Fase A.2 — DPP dinamis** *(enhancement, lihat §3.2)*: tabel `dpp_kategori` (data-driven) + kolom `*_dpp_kategori_id`; helper resolve DPP (`nilai_penuh|persentase|manual`) + pembulatan; **seed `PENUH`/`NL-10`/`MANUAL`**. Default `PENUH` → tak mengubah perilaku. Dipakai oleh Fase B/C.
+- **Fase B — Modul AP** *(prioritas — kita memotong vendor)*: logic hitung `pph_amount`/`kas_neto` + auto-tarif via NPWP + **resolve DPP via kategori/manual** di AP pay; UI input flag PPh 23 + NPWP + **kategori DPP + field DPP** + tarif; baris config `AP-PAY`.
+- **Fase C — Modul AR** *(in scope — customer memotong PPh dari kita)*: sisi terima bayar; catat `1-10400-3` PPh 23 Dibayar Dimuka (kredit pajak); UI flag + **kategori/field DPP**; baris config `AR-PAY-RCV`.
 - **Fase D — PPN non-standar (DITUNDA):** WAPU/DTP (`ppn_dipungut_oleh = lawan`) — tidak ada kebutuhan saat ini.
 - **Fase E — Pembayaran internal (UC#5)** bila relevan.
 - **Fase F — Laporan & rekonsiliasi pajak:** daftar bukti potong, saldo Hutang PPh / PPh Dibayar Dimuka untuk SPT.
