@@ -6,6 +6,7 @@ import {
   AlertTriangleIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  InfoIcon,
   Loader2Icon,
   PencilIcon,
   PlusIcon,
@@ -415,6 +416,21 @@ export default function JournalConfigPage() {
         </div>
       </div>
 
+      {/* PSAK immutability notice — persistent so the impact of edits is unambiguous */}
+      <div className="flex gap-2 rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 text-xs text-blue-900 dark:text-blue-200">
+        <InfoIcon className="h-4 w-4 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-medium">Perubahan hanya berlaku untuk transaksi ke depan.</p>
+          <p className="mt-0.5">
+            Mengubah COA atau posisi debit/kredit di sini <span className="font-medium">tidak</span>{' '}
+            mengubah jurnal yang sudah ter-posting — sesuai prinsip PSAK, jurnal yang sudah diposting
+            bersifat immutable (hanya dapat dikoreksi via reversal). Konfigurasi baru dipakai engine
+            saat membuat jurnal berikutnya. Untuk mengoreksi jurnal lama secara retroaktif, gunakan
+            mekanisme reversal/backfill terpisah.
+          </p>
+        </div>
+      </div>
+
       {/* Config cards */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -532,6 +548,18 @@ export default function JournalConfigPage() {
               {isCreate ? 'Buat Konfigurasi Trigger Baru' : `Edit Konfigurasi — ${editingKode}`}
             </DialogTitle>
           </DialogHeader>
+
+          {/* PSAK reminder when editing an existing trigger */}
+          {!isCreate && (
+            <div className="flex gap-2 rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 p-3 text-xs text-blue-900 dark:text-blue-200">
+              <InfoIcon className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>
+                Perubahan akun/posisi berlaku untuk jurnal yang dibuat{' '}
+                <span className="font-medium">setelah</span> disimpan. Jurnal yang sudah ter-posting
+                tetap tidak berubah (PSAK immutable) — koreksi retroaktif perlu reversal terpisah.
+              </p>
+            </div>
+          )}
 
           {/* Dormant warning for new triggers */}
           {isCreate && (
