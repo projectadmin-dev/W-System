@@ -6,9 +6,11 @@
 >
 > **Decisions locked in this round (Finance):**
 > - Add a scalable **conditional premise** to every transaction module: a *"Dibayar/Dipungut Oleh"* flag for **both PPN and PPh**, driving module calculation **and** journal automation.
-> - PPh type in scope: **PPh 23 (jasa, default 2%)**.
+> - PPh type in scope: **PPh 23 (jasa)** — default **2% (ber-NPWP)**, with **non-NPWP = 4%** supported (rate per-transaction, scalable).
+> - **PPN WAPU/DTP**: tidak ada customer WAPU saat ini → **ditunda** (Fase D, dirancang tapi tidak diimplementasi dulu).
 > - Timing: **at payment** (PSAK — withholding crystallizes when cash moves).
 > - Scope now: **design only**; implementation phased after Finance + tax-consultant validation.
+> - **Pending:** apakah customer AR memotong PPh dari kita (menentukan apakah Fase C / sisi AR dibangun).
 >
 > ⚠️ Tarif & aplikabilitas pajak adalah keputusan hukum — **wajib dikonfirmasi ke konsultan pajak** sebelum go-live. Dokumen ini merancang *mekanismenya*, bukan menetapkan tarif yang mengikat.
 
@@ -24,8 +26,19 @@ PPN **ditambahkan di atas** harga; PPh **dipotong dari** pembayaran, dan arah pe
 |---|---|---|
 | `ppn_dipungut_oleh` | Siapa yang memungut & menyetor PPN | `kita` · `lawan_transaksi` · `tidak_ada` |
 | `pph_jenis` | Jenis PPh yang berlaku | `null` · `pph23` · `pph42` · `pph21` · … |
-| `pph_tarif` | Tarif (%) | mis. `2.00` (default PPh 23) |
+| `lawan_punya_npwp` | Lawan transaksi ber-NPWP? | `true` · `false` |
+| `pph_tarif` | Tarif (%) — **bisa di-override** | default dari (`pph_jenis`, `lawan_punya_npwp`) |
 | `pph_dipotong_oleh` | Siapa yang memotong & menyetor PPh | `kita` · `lawan_transaksi` · `tidak_ada` |
+
+**Penentuan tarif (scalable, default cerdas):** tarif **tidak** hard-code. Sistem menyimpan tabel default `(pph_jenis, npwp?) → tarif`, lalu **boleh di-override** per transaksi:
+
+| `pph_jenis` | ber-NPWP | tanpa NPWP | Catatan |
+|---|---|---|---|
+| `pph23` | **2%** *(default umum)* | **4%** *(2× lipat)* | PPh 23 jasa |
+| `pph42` | (final, per objek) | — | sewa bangunan 10%, dll — fase lanjut |
+| `pph21` | progresif/objek | +20% | individu — fase lanjut |
+
+Saat `lawan_punya_npwp = false` untuk `pph23`, sistem otomatis mengisi `pph_tarif = 4.00` (tetap bisa diubah manual). Menambah jenis/tarif baru cukup menambah baris di tabel default — tanpa ubah engine.
 
 Flag inilah yang menentukan **arah & keberadaan** baris pajak di jurnal — bukan hard-code per trigger. Engine tet앙 config-driven; flag hanya menentukan apakah nominal pajak > 0 dan akun mana yang dipakai.
 
@@ -107,13 +120,16 @@ Tambahkan blok kolom seragam (atau tabel `transaksi_pajak` ternormalisasi — li
 ```
 ppn_dipungut_oleh   VARCHAR(16)  DEFAULT 'kita'      CHECK (kita|lawan_transaksi|tidak_ada)
 pph_jenis           VARCHAR(12)  NULL               CHECK (pph23|pph42|pph21| ...)
-pph_tarif           NUMERIC(5,2) NULL               -- mis. 2.00
+lawan_punya_npwp    BOOLEAN      DEFAULT true       -- false → tarif naik (PPh 23: 2%→4%)
+pph_tarif           NUMERIC(5,2) NULL               -- auto dari (jenis,npwp); bisa di-override
 pph_dipotong_oleh   VARCHAR(16)  DEFAULT 'tidak_ada' CHECK (kita|lawan_transaksi|tidak_ada)
 pph_dpp             NUMERIC(20,2) NULL               -- default = subtotal
 pph_amount          NUMERIC(20,2) DEFAULT 0          -- computed: dpp × tarif/100
 ```
 - Default `pph_dipotong_oleh = 'tidak_ada'` → **zero-impact** untuk semua data lama (backward-compatible; jurnal existing tak berubah).
 - `ppn_dipungut_oleh` default `'kita'` → cocok dengan perilaku PPN saat ini.
+- `lawan_punya_npwp` default `true` (tarif 2%); set `false` untuk vendor/customer tanpa NPWP → engine isi `pph_tarif = 4.00`. Tarif tetap bisa di-override manual.
+- **Tabel referensi tarif** `pph_tarif_default(pph_jenis, ber_npwp, tarif)` (data, bukan kode) → menambah jenis/tarif baru tanpa ubah engine.
 
 ### 4.3 Engine vocabulary (CHECK `chk_sumber_nominal`)
 Tambah token: `pph_amount`, `kas_neto`. (Sudah ada: `grand_total, subtotal, pajak, total_piutang, bayar_sekarang, nominal_bayar, line_amount, line_tax, biaya_lain_amount`.)
@@ -203,23 +219,25 @@ Kedua jurnal tetap **balanced** dan memakai mekanisme skip-zero yang ada.
 
 ---
 
-## 9. Yang perlu dikonfirmasi ke konsultan pajak (sebelum implement)
+## 9. Status konfirmasi pajak
 
-1. **Tarif PPh 23** untuk jenis jasa yang Anda transaksikan (umumnya 2% ber-NPWP; **4% tanpa NPWP** — perlukah handling non-NPWP?).
-2. **DPP PPh**: seluruh `subtotal` atau hanya komponen jasa (bila invoice campur barang+jasa)?
-3. **Sisi AR**: apakah customer Anda memang withholding agent (memotong PPh dari pembayaran)? Untuk siapa saja?
-4. **PPN WAPU/DTP**: ada customer BUMN/bendaharawan (WAPU) atau transaksi PPN DTP? (menentukan apakah `ppn_dipungut_oleh = lawan` perlu di fase awal)
-5. **PPh 4(2) final**: dipakai? (sewa bangunan, konstruksi) — perlakuan beda (final, non-creditable).
-6. **Pembulatan** PPh (umumnya dibulatkan ke rupiah penuh).
+| # | Item | Status |
+|---|---|---|
+| 1 | **Tarif PPh 23** & non-NPWP | ✅ **Resolved** — default **2% ber-NPWP**, **4% tanpa NPWP** (di-handle agar scalable; rate per-transaksi + tabel default) |
+| 2 | **PPN WAPU/DTP** | ✅ **Resolved** — belum ada customer WAPU → **ditunda** (Fase D dirancang, tak diimplementasi dulu) |
+| 3 | **Sisi AR** — customer memotong PPh dari kita? | ⏳ **Pending** — menentukan apakah Fase C dibangun (lihat penjelasan di chat) |
+| 4 | **DPP PPh**: seluruh `subtotal` atau hanya komponen jasa (invoice campur barang+jasa)? | ⏳ Perlu konfirmasi konsultan |
+| 5 | **PPh 4(2) final** (sewa bangunan/konstruksi) dipakai? | ⏳ Di luar scope sekarang (fase lanjut) |
+| 6 | **Pembulatan** PPh ke rupiah penuh | ⏳ Asumsi default: dibulatkan; konfirmasi |
 
 ---
 
 ## 10. Rencana implementasi bertahap (setelah validasi)
 
-- **Fase A — Fondasi:** tambah COA `1-10400-3`; tambah kolom premis pajak (Opsi A) + default backward-compatible; tambah token engine `pph_amount`, `kas_neto`.
-- **Fase B — Modul AP:** logic hitung `pph_amount`/`kas_neto` di AP pay; UI input flag PPh 23 + tarif; baris config `AP-PAY`.
-- **Fase C — Modul AR:** sisi terima bayar (customer potong); UI flag; baris config `AR-PAY-RCV`.
-- **Fase D — PPN non-standar:** WAPU/DTP (`ppn_dipungut_oleh = lawan`).
+- **Fase A — Fondasi:** tambah COA `1-10400-3`; tabel `pph_tarif_default`; kolom premis pajak (Opsi A) + default backward-compatible; token engine `pph_amount`, `kas_neto`.
+- **Fase B — Modul AP** *(prioritas — kita memotong vendor)*: logic hitung `pph_amount`/`kas_neto` + auto-tarif via NPWP di AP pay; UI input flag PPh 23 + NPWP + tarif; baris config `AP-PAY`.
+- **Fase C — Modul AR** *(kondisional — tunggu jawaban #3 §9)*: sisi terima bayar bila customer memotong; UI flag; baris config `AR-PAY-RCV`.
+- **Fase D — PPN non-standar (DITUNDA):** WAPU/DTP (`ppn_dipungut_oleh = lawan`) — tidak ada kebutuhan saat ini.
 - **Fase E — Pembayaran internal (UC#5)** bila relevan.
 - **Fase F — Laporan & rekonsiliasi pajak:** daftar bukti potong, saldo Hutang PPh / PPh Dibayar Dimuka untuk SPT.
 - **Fase G — Tes & QA** (modul `journal-automation` / `tax-withholding`).
