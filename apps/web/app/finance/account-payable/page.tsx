@@ -14,6 +14,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@workspace/ui/components/select'
+import { Checkbox } from '@workspace/ui/components/checkbox'
+import { computeWithholding } from '@/lib/finance/tax-withholding'
 import {
   ChevronDownIcon, ChevronRightIcon, PlusIcon, XIcon, SearchIcon, RefreshCwIcon,
   WalletIcon, AlertTriangleIcon, CheckCircle2Icon, SendIcon, FileDownIcon, Loader2Icon,
@@ -791,12 +793,24 @@ function RejectDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () =>
 }
 
 // ── Pay dialog ──────────────────────────────────────────────────────────────────
+interface DppKategoriRef { id: string; kode: string; nama: string; metode: string; faktor: number | null }
+interface PphTarifRef { pph_jenis: string; ber_npwp: boolean; tarif: number }
+
 function PayDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () => void; onDone: () => void }) {
   const [amount, setAmount] = useState(String(inv.amount_due))
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [bankCoaId, setBankCoaId] = useState('')
   const [cashAccounts, setCashAccounts] = useState<{ id: string; account_code: string; account_name: string }[]>([])
+
+  // PPh withholding state
+  const [pphOn, setPphOn] = useState(false)
+  const [berNpwp, setBerNpwp] = useState(true)
+  const [dppKategoriId, setDppKategoriId] = useState('')
+  const [manualDpp, setManualDpp] = useState('')
+  const [dppList, setDppList] = useState<DppKategoriRef[]>([])
+  const [tarifList, setTarifList] = useState<PphTarifRef[]>([])
+
   useEffect(() => {
     fetch('/api/finance/coa?type=asset')
       .then(r => r.json())
@@ -804,10 +818,37 @@ function PayDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () => vo
         ? d.filter((a: any) => a.is_active && typeof a.account_code === 'string' && a.account_code.startsWith('1-100'))
         : []))
       .catch(() => {})
+    fetch('/api/finance/tax/refs')
+      .then(r => r.json())
+      .then(d => {
+        const dpp: DppKategoriRef[] = d.dpp_kategori ?? []
+        setDppList(dpp)
+        setTarifList(d.pph_tarif ?? [])
+        const penuh = dpp.find(k => k.kode === 'PENUH')
+        if (penuh) setDppKategoriId(penuh.id)
+      })
+      .catch(() => {})
   }, [])
+
+  const payAmt = Number(amount) || 0
+  const kategori = dppList.find(k => k.id === dppKategoriId) || null
+  const isManual = kategori?.metode === 'manual'
+  // PPh 23 rate from the data-driven table (2% NPWP / 4% non-NPWP).
+  const tarif = tarifList.find(t => t.pph_jenis === 'pph23' && t.ber_npwp === berNpwp)?.tarif ?? (berNpwp ? 2 : 4)
+
+  const wh = computeWithholding({
+    grossSettled: payAmt,
+    base: Number(inv.subtotal || 0),
+    dipotongOleh: pphOn ? 'kita' : 'tidak_ada',
+    tarif,
+    kategori: kategori ? { metode: kategori.metode as any, faktor: kategori.faktor } : null,
+    manualDpp: isManual ? Number(manualDpp) || 0 : null,
+  })
+
   const go = async () => {
     const a = Number(amount)
     if (a <= 0) { toast.error('Nominal harus > 0'); return }
+    if (pphOn && wh.kasNeto < 0) { toast.error('PPh melebihi nominal bayar — periksa DPP'); return }
     setBusy(true)
     try {
       const bank = cashAccounts.find(c => c.id === bankCoaId)
@@ -817,17 +858,24 @@ function PayDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () => vo
           amount: a, notes,
           bank_coa_id: bankCoaId || undefined,
           bank_label: bank ? `${bank.account_code} - ${bank.account_name}` : undefined,
+          // PPh premise (route recomputes authoritatively)
+          pph_dipotong_oleh: pphOn ? 'kita' : 'tidak_ada',
+          pph_jenis: pphOn ? 'pph23' : undefined,
+          lawan_punya_npwp: berNpwp,
+          pph_dpp_kategori_id: pphOn ? (dppKategoriId || undefined) : undefined,
+          pph_dpp_manual: pphOn && isManual ? Number(manualDpp) || 0 : undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(json.error ?? 'Gagal'); return }
+      if (json.warning) toast.warning(json.warning)
       toast.success('Pembayaran tercatat')
       onDone()
     } catch (e) { toast.error(String(e)) } finally { setBusy(false) }
   }
   return (
     <Dialog open onOpenChange={o => { if (!o) onClose() }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bayar Tagihan</DialogTitle>
           <DialogDescription>{inv.pihak_ketiga} · Sisa {formatRpAP(inv.amount_due, inv.mata_uang)}</DialogDescription>
@@ -849,6 +897,50 @@ function PayDialog({ inv, onClose, onDone }: { inv: APInvoice; onClose: () => vo
               </SelectContent>
             </Select>
           </Field>
+
+          {/* ── PPh 23 withholding ─────────────────────────────────── */}
+          <div className="rounded-lg border p-3 space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <Checkbox checked={pphOn} onCheckedChange={v => setPphOn(!!v)} />
+              Potong PPh 23 dari pembayaran ini
+            </label>
+            {pphOn && (
+              <div className="space-y-3 pt-1">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={berNpwp} onCheckedChange={v => setBerNpwp(!!v)} />
+                  Vendor ber-NPWP
+                  <span className="text-xs text-muted-foreground">(tarif {berNpwp ? '2%' : '4% (tanpa NPWP)'})</span>
+                </label>
+                <Field label="Kategori DPP (Dasar Pengenaan)">
+                  <Select value={dppKategoriId} onValueChange={setDppKategoriId}>
+                    <SelectTrigger><SelectValue placeholder="Pilih kategori DPP..." /></SelectTrigger>
+                    <SelectContent>
+                      {dppList.map(k => (
+                        <SelectItem key={k.id} value={k.id}>{k.kode} — {k.nama}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                {isManual && (
+                  <Field label="Nilai DPP (manual)" req>
+                    <Input type="number" value={manualDpp} onChange={e => setManualDpp(e.target.value)} placeholder={String(inv.subtotal ?? '')} />
+                  </Field>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-sm rounded-md bg-muted/40 p-3">
+                  <div><p className="text-xs text-muted-foreground">DPP</p><p className="font-semibold tabular-nums">{formatRpAP(wh.dpp, inv.mata_uang)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">PPh ({tarif}%)</p><p className="font-semibold tabular-nums text-amber-700">{formatRpAP(wh.pphAmount, inv.mata_uang)}</p></div>
+                  <div className="col-span-2 border-t pt-2 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Kas keluar (neto ke vendor)</span>
+                    <span className="font-bold tabular-nums">{formatRpAP(wh.kasNeto, inv.mata_uang)}</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Tagihan tetap lunas senilai gross; PPh {formatRpAP(wh.pphAmount, inv.mata_uang)} disetor ke negara (Hutang PPh 23). Pastikan terbitkan bukti potong.
+                </p>
+              </div>
+            )}
+          </div>
+
           <Field label="Catatan (opsional)"><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} /></Field>
         </div>
         <DialogFooter>
