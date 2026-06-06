@@ -542,7 +542,7 @@ export default function JournalConfigPage() {
 
       {/* ── Editor dialog ─────────────────────────────────────────────────── */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isCreate ? 'Buat Konfigurasi Trigger Baru' : `Edit Konfigurasi — ${editingKode}`}
@@ -650,113 +650,135 @@ export default function JournalConfigPage() {
               </Button>
             </div>
 
-            <div className="divide-y">
+            <div className="space-y-3 p-3">
               {fRows.map((r, idx) => {
                 const isMulti = MULTI_DYNAMIC_VALUES.includes(r.dynamic_source as any)
                 return (
-                  <div key={r.key} className="p-3 grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-                    {/* index + posisi */}
-                    <div className="lg:col-span-2 grid gap-1.5">
-                      <Label className="text-xs text-muted-foreground">Baris {idx + 1} · Posisi</Label>
-                      <Select value={r.posisi} onValueChange={(v) => updateRow(r.key, { posisi: v as any })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {POSISI_OPTIONS.map((p) => (
-                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <div key={r.key} className="rounded-lg border bg-card p-4">
+                    {/* Row header: badge + remove */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Baris {idx + 1}</span>
+                        <Badge
+                          variant={r.posisi === 'debit' ? 'default' : 'secondary'}
+                          className="text-xs"
+                        >
+                          {r.posisi === 'debit' ? 'Debit' : 'Credit'}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive h-8"
+                        onClick={() => removeRow(r.key)}
+                      >
+                        <Trash2Icon className="h-3.5 w-3.5 mr-1" />
+                        Hapus
+                      </Button>
                     </div>
 
-                    {/* account mode + value */}
-                    <div className="lg:col-span-4 grid gap-1.5">
-                      <Label className="text-xs text-muted-foreground">Akun</Label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={r.accountMode}
-                          onValueChange={(v) => updateRow(r.key, { accountMode: v as any })}
-                        >
-                          <SelectTrigger className="w-28 shrink-0"><SelectValue /></SelectTrigger>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Posisi */}
+                      <div className="grid gap-1.5">
+                        <Label className="text-xs text-muted-foreground">Posisi</Label>
+                        <Select value={r.posisi} onValueChange={(v) => updateRow(r.key, { posisi: v as any })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="fixed">Tetap</SelectItem>
-                            <SelectItem value="dynamic">Dinamis</SelectItem>
+                            {POSISI_OPTIONS.map((p) => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
-                        {r.accountMode === 'fixed' ? (
-                          <SearchableSelect
-                            options={coaOptions}
-                            value={r.coa_id}
-                            onValueChange={(v) => updateRow(r.key, { coa_id: v })}
-                            placeholder="Pilih COA…"
-                            searchPlaceholder="Cari kode/nama akun…"
-                          />
-                        ) : (
-                          <Select
-                            value={r.dynamic_source}
-                            onValueChange={(v) => updateRow(r.key, { dynamic_source: v })}
-                          >
-                            <SelectTrigger><SelectValue placeholder="Pilih sumber dinamis…" /></SelectTrigger>
-                            <SelectContent>
-                              {DYNAMIC_SOURCE_OPTIONS.map((d) => (
-                                <SelectItem key={d.value} value={d.value}>
-                                  {d.label}{d.multi ? ' (multi-line)' : ''}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                      </div>
+
+                      {/* Sumber nominal */}
+                      <div className="grid gap-1.5">
+                        <Label className="text-xs text-muted-foreground">Sumber Nominal</Label>
+                        <Select
+                          value={r.sumber_nominal}
+                          onValueChange={(v) => updateRow(r.key, { sumber_nominal: v })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {NOMINAL_SOURCE_OPTIONS.map((nm) => (
+                              <SelectItem key={nm.value} value={nm.value}>
+                                {nm.label}{nm.perLine ? ' (per line)' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isMulti && (
+                          <p className="text-[11px] text-muted-foreground">
+                            Sumber multi-line: gunakan nominal "per line".
+                          </p>
                         )}
                       </div>
-                    </div>
 
-                    {/* sumber nominal */}
-                    <div className="lg:col-span-3 grid gap-1.5">
-                      <Label className="text-xs text-muted-foreground">Sumber Nominal</Label>
-                      <Select
-                        value={r.sumber_nominal}
-                        onValueChange={(v) => updateRow(r.key, { sumber_nominal: v })}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {NOMINAL_SOURCE_OPTIONS.map((nm) => (
-                            <SelectItem key={nm.value} value={nm.value}>
-                              {nm.label}{nm.perLine ? ' (per line)' : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {isMulti && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Sumber multi-line: gunakan nominal "per line".
-                        </p>
-                      )}
-                    </div>
+                      {/* Akun: mode + value (full width) */}
+                      <div className="grid gap-1.5 md:col-span-2">
+                        <Label className="text-xs text-muted-foreground">Akun</Label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Select
+                            value={r.accountMode}
+                            onValueChange={(v) => updateRow(r.key, { accountMode: v as any })}
+                          >
+                            <SelectTrigger className="w-full sm:w-32 shrink-0"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed">Akun Tetap</SelectItem>
+                              <SelectItem value="dynamic">Akun Dinamis</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <div className="flex-1 min-w-0">
+                            {r.accountMode === 'fixed' ? (
+                              <SearchableSelect
+                                options={coaOptions}
+                                value={r.coa_id}
+                                onValueChange={(v) => updateRow(r.key, { coa_id: v })}
+                                placeholder="Pilih COA…"
+                                searchPlaceholder="Cari kode/nama akun…"
+                              />
+                            ) : (
+                              <Select
+                                value={r.dynamic_source}
+                                onValueChange={(v) => updateRow(r.key, { dynamic_source: v })}
+                              >
+                                <SelectTrigger><SelectValue placeholder="Pilih sumber dinamis…" /></SelectTrigger>
+                                <SelectContent>
+                                  {DYNAMIC_SOURCE_OPTIONS.map((d) => (
+                                    <SelectItem key={d.value} value={d.value}>
+                                      {d.label}{d.multi ? ' (multi-line)' : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        </div>
+                      </div>
 
-                    {/* optional + remove */}
-                    <div className="lg:col-span-3 grid gap-1.5">
-                      <Label className="text-xs text-muted-foreground">Opsi</Label>
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      {/* Keterangan baris (full width) */}
+                      <div className="grid gap-1.5 md:col-span-2">
+                        <Label className="text-xs text-muted-foreground">Keterangan Baris (opsional)</Label>
+                        <Input
+                          placeholder="mis. PPN Keluaran"
+                          value={r.keterangan_baris}
+                          onChange={(e) => updateRow(r.key, { keterangan_baris: e.target.value })}
+                        />
+                      </div>
+
+                      {/* Optional flag */}
+                      <div className="md:col-span-2">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
                           <Checkbox
                             checked={r.is_optional}
                             onCheckedChange={(v) => updateRow(r.key, { is_optional: !!v })}
                           />
-                          Opsional
+                          <span>Baris opsional</span>
+                          <span className="text-xs text-muted-foreground">
+                            — dilewati otomatis jika nominal = 0 (mis. PPN)
+                          </span>
                         </label>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => removeRow(r.key)}
-                        >
-                          <Trash2Icon className="h-3.5 w-3.5" />
-                        </Button>
                       </div>
-                      <Input
-                        placeholder="Keterangan baris (opsional)"
-                        value={r.keterangan_baris}
-                        onChange={(e) => updateRow(r.key, { keterangan_baris: e.target.value })}
-                        className="h-8 text-xs"
-                      />
                     </div>
                   </div>
                 )
