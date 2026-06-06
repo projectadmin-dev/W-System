@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeftIcon, CheckIcon } from 'lucide-react'
+import { ArrowLeftIcon, CheckIcon, Loader2Icon } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/components/card'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@workspace/ui/components/dialog'
 import { toast } from 'sonner'
 import { cn } from '@workspace/ui/lib/utils'
 import type { Pembayaran, PayStatus } from '@/types/fund-request'
 import { PAY_STATUS_LABEL, PAY_STATUS_COLOR, formatRpFR, formatDateFR } from '@/types/fund-request'
+import { computeWithholding } from '@/lib/finance/tax-withholding'
+import { PphPremiseFields, EMPTY_PPH_PREMISE, type PphPremiseValue } from '@/components/finance/pph-premise-fields'
 
 function PayStatusBadge({ status }: { status: PayStatus }) {
   return (
@@ -33,6 +38,10 @@ export default function PembayaranDetailPage() {
   const [pay, setPay] = useState<Pembayaran | null>(null)
   const [loading, setLoading] = useState(true)
   const [executing, setExecuting] = useState(false)
+  const [showExec, setShowExec] = useState(false)
+  const [pphPremise, setPphPremise] = useState<PphPremiseValue>(EMPTY_PPH_PREMISE)
+  const [dppRefs, setDppRefs] = useState<{ id: string; kode: string; metode: string; faktor: number | null }[]>([])
+  const [tarifRefs, setTarifRefs] = useState<{ pph_jenis: string; ber_npwp: boolean; tarif: number }[]>([])
 
   const fetchData = async () => {
     setLoading(true)
@@ -46,14 +55,34 @@ export default function PembayaranDetailPage() {
 
   useEffect(() => { fetchData() }, [id])
 
+  useEffect(() => {
+    fetch('/api/finance/tax/refs')
+      .then(r => r.json())
+      .then(d => { setDppRefs(d.dpp_kategori ?? []); setTarifRefs(d.pph_tarif ?? []) })
+      .catch(() => {})
+  }, [])
+
   const handleExecute = async () => {
-    if (!confirm('Tandai pembayaran ini sebagai LUNAS?')) return
     setExecuting(true)
     try {
-      const res = await fetch(`/api/finance/pembayaran/${id}/execute`, { method: 'POST' })
+      const body = pphPremise.enabled
+        ? {
+            pph_dipotong_oleh: 'kita',
+            pph_jenis: 'pph23',
+            lawan_punya_npwp: pphPremise.berNpwp,
+            pph_dpp_kategori_id: pphPremise.dppKategoriId || undefined,
+          }
+        : {}
+      const res = await fetch(`/api/finance/pembayaran/${id}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(json.error ?? 'Gagal'); return }
+      if (json.warning) toast.warning(json.warning)
       toast.success('Pembayaran ditandai LUNAS')
+      setShowExec(false)
       fetchData()
     } catch (e) { toast.error(String(e)) } finally { setExecuting(false) }
   }
@@ -79,7 +108,7 @@ export default function PembayaranDetailPage() {
         <div className="flex items-center gap-2">
           <PayStatusBadge status={pay.status} />
           {pay.status !== 'PAID' && pay.status !== 'CANCELLED' && (
-            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleExecute} disabled={executing}>
+            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => setShowExec(true)} disabled={executing}>
               <CheckIcon className="h-4 w-4 mr-1" />Tandai Lunas
             </Button>
           )}
@@ -175,6 +204,54 @@ export default function PembayaranDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Execute (mark paid) dialog with optional PPh 23 withholding */}
+      <Dialog open={showExec} onOpenChange={setShowExec}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tandai Pembayaran LUNAS</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const nominalBayar = Number(pay.nominal_bayar || 0)
+            const biayaTotal = pay.biaya_lain.reduce((s, b) => s + b.nominal, 0)
+            const gross = nominalBayar + biayaTotal
+            const kategori = dppRefs.find(k => k.id === pphPremise.dppKategoriId) || null
+            const tarif = tarifRefs.find(t => t.pph_jenis === 'pph23' && t.ber_npwp === pphPremise.berNpwp)?.tarif ?? (pphPremise.berNpwp ? 2 : 4)
+            const wh = computeWithholding({
+              grossSettled: gross,
+              base: nominalBayar,
+              dipotongOleh: pphPremise.enabled ? 'kita' : 'tidak_ada',
+              tarif,
+              kategori: kategori ? { metode: kategori.metode as any, faktor: kategori.faktor } : null,
+            })
+            return (
+              <div className="space-y-4 py-2 text-sm">
+                <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-3">
+                  <div><p className="text-xs text-muted-foreground">Nominal Bayar</p><p className="font-semibold tabular-nums">{formatRpFR(nominalBayar, pay.mata_uang)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Biaya Lain</p><p className="font-semibold tabular-nums">{formatRpFR(biayaTotal, pay.mata_uang)}</p></div>
+                  <div className="col-span-2 border-t pt-2 flex justify-between"><span className="text-xs text-muted-foreground">Total (gross)</span><span className="font-bold tabular-nums">{formatRpFR(gross, pay.mata_uang)}</span></div>
+                </div>
+
+                <PphPremiseFields value={pphPremise} onChange={setPphPremise} context="ap" />
+
+                {pphPremise.enabled && (
+                  <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-3">
+                    <div><p className="text-xs text-muted-foreground">DPP</p><p className="font-semibold tabular-nums">{formatRpFR(wh.dpp, pay.mata_uang)}</p></div>
+                    <div><p className="text-xs text-muted-foreground">PPh ({tarif}%)</p><p className="font-semibold tabular-nums text-amber-700">{formatRpFR(wh.pphAmount, pay.mata_uang)}</p></div>
+                    <div className="col-span-2 border-t pt-2 flex justify-between"><span className="text-xs text-muted-foreground">Kas keluar (neto)</span><span className="font-bold tabular-nums">{formatRpFR(wh.kasNeto, pay.mata_uang)}</span></div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExec(false)} disabled={executing}>Batal</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleExecute} disabled={executing}>
+              {executing ? <Loader2Icon className="h-4 w-4 animate-spin" /> : 'Tandai Lunas'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

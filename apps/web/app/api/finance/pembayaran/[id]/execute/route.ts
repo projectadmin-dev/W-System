@@ -2,19 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { processJournalAutomation } from '@/lib/finance/journal-engine'
 import { getCoaIdByCode, getDefaultExpenseCoaId, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
+import { type PihakPajak } from '@/lib/finance/tax-withholding'
+import { resolveWithholding } from '@/lib/finance/tax-withholding-server'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const SYSTEM_USER = '812558af-8be8-4c53-b581-e6a4f1c91147'
 
 // POST /api/finance/pembayaran/:id/execute — mark as PAID + auto-journal (UC#5)
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// Optional body: PPh premise (we withhold from the third party at disbursement).
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     const db = createAdminClient()
+    const body = await req.json().catch(() => ({}))
 
     const { data: pay } = await db
       .from('pembayaran')
-      .select('id, status, permintaan_uang_id, doc_number, tanggal_pembayaran, nominal_bayar, mata_uang, bank_dari_coa_id, created_by')
+      .select('id, status, permintaan_uang_id, doc_number, tanggal_pembayaran, nominal_bayar, mata_uang, bank_dari_coa_id, created_by, pph_dipotong_oleh, pph_jenis, lawan_punya_npwp, pph_tarif, pph_dpp_kategori_id, pph_dpp')
       .eq('id', id)
       .eq('tenant_id', TENANT)
       .single()
@@ -23,10 +27,42 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     const now = new Date().toISOString()
 
+    // ── PPh withholding on the internal disbursement (we withhold from the
+    // third party). DPP basis = nominal_bayar (the service value); biaya lain
+    // are not part of the PPh base. Gross cash out = nominal_bayar + Σ biaya.
+    const { data: biayaPre } = await db
+      .from('pembayaran_biaya_lain').select('nominal').eq('pembayaran_id', id)
+    const biayaTotalPre = (biayaPre ?? []).reduce((s: number, b: any) => s + Number(b.nominal || 0), 0)
+    const nominalBayar = Number(pay.nominal_bayar || 0)
+    const grossOut = nominalBayar + biayaTotalPre
+
+    const wh = await resolveWithholding(
+      db,
+      TENANT,
+      {
+        dipotongOleh: (body.pph_dipotong_oleh ?? pay.pph_dipotong_oleh ?? 'tidak_ada') as PihakPajak,
+        jenis: body.pph_jenis ?? pay.pph_jenis ?? null,
+        berNpwp: (body.lawan_punya_npwp ?? pay.lawan_punya_npwp ?? true) !== false,
+        tarifOverride: body.pph_tarif ?? pay.pph_tarif ?? null,
+        dppKategoriId: body.pph_dpp_kategori_id ?? pay.pph_dpp_kategori_id ?? null,
+        manualDpp: body.pph_dpp_manual ?? pay.pph_dpp ?? null,
+      },
+      nominalBayar,
+      grossOut,
+    )
+
     await db.from('pembayaran').update({
       status: 'PAID',
       paid_at: now,
       updated_at: now,
+      pph_dipotong_oleh: body.pph_dipotong_oleh ?? pay.pph_dipotong_oleh ?? 'tidak_ada',
+      pph_jenis: wh.pphAmount > 0 ? (body.pph_jenis ?? pay.pph_jenis ?? 'pph23') : pay.pph_jenis,
+      lawan_punya_npwp: (body.lawan_punya_npwp ?? pay.lawan_punya_npwp ?? true) !== false,
+      pph_tarif: wh.pphAmount > 0 ? wh.tarif : pay.pph_tarif,
+      pph_dpp_kategori_id: body.pph_dpp_kategori_id ?? pay.pph_dpp_kategori_id ?? null,
+      pph_dpp: wh.pphAmount > 0 ? wh.dpp : pay.pph_dpp,
+      pph_amount: wh.pphAmount,
+      kas_neto: wh.kasNeto,
     }).eq('id', id)
 
     // Mark linked PU as PAID
@@ -59,8 +95,6 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         amount: Number(b.nominal || 0),
         description: b.deskripsi || 'Biaya lain',
       }))
-      const biayaTotal = biayaLines.reduce((s: number, l: any) => s + l.amount, 0)
-      const nominalBayar = Number(pay.nominal_bayar || 0)
 
       const result = await processJournalAutomation({
         triggerCode: 'PMB-INTERNAL',
@@ -72,9 +106,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         description: `Pembayaran internal ${pay.doc_number}`,
         referenceNumber: pay.doc_number,
         currency: pay.mata_uang || 'IDR',
+        // grand_total = total expense (main + biaya); kas_neto = cash out after
+        // PPh withheld; pph_amount → Cr Hutang PPh 23. No PPh → kas_neto=grand_total.
         nominals: {
           nominal_bayar: nominalBayar,
-          grand_total: nominalBayar + biayaTotal, // total cash out = main + biaya lain
+          grand_total: grossOut,
+          pph_amount: wh.pphAmount,
+          kas_neto: wh.kasNeto,
         },
         dynamicAccounts: { pmb_expense_coa: expenseCoaId, pmb_bank_coa: bankCoaId },
         dynamicLines: { pmb_biaya_lain_coa: biayaLines },
