@@ -114,6 +114,11 @@ export interface CreateInvoiceRequest {
   status_bayar: StatusBayar
   /** Revenue account to credit on issuance (UC#1). Falls back to default if omitted. */
   revenue_coa_id?: string
+  /** PPh withholding premise (customer withholds from us). Resolved into amounts at payment. */
+  pph_dipotong_oleh?: 'kita' | 'lawan_transaksi' | 'tidak_ada'
+  pph_jenis?: string
+  lawan_punya_npwp?: boolean
+  pph_dpp_kategori_id?: string
 }
 
 export interface UpdatePaymentRequest {

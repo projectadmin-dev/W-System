@@ -403,6 +403,11 @@ export async function createInvoice(
       status_bayar: i === 0 ? payload.status_bayar : 'belum',
       status_kirim: payload.tipe_invoice === 'recurring' ? 'reminder' : 'sent',
       revenue_coa_id: payload.revenue_coa_id || null,
+      // Withholding premise — resolved into amounts at payment (Fase C).
+      pph_dipotong_oleh: payload.pph_dipotong_oleh ?? 'tidak_ada',
+      pph_jenis: payload.pph_jenis ?? null,
+      lawan_punya_npwp: payload.lawan_punya_npwp ?? true,
+      pph_dpp_kategori_id: payload.pph_dpp_kategori_id ?? null,
       created_by: userId,
     }
 

@@ -33,6 +33,7 @@ import {
 } from '@workspace/ui/components/select'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { computeWithholding } from '@/lib/finance/tax-withholding'
+import { PphPremiseFields, pphPremiseToPayload, EMPTY_PPH_PREMISE, type PphPremiseValue } from '@/components/finance/pph-premise-fields'
 import { toast } from 'sonner'
 import { cn } from '@workspace/ui/lib/utils'
 import type {
@@ -447,6 +448,7 @@ function NewInvoiceModal({
   const [selectedProject, setSelectedProject] = useState<ProjectOption | null>(null)
   const [recurringDates, setRecurringDates] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [pphPremise, setPphPremise] = useState<PphPremiseValue>(EMPTY_PPH_PREMISE)
 
   useEffect(() => {
     if (!open) return
@@ -534,6 +536,7 @@ function NewInvoiceModal({
         deadline_bayar: form.deadline_bayar,
         status_bayar: form.status_bayar!,
         revenue_coa_id: form.revenue_coa_id,
+        ...pphPremiseToPayload(pphPremise, 'ar'),
       }
       const res = await fetch('/api/ar/invoices', {
         method: 'POST',
@@ -747,6 +750,8 @@ function NewInvoiceModal({
               </Select>
             </div>
           </div>
+
+          <PphPremiseFields value={pphPremise} onChange={setPphPremise} context="ar" />
         </div>
 
         <DialogFooter>
