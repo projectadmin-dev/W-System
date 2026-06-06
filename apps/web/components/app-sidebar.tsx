@@ -229,6 +229,7 @@ const data = {
         { title: "Approval Dashboard", url: "/finance/approval-dashboard" },
         { title: "Chart of Accounts", url: "/finance/coa" },
         { title: "Journal Entries", url: "/finance/journal" },
+        { title: "Konfigurasi Jurnal", url: "/finance/journal-config" },
         { title: "Petty Cash", url: "/finance/petty-cash" },
         { title: "Fiscal Periods", url: "/finance/periods" },
 
