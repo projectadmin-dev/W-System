@@ -2,7 +2,7 @@
 // Business logic for AR invoices, payments, and KPI summaries.
 
 import { createAdminClient } from '@/lib/supabase-server'
-import { processJournalAutomation } from '@/lib/finance/journal-engine'
+import { processJournalAutomation, reverseJournalsForSource } from '@/lib/finance/journal-engine'
 import { getCoaIdByCode, DEFAULT_REVENUE_CODE, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
 import { resolveWithholding } from '@/lib/finance/tax-withholding-server'
 import type {
@@ -617,6 +617,19 @@ export async function archiveInvoice(
     .eq('tenant_id', tenantId)
 
   if (error) throw new Error(error.message)
+
+  // Reverse the invoice-issue journal and any receipt journals (Phase 5).
+  // Idempotent + non-blocking: archiving must succeed even if reversal can't.
+  try {
+    await reverseJournalsForSource('ar_invoice', invoiceId, 'Invoice diarsipkan', userId)
+    const { data: pays } = await db
+      .from('ar_payment_history').select('id').eq('invoice_id', invoiceId)
+    for (const p of pays ?? []) {
+      await reverseJournalsForSource('ar_payment', p.id, 'Invoice diarsipkan', userId)
+    }
+  } catch (err) {
+    console.error('[archiveInvoice reversal]', err)
+  }
 }
 
 export async function archiveProjectInvoices(
