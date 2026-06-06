@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from '@workspace/ui/components/select'
 import { Checkbox } from '@workspace/ui/components/checkbox'
+import { computeWithholding } from '@/lib/finance/tax-withholding'
 import { toast } from 'sonner'
 import { cn } from '@workspace/ui/lib/utils'
 import type {
@@ -200,6 +201,14 @@ function EditPaymentModal({
   const [history, setHistory] = useState<ARPaymentHistory[]>([])
   const [saving, setSaving] = useState(false)
 
+  // PPh withholding (customer withholds from us)
+  const [pphOn, setPphOn] = useState(false)
+  const [berNpwp, setBerNpwp] = useState(true)
+  const [dppKategoriId, setDppKategoriId] = useState('')
+  const [manualDpp, setManualDpp] = useState('')
+  const [dppList, setDppList] = useState<{ id: string; kode: string; nama: string; metode: string; faktor: number | null }[]>([])
+  const [tarifList, setTarifList] = useState<{ pph_jenis: string; ber_npwp: boolean; tarif: number }[]>([])
+
   useEffect(() => {
     if (invoice && open) {
       setForm({
@@ -210,8 +219,37 @@ function EditPaymentModal({
         catatan_pembayaran: '',
       })
       setHistory(invoice.payment_history ?? [])
+      setPphOn(false)
+      setBerNpwp(true)
+      setManualDpp('')
     }
   }, [invoice, open])
+
+  useEffect(() => {
+    if (!open) return
+    fetch('/api/finance/tax/refs')
+      .then((r) => r.json())
+      .then((d) => {
+        const dpp = d.dpp_kategori ?? []
+        setDppList(dpp)
+        setTarifList(d.pph_tarif ?? [])
+        const penuh = dpp.find((k: any) => k.kode === 'PENUH')
+        if (penuh) setDppKategoriId(penuh.id)
+      })
+      .catch(() => {})
+  }, [open])
+
+  const kategori = dppList.find((k) => k.id === dppKategoriId) || null
+  const isManual = kategori?.metode === 'manual'
+  const tarif = tarifList.find((t) => t.pph_jenis === 'pph23' && t.ber_npwp === berNpwp)?.tarif ?? (berNpwp ? 2 : 4)
+  const wh = computeWithholding({
+    grossSettled: form.bayar_sekarang || 0,
+    base: Number(invoice?.subtotal || 0),
+    dipotongOleh: pphOn ? 'lawan_transaksi' : 'tidak_ada',
+    tarif,
+    kategori: kategori ? { metode: kategori.metode as any, faktor: kategori.faktor } : null,
+    manualDpp: isManual ? Number(manualDpp) || 0 : null,
+  })
 
   if (!invoice) return null
 
@@ -221,12 +259,20 @@ function EditPaymentModal({
     if (form.bayar_sekarang <= 0) { toast.error('Bayar sekarang harus > 0'); return }
     if (form.bayar_sekarang > invoice.sisa_piutang) { toast.error('Tidak boleh melebihi sisa piutang'); return }
     if (!form.bank_id) { toast.error('Bank wajib dipilih'); return }
+    if (pphOn && wh.kasNeto < 0) { toast.error('PPh melebihi nominal bayar — periksa DPP'); return }
     setSaving(true)
     try {
       const res = await fetch(`/api/ar/invoices/${invoice.id}/payment`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          pph_dipotong_oleh: pphOn ? 'lawan_transaksi' : 'tidak_ada',
+          pph_jenis: pphOn ? 'pph23' : undefined,
+          lawan_punya_npwp: berNpwp,
+          pph_dpp_kategori_id: pphOn ? (dppKategoriId || undefined) : undefined,
+          pph_dpp_manual: pphOn && isManual ? Number(manualDpp) || 0 : undefined,
+        }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       toast.success('Pembayaran berhasil dicatat')
@@ -287,6 +333,51 @@ function EditPaymentModal({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* ── PPh 23 dipotong customer ───────────────────────── */}
+          <div className="rounded-lg border p-3 space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <Checkbox checked={pphOn} onCheckedChange={(v) => setPphOn(!!v)} />
+              Customer memotong PPh 23
+            </label>
+            {pphOn && (
+              <div className="space-y-3 pt-1">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={berNpwp} onCheckedChange={(v) => setBerNpwp(!!v)} />
+                  Perusahaan ber-NPWP
+                  <span className="text-xs text-muted-foreground">(tarif {berNpwp ? '2%' : '4% (tanpa NPWP)'})</span>
+                </label>
+                <div>
+                  <label className="text-xs font-medium">Kategori DPP (Dasar Pengenaan)</label>
+                  <Select value={dppKategoriId} onValueChange={setDppKategoriId}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih kategori DPP..." /></SelectTrigger>
+                    <SelectContent>
+                      {dppList.map((k) => (
+                        <SelectItem key={k.id} value={k.id}>{k.kode} — {k.nama}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {isManual && (
+                  <div>
+                    <label className="text-xs font-medium">Nilai DPP (manual) *</label>
+                    <Input type="number" value={manualDpp} onChange={(e) => setManualDpp(e.target.value)} placeholder={String(invoice.subtotal ?? '')} className="mt-1" />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-sm rounded-md bg-muted/40 p-3">
+                  <div><p className="text-xs text-muted-foreground">DPP</p><p className="font-semibold tabular-nums">{formatRp(wh.dpp)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">PPh ({tarif}%)</p><p className="font-semibold tabular-nums text-amber-700">{formatRp(wh.pphAmount)}</p></div>
+                  <div className="col-span-2 border-t pt-2 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Kas diterima (neto)</span>
+                    <span className="font-bold tabular-nums">{formatRp(wh.kasNeto)}</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Piutang lunas senilai gross; PPh {formatRp(wh.pphAmount)} jadi kredit pajak (PPh 23 Dibayar Dimuka). Simpan bukti potong dari customer.
+                </p>
+              </div>
+            )}
           </div>
 
           <div>

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { processJournalAutomation } from '@/lib/finance/journal-engine'
 import { getCoaIdByCode, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
-import { computeWithholding, type PihakPajak } from '@/lib/finance/tax-withholding'
+import { type PihakPajak } from '@/lib/finance/tax-withholding'
+import { resolveWithholding } from '@/lib/finance/tax-withholding-server'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const SYSTEM_USER = '812558af-8be8-4c53-b581-e6a4f1c91147'
@@ -54,42 +55,17 @@ export async function POST(
     const dppKategoriId = pph_dpp_kategori_id ?? inv.pph_dpp_kategori_id ?? null
     const manualDpp = pph_dpp_manual ?? inv.pph_dpp ?? null
 
-    let pphAmount = 0
-    let kasNeto = payAmt
-    let dppResolved: number | null = null
-    let tarifUsed: number | null = null
-
-    if (dipotong !== 'tidak_ada' && jenis) {
-      // Resolve rate: explicit override → header → default table (jenis, npwp).
-      let tarif = pph_tarif ?? inv.pph_tarif ?? null
-      if (tarif == null) {
-        const { data: rate } = await db
-          .from('pph_tarif_default')
-          .select('tarif')
-          .eq('tenant_id', TENANT).eq('pph_jenis', jenis).eq('ber_npwp', berNpwp)
-          .eq('is_aktif', true).maybeSingle()
-        tarif = rate ? Number(rate.tarif) : 0
-      }
-      // Resolve DPP category (metode/faktor) if one was chosen.
-      let kategori: { metode: any; faktor: number | null } | null = null
-      if (dppKategoriId) {
-        const { data: kat } = await db
-          .from('dpp_kategori').select('metode, faktor').eq('id', dppKategoriId).maybeSingle()
-        if (kat) kategori = { metode: kat.metode, faktor: kat.faktor != null ? Number(kat.faktor) : null }
-      }
-      const w = computeWithholding({
-        grossSettled: payAmt,
-        base: Number(inv.subtotal || 0),
-        dipotongOleh: dipotong,
-        tarif: Number(tarif),
-        kategori,
-        manualDpp: manualDpp != null ? Number(manualDpp) : null,
-      })
-      pphAmount = w.pphAmount
-      kasNeto = w.kasNeto
-      dppResolved = w.dpp
-      tarifUsed = Number(tarif)
-    }
+    const wh = await resolveWithholding(
+      db,
+      TENANT,
+      { dipotongOleh: dipotong, jenis, berNpwp, tarifOverride: pph_tarif ?? inv.pph_tarif ?? null, dppKategoriId, manualDpp },
+      Number(inv.subtotal || 0),
+      payAmt,
+    )
+    const pphAmount = wh.pphAmount
+    const kasNeto = wh.kasNeto
+    const dppResolved = pphAmount > 0 ? wh.dpp : null
+    const tarifUsed = pphAmount > 0 ? wh.tarif : null
 
     const { data, error } = await db
       .from('ap_invoices')
