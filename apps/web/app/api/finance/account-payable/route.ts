@@ -120,6 +120,9 @@ export async function POST(request: NextRequest) {
       mata_uang = 'IDR', kurs = 1,
       items = [], discount_amount = 0, tax_amount = 0,
       submit = false, created_by, attachment_url,
+      // PPh premise (optional; default no withholding). AP = we withhold.
+      pph_dipotong_oleh = 'tidak_ada', pph_jenis = null,
+      lawan_punya_npwp = true, pph_dpp_kategori_id = null,
     } = body
 
     if (!no_invoice?.trim() || !tgl_terima || !tgl_jatuh_tempo || !pihak_ketiga?.trim()) {
@@ -176,6 +179,11 @@ export async function POST(request: NextRequest) {
         attachment_url: attachment_url || null,
         submitted_at: submit ? new Date().toISOString() : null,
         created_by: created_by || null,
+        // Withholding premise — resolved into amounts at payment time.
+        pph_dipotong_oleh,
+        pph_jenis,
+        lawan_punya_npwp,
+        pph_dpp_kategori_id,
       })
       .select()
       .single()

@@ -16,6 +16,7 @@ import {
 } from '@workspace/ui/components/select'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { computeWithholding } from '@/lib/finance/tax-withholding'
+import { PphPremiseFields, pphPremiseToPayload, EMPTY_PPH_PREMISE, type PphPremiseValue } from '@/components/finance/pph-premise-fields'
 import {
   ChevronDownIcon, ChevronRightIcon, PlusIcon, XIcon, SearchIcon, RefreshCwIcon,
   WalletIcon, AlertTriangleIcon, CheckCircle2Icon, SendIcon, FileDownIcon, Loader2Icon,
@@ -607,6 +608,7 @@ function CreateBillDialog({ onClose, onSaved }: { onClose: () => void; onSaved: 
   const [items, setItems] = useState<APItem[]>([{ urutan: 1, deskripsi: '', qty: 1, harga: 0 }])
   const [projects, setProjects] = useState<ProjectOpt[]>([])
   const [saving, setSaving] = useState(false)
+  const [pphPremise, setPphPremise] = useState<PphPremiseValue>(EMPTY_PPH_PREMISE)
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
@@ -629,6 +631,7 @@ function CreateBillDialog({ onClose, onSaved }: { onClose: () => void; onSaved: 
           ...form, project_id: form.project_id || null, project_name: proj?.project_name ?? null,
           items: items.map(it => ({ deskripsi: it.deskripsi, qty: Number(it.qty), harga: Number(it.harga) })),
           submit,
+          ...pphPremiseToPayload(pphPremise, 'ap'),
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -695,6 +698,8 @@ function CreateBillDialog({ onClose, onSaved }: { onClose: () => void; onSaved: 
             </div>
             <div className="flex justify-end mt-3 text-sm font-semibold">Grand Total:&nbsp;<span className="tabular-nums">{formatRpAP(grand)}</span></div>
           </div>
+
+          <PphPremiseFields value={pphPremise} onChange={setPphPremise} context="ap" />
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose} disabled={saving}>Batal</Button>
