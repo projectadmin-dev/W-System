@@ -122,6 +122,14 @@ export interface UpdatePaymentRequest {
   bank_id: string
   deadline_baru?: string
   catatan_pembayaran: string
+  // PPh withholding (customer withholds from us → PPh Dibayar Dimuka asset).
+  // Optional; absent means no withholding (backward-compatible).
+  pph_dipotong_oleh?: 'kita' | 'lawan_transaksi' | 'tidak_ada'
+  pph_jenis?: string
+  lawan_punya_npwp?: boolean
+  pph_tarif?: number
+  pph_dpp_kategori_id?: string
+  pph_dpp_manual?: number
 }
 
 // ─── Display helpers ──────────────────────────────────────────────────────────

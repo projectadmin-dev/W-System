@@ -4,6 +4,7 @@
 import { createAdminClient } from '@/lib/supabase-server'
 import { processJournalAutomation } from '@/lib/finance/journal-engine'
 import { getCoaIdByCode, DEFAULT_REVENUE_CODE, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
+import { resolveWithholding } from '@/lib/finance/tax-withholding-server'
 import type {
   ARBankAccount,
   ARInvoice,
@@ -471,7 +472,7 @@ export async function updatePayment(
 
   const { data: inv, error: fetchErr } = await db
     .from('ar_invoices')
-    .select('id, no_invoice, sudah_dibayar, sisa_piutang, total_piutang, is_archived, tenant_id')
+    .select('id, no_invoice, sudah_dibayar, sisa_piutang, total_piutang, subtotal, is_archived, tenant_id, pph_jenis, lawan_punya_npwp, pph_tarif, pph_dipotong_oleh, pph_dpp_kategori_id, pph_dpp')
     .eq('id', invoiceId)
     .eq('tenant_id', tenantId)
     .single()
@@ -502,6 +503,24 @@ export async function updatePayment(
   const sudahDibayarLama = Number(inv.sudah_dibayar)
   const newSudahDibayar = sudahDibayarLama + payload.bayar_sekarang
 
+  // ── PPh withholding (customer withholds from us, at payment, PSAK). Premise
+  // from the payment request, falling back to the invoice header. Computed
+  // authoritatively server-side; DPP basis is the invoice subtotal.
+  const wh = await resolveWithholding(
+    db,
+    tenantId,
+    {
+      dipotongOleh: (payload.pph_dipotong_oleh ?? (inv as any).pph_dipotong_oleh ?? 'tidak_ada') as any,
+      jenis: payload.pph_jenis ?? (inv as any).pph_jenis ?? null,
+      berNpwp: (payload.lawan_punya_npwp ?? (inv as any).lawan_punya_npwp ?? true) !== false,
+      tarifOverride: payload.pph_tarif ?? (inv as any).pph_tarif ?? null,
+      dppKategoriId: payload.pph_dpp_kategori_id ?? (inv as any).pph_dpp_kategori_id ?? null,
+      manualDpp: payload.pph_dpp_manual ?? (inv as any).pph_dpp ?? null,
+    },
+    Number((inv as any).subtotal || 0),
+    Number(payload.bayar_sekarang),
+  )
+
   // Save to payment history
   const { data: payHist } = await db.from('ar_payment_history').insert({
     tenant_id: tenantId,
@@ -516,6 +535,8 @@ export async function updatePayment(
     catatan_pembayaran: payload.catatan_pembayaran || null,
     created_by: userId,
     actor_name: actorName,
+    pph_amount: wh.pphAmount,
+    kas_neto: wh.kasNeto,
   }).select('id').single()
 
   // Update invoice
@@ -524,6 +545,16 @@ export async function updatePayment(
     status_bayar: payload.status_baru,
     updated_by: userId,
     updated_at: new Date().toISOString(),
+  }
+  // Snapshot withholding premise for audit (only when PPh applies).
+  if (wh.pphAmount > 0) {
+    updateData.pph_dipotong_oleh = payload.pph_dipotong_oleh ?? 'lawan_transaksi'
+    updateData.pph_jenis = payload.pph_jenis ?? (inv as any).pph_jenis ?? 'pph23'
+    updateData.lawan_punya_npwp = (payload.lawan_punya_npwp ?? (inv as any).lawan_punya_npwp ?? true) !== false
+    updateData.pph_tarif = wh.tarif
+    updateData.pph_dpp_kategori_id = payload.pph_dpp_kategori_id ?? (inv as any).pph_dpp_kategori_id ?? null
+    updateData.pph_dpp = wh.dpp
+    updateData.pph_amount = wh.pphAmount
   }
   if (payload.deadline_baru) updateData.deadline_bayar = payload.deadline_baru
   if (payload.bank_id) {
@@ -545,7 +576,14 @@ export async function updatePayment(
         createdBy: userId,
         description: `Pembayaran ${inv.no_invoice}`,
         referenceNumber: inv.no_invoice,
-        nominals: { bayar_sekarang: Number(payload.bayar_sekarang) },
+        // bayar_sekarang clears Piutang (gross); kas_neto = cash received
+        // (gross − PPh); pph_amount → Dr PPh 23 Dibayar Dimuka. No PPh →
+        // pph_amount=0 (skipped) and kas_neto=gross → journal unchanged.
+        nominals: {
+          bayar_sekarang: Number(payload.bayar_sekarang),
+          pph_amount: wh.pphAmount,
+          kas_neto: wh.kasNeto,
+        },
         dynamicAccounts: { ar_bank_coa: bankCoaId },
       })
     } catch (err) {
