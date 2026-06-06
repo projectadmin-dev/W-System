@@ -9,8 +9,8 @@
 > - PPh type in scope: **PPh 23 (jasa)** — default **2% (ber-NPWP)**, with **non-NPWP = 4%** supported (rate per-transaction, scalable).
 > - **PPN WAPU/DTP**: tidak ada customer WAPU saat ini → **ditunda** (Fase D, dirancang tapi tidak diimplementasi dulu).
 > - Timing: **at payment** (PSAK — withholding crystallizes when cash moves).
+> - **Kedua arah dalam scope:** sisi **AP** (kita memotong vendor → Hutang PPh) **dan** sisi **AR** (customer memotong kita → PPh Dibayar Dimuka). Finance mengonfirmasi customer memang memotong PPh.
 > - Scope now: **design only**; implementation phased after Finance + tax-consultant validation.
-> - **Pending:** apakah customer AR memotong PPh dari kita (menentukan apakah Fase C / sisi AR dibangun).
 >
 > ⚠️ Tarif & aplikabilitas pajak adalah keputusan hukum — **wajib dikonfirmasi ke konsultan pajak** sebelum go-live. Dokumen ini merancang *mekanismenya*, bukan menetapkan tarif yang mengikat.
 
@@ -225,7 +225,7 @@ Kedua jurnal tetap **balanced** dan memakai mekanisme skip-zero yang ada.
 |---|---|---|
 | 1 | **Tarif PPh 23** & non-NPWP | ✅ **Resolved** — default **2% ber-NPWP**, **4% tanpa NPWP** (di-handle agar scalable; rate per-transaksi + tabel default) |
 | 2 | **PPN WAPU/DTP** | ✅ **Resolved** — belum ada customer WAPU → **ditunda** (Fase D dirancang, tak diimplementasi dulu) |
-| 3 | **Sisi AR** — customer memotong PPh dari kita? | ⏳ **Pending** — menentukan apakah Fase C dibangun (lihat penjelasan di chat) |
+| 3 | **Sisi AR** — customer memotong PPh dari kita? | ✅ **Resolved** — **Ya**, customer memotong → Fase C **masuk scope** (PPh 23 Dibayar Dimuka saat terima bayar) |
 | 4 | **DPP PPh**: seluruh `subtotal` atau hanya komponen jasa (invoice campur barang+jasa)? | ⏳ Perlu konfirmasi konsultan |
 | 5 | **PPh 4(2) final** (sewa bangunan/konstruksi) dipakai? | ⏳ Di luar scope sekarang (fase lanjut) |
 | 6 | **Pembulatan** PPh ke rupiah penuh | ⏳ Asumsi default: dibulatkan; konfirmasi |
@@ -236,7 +236,7 @@ Kedua jurnal tetap **balanced** dan memakai mekanisme skip-zero yang ada.
 
 - **Fase A — Fondasi:** tambah COA `1-10400-3`; tabel `pph_tarif_default`; kolom premis pajak (Opsi A) + default backward-compatible; token engine `pph_amount`, `kas_neto`.
 - **Fase B — Modul AP** *(prioritas — kita memotong vendor)*: logic hitung `pph_amount`/`kas_neto` + auto-tarif via NPWP di AP pay; UI input flag PPh 23 + NPWP + tarif; baris config `AP-PAY`.
-- **Fase C — Modul AR** *(kondisional — tunggu jawaban #3 §9)*: sisi terima bayar bila customer memotong; UI flag; baris config `AR-PAY-RCV`.
+- **Fase C — Modul AR** *(in scope — customer memotong PPh dari kita)*: sisi terima bayar; catat `1-10400-3` PPh 23 Dibayar Dimuka (kredit pajak); UI flag; baris config `AR-PAY-RCV`.
 - **Fase D — PPN non-standar (DITUNDA):** WAPU/DTP (`ppn_dipungut_oleh = lawan`) — tidak ada kebutuhan saat ini.
 - **Fase E — Pembayaran internal (UC#5)** bila relevan.
 - **Fase F — Laporan & rekonsiliasi pajak:** daftar bukti potong, saldo Hutang PPh / PPh Dibayar Dimuka untuk SPT.
