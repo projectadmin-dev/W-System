@@ -1,6 +1,29 @@
 # Tax Withholding Enhancement — PPN & PPh "Dibayar Oleh" (Design Plan)
 
-> Status: **DESIGN — not yet implemented** (per decision: "rancang dulu, jangan koding").
+> ## ✅ IMPLEMENTATION STATUS (autonomous completion run)
+>
+> | Fase | Isi | Status |
+> |---|---|---|
+> | A | Fondasi: COA `1-10400-3`, kolom premis, token engine, tabel tarif | ✅ live |
+> | A.2 | DPP dinamis (`dpp_kategori` PENUH/NL-10/MANUAL + helper) | ✅ live |
+> | B | AP withholding (kita potong vendor → Hutang PPh 23) | ✅ live |
+> | C | AR withholding (customer potong kita → PPh 23 Dibayar Dimuka) | ✅ live |
+> | — | Premis PPh di form **create** AP bill / AR invoice | ✅ live |
+> | F | Laporan PPh + bukti potong register (`/finance/pph`) | ✅ live |
+> | E | Internal payout (UC#5) PPh 23 | ✅ merged · **config flip pending Fase E deploy** |
+> | 5 | Reversal otomatis saat AR invoice diarsipkan | ✅ merged |
+> | G | QA acceptance (unit 31/31 + verifikasi DB) logged ke `/finance/qa` (`tax-withholding`) | ✅ |
+>
+> **Deferred — alasan teknis (bukan sekadar belum sempat):**
+> - **Fase D (PPN WAPU/DTP):** tidak ada customer WAPU. Implementasi penuh butuh receivable = DPP saja (konflik dengan kolom **generated** `ar_invoices.total_piutang` = subtotal+PPN) + rekonsiliasi pembayaran. Berisiko meng-misstate PPN tanpa kasus nyata → **ditunda sampai ada customer WAPU**. Mekanisme dapat dikonfigurasi via UI `/finance/journal-config` saat dibutuhkan.
+> - **PPh 4(2) final sisi AR:** perlakuan beda (beban final, bukan aset creditable) + akun per-jenis. Sisi AP PPh 4(2) (potong vendor) secara mekanis sama dengan PPh 23 tetapi config saat ini pakai akun PPh 23 tetap; multi-jenis PPh butuh `dynamic_source: pph_payable_coa` (enhancement kecil). Ditunda sampai dipakai.
+> - **Backfill historis** 13 AR / 33 AP: keputusan penanggalan/periode Finance. Tooling siap (`reverse-source` + engine idempotent) tetapi **tidak dijalankan otomatis** atas data produksi.
+>
+> **Catatan deploy:** config coupled (`AP-PAY`, `AR-PAY-RCV`) sudah di-apply. `PMB-INTERNAL` (`20260606000008`) di-apply setelah Fase E ter-deploy.
+>
+> ---
+>
+> Status awal: **DESIGN — not yet implemented** (per decision: "rancang dulu, jangan koding").
 > Companion to `docs/JOURNAL-AUTOMATION-PLAN.md` and `JOURNAL-AUTOMATION-REVISION-SPEC.md`.
 > Branch: `claude/serene-galileo-kwyFL`.
 >
