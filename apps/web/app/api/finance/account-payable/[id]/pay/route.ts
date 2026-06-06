@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { processJournalAutomation } from '@/lib/finance/journal-engine'
 import { getCoaIdByCode, DEFAULT_CASH_CODE } from '@/lib/finance/journal-defaults'
+import { computeWithholding, type PihakPajak } from '@/lib/finance/tax-withholding'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const SYSTEM_USER = '812558af-8be8-4c53-b581-e6a4f1c91147'
@@ -16,7 +17,12 @@ export async function POST(
     const db = createAdminClient()
     const { id } = await params
     const body = await request.json().catch(() => ({}))
-    const { amount, bank_coa_id, bank_label, actor_id, actor_name, notes } = body
+    const {
+      amount, bank_coa_id, bank_label, actor_id, actor_name, notes,
+      // PPh withholding premise (optional; falls back to the bill header).
+      pph_dipotong_oleh, pph_jenis, lawan_punya_npwp, pph_tarif,
+      pph_dpp_kategori_id, pph_dpp_manual,
+    } = body
 
     const { data: inv } = await db
       .from('ap_invoices').select('*')
@@ -38,6 +44,53 @@ export async function POST(
     const newPaid = paidBefore + payAmt
     const fullyPaid = newPaid >= Number(inv.grand_total || 0) - 0.009
 
+    // ── PPh withholding (timing = at payment, PSAK). Premise comes from the
+    // request body, falling back to the bill header. The route computes the
+    // authoritative amounts (never trusts a client-sent pph_amount). DPP basis
+    // is the bill subtotal; finance may pick a DPP category or enter it manually.
+    const dipotong: PihakPajak = (pph_dipotong_oleh ?? inv.pph_dipotong_oleh ?? 'tidak_ada') as PihakPajak
+    const jenis = pph_jenis ?? inv.pph_jenis ?? null
+    const berNpwp = (lawan_punya_npwp ?? inv.lawan_punya_npwp ?? true) !== false
+    const dppKategoriId = pph_dpp_kategori_id ?? inv.pph_dpp_kategori_id ?? null
+    const manualDpp = pph_dpp_manual ?? inv.pph_dpp ?? null
+
+    let pphAmount = 0
+    let kasNeto = payAmt
+    let dppResolved: number | null = null
+    let tarifUsed: number | null = null
+
+    if (dipotong !== 'tidak_ada' && jenis) {
+      // Resolve rate: explicit override → header → default table (jenis, npwp).
+      let tarif = pph_tarif ?? inv.pph_tarif ?? null
+      if (tarif == null) {
+        const { data: rate } = await db
+          .from('pph_tarif_default')
+          .select('tarif')
+          .eq('tenant_id', TENANT).eq('pph_jenis', jenis).eq('ber_npwp', berNpwp)
+          .eq('is_aktif', true).maybeSingle()
+        tarif = rate ? Number(rate.tarif) : 0
+      }
+      // Resolve DPP category (metode/faktor) if one was chosen.
+      let kategori: { metode: any; faktor: number | null } | null = null
+      if (dppKategoriId) {
+        const { data: kat } = await db
+          .from('dpp_kategori').select('metode, faktor').eq('id', dppKategoriId).maybeSingle()
+        if (kat) kategori = { metode: kat.metode, faktor: kat.faktor != null ? Number(kat.faktor) : null }
+      }
+      const w = computeWithholding({
+        grossSettled: payAmt,
+        base: Number(inv.subtotal || 0),
+        dipotongOleh: dipotong,
+        tarif: Number(tarif),
+        kategori,
+        manualDpp: manualDpp != null ? Number(manualDpp) : null,
+      })
+      pphAmount = w.pphAmount
+      kasNeto = w.kasNeto
+      dppResolved = w.dpp
+      tarifUsed = Number(tarif)
+    }
+
     const { data, error } = await db
       .from('ap_invoices')
       .update({
@@ -45,6 +98,14 @@ export async function POST(
         status: fullyPaid ? 'PAID' : 'APPROVED',
         paid_at: fullyPaid ? new Date().toISOString() : inv.paid_at,
         updated_at: new Date().toISOString(),
+        // Snapshot the withholding premise on the bill for audit.
+        pph_dipotong_oleh: dipotong,
+        pph_jenis: jenis,
+        lawan_punya_npwp: berNpwp,
+        pph_tarif: tarifUsed,
+        pph_dpp_kategori_id: dppKategoriId,
+        pph_dpp: dppResolved,
+        pph_amount: pphAmount,
       })
       .eq('id', id).eq('tenant_id', TENANT)
       .select().single()
@@ -69,6 +130,8 @@ export async function POST(
       catatan_pembayaran: notes || null,
       created_by: actor_id || null,
       actor_name: actor_name || null,
+      pph_amount: pphAmount,
+      kas_neto: kasNeto,
     }).select('id').single()
 
     // UC#4: auto-journal Dr Hutang / Cr Kas/Bank (non-blocking).
@@ -87,7 +150,11 @@ export async function POST(
           description: `Pembayaran AP ${inv.ap_number} — ${inv.pihak_ketiga}`,
           referenceNumber: inv.no_invoice,
           currency: inv.mata_uang || 'IDR',
-          nominals: { bayar_sekarang: payAmt },
+          // bayar_sekarang = gross settled (clears Hutang); kas_neto = actual
+          // cash out (gross − PPh); pph_amount = withheld → Cr Hutang PPh.
+          // When no PPh: pphAmount=0 (line skipped) and kasNeto=payAmt, so the
+          // journal is identical to the pre-withholding behavior.
+          nominals: { bayar_sekarang: payAmt, pph_amount: pphAmount, kas_neto: kasNeto },
           dynamicAccounts: { ap_bank_coa: bankCoaId },
         })
         journal_entry_id = result.journalEntryId ?? null
