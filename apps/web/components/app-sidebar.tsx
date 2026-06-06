@@ -285,6 +285,7 @@ const data = {
         { title: "Income Statement", url: "/finance/reports/profit-loss" },
         { title: "Balance Sheet", url: "/finance/reports/balance-sheet" },
         { title: "Cash Flow Statement", url: "/finance/reports/cash-flow-statement" },
+        { title: "Laporan PPh 23", url: "/finance/pph" },
         { title: "All Reports", url: "/finance/reports" },
         { title: "BI Dashboard", url: "/dashboard/bi" },
 
