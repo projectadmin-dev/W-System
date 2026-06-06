@@ -339,6 +339,7 @@ function NewInvoiceModal({
   banks: ARBankAccount[]
 }) {
   const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [revenueAccounts, setRevenueAccounts] = useState<{ id: string; account_code: string; account_name: string }[]>([])
   const [form, setForm] = useState<Partial<CreateInvoiceRequest>>({
     tipe_invoice: 'one_time',
     tgl_invoice: new Date().toISOString().split('T')[0],
@@ -376,6 +377,12 @@ function NewInvoiceModal({
     fetch(`/api/ar/invoices/next-number?date=${today}`)
       .then((r) => r.json())
       .then((d) => setNoInvoice(d.no_invoice ?? ''))
+      .catch(() => {})
+
+    // Revenue accounts for the journal (UC#1)
+    fetch('/api/finance/coa?type=revenue')
+      .then((r) => r.json())
+      .then((d) => setRevenueAccounts(Array.isArray(d) ? d.filter((a: any) => a.is_active) : []))
       .catch(() => {})
   }, [open])
 
@@ -435,6 +442,7 @@ function NewInvoiceModal({
         bank_id: form.bank_id,
         deadline_bayar: form.deadline_bayar,
         status_bayar: form.status_bayar!,
+        revenue_coa_id: form.revenue_coa_id,
       }
       const res = await fetch('/api/ar/invoices', {
         method: 'POST',
@@ -632,6 +640,17 @@ function NewInvoiceModal({
                 <SelectContent>
                   {banks.map((b) => (
                     <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium">Akun Pendapatan (Jurnal)</label>
+              <Select value={form.revenue_coa_id ?? ''} onValueChange={(v) => setForm((f) => ({ ...f, revenue_coa_id: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Default: Project Revenue..." /></SelectTrigger>
+                <SelectContent>
+                  {revenueAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.account_code} - {a.account_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

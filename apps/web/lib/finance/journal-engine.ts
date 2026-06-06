@@ -1,0 +1,360 @@
+import { createAdminClient } from '@/lib/supabase-server'
+import { createJournalEntry, postJournalEntry } from '@/lib/repositories/finance-journal'
+import {
+  resolveJournalLines,
+  computeBalance,
+  type JournalAutomationPayload,
+  type ConfigDetailRow,
+} from '@/lib/finance/journal-engine-core'
+
+// Re-export the pure core so existing imports of these from the engine keep working.
+export * from '@/lib/finance/journal-engine-core'
+
+/**
+ * Journal Automation Engine (Phase 2)
+ * -----------------------------------
+ * Config-driven double-entry generator. For a given trigger code it loads the
+ * active `konfigurasi_jurnal` + `konfigurasi_jurnal_detail`, resolves each line's
+ * account (fixed COA or a dynamic value pulled from the source document) and
+ * nominal, validates balance, then persists + auto-posts a journal entry linked
+ * to the source document.
+ *
+ * Design rules (per SDD-JURNAL-OTOMATIS):
+ *  - Always Balanced: only persisted when total debit == total credit.
+ *  - Non-blocking (NFR-02): failures are logged to `jurnal_error_log` and
+ *    returned to the caller; they must NOT roll back the business transaction.
+ *  - Idempotent: a source document that already has an active journal is a no-op.
+ *  - Zero-nominal lines are skipped silently.
+ */
+
+export type JournalErrorCode =
+  | 'NO_CONFIG'
+  | 'NO_LINES'
+  | 'MISSING_ACCOUNT'
+  | 'NOT_BALANCED'
+  | 'PERSIST_FAILED'
+
+export interface JournalAutomationResult {
+  success: boolean
+  journalEntryId?: string
+  entryNumber?: string
+  /** true when there was nothing to post (all zero / no config) */
+  skipped?: boolean
+  /** true when an active journal already existed for this source */
+  idempotent?: boolean
+  errorCode?: JournalErrorCode
+  message?: string
+}
+
+/** Map source_type -> { table, idColumn } for journal_entry_id write-back. */
+const SOURCE_LINK: Record<string, { table: string; idColumn: string }> = {
+  ar_invoice: { table: 'ar_invoices', idColumn: 'id' },
+  ar_payment: { table: 'ar_payment_history', idColumn: 'id' },
+  ap_invoice: { table: 'ap_invoices', idColumn: 'id' },
+  ap_payment: { table: 'ap_payment_history', idColumn: 'id' },
+  pembayaran: { table: 'pembayaran', idColumn: 'id' },
+}
+
+/**
+ * Process a trigger and create (auto-post) the resulting journal entry.
+ * Never throws — all failures are captured in the result + jurnal_error_log.
+ */
+export async function processJournalAutomation(
+  payload: JournalAutomationPayload,
+): Promise<JournalAutomationResult> {
+  const db: any = await createAdminClient()
+
+  try {
+    // [0] Idempotency — skip if this source already has an active journal.
+    const { data: existing } = await db
+      .from('journal_entries')
+      .select('id, entry_number')
+      .eq('source_type', payload.sourceType)
+      .eq('source_id', payload.sourceId)
+      .eq('is_reversal', false)
+      .is('deleted_at', null)
+      .in('status', ['draft', 'posted'])
+      .maybeSingle()
+
+    if (existing) {
+      return {
+        success: true,
+        idempotent: true,
+        journalEntryId: existing.id,
+        entryNumber: existing.entry_number,
+      }
+    }
+
+    // [1] Load active configuration.
+    const { data: config } = await db
+      .from('konfigurasi_jurnal')
+      .select('id, kode_konfigurasi')
+      .eq('tenant_id', payload.tenantId)
+      .eq('kode_konfigurasi', payload.triggerCode)
+      .eq('is_aktif', true)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (!config) {
+      const message = `Konfigurasi "${payload.triggerCode}" tidak aktif atau tidak ditemukan`
+      await logJournalError(db, payload, 'NO_CONFIG', message)
+      return { success: false, errorCode: 'NO_CONFIG', message }
+    }
+
+    const { data: details } = await db
+      .from('konfigurasi_jurnal_detail')
+      .select('id, coa_id, dynamic_source, posisi, sumber_nominal, urutan, keterangan_baris, is_optional')
+      .eq('konfigurasi_id', config.id)
+      .order('urutan', { ascending: true })
+
+    const rows: ConfigDetailRow[] = details || []
+
+    // [2] Resolve lines (pure).
+    const resolved = resolveJournalLines(rows, payload)
+    if (!resolved.ok) {
+      await logJournalError(db, payload, resolved.errorCode, resolved.message, config.kode_konfigurasi)
+      return { success: false, errorCode: resolved.errorCode, message: resolved.message }
+    }
+    const lines = resolved.lines
+
+    // [3] Nothing to post (e.g. all nominals zero) — skip, not an error.
+    if (lines.length === 0) {
+      return { success: true, skipped: true, message: 'Tidak ada baris bernominal > 0' }
+    }
+
+    // [4] Balance validation (pure).
+    const bal = computeBalance(lines)
+    if (!bal.balanced) {
+      const message = `Jurnal tidak balance: debit=${bal.totalDebit}, credit=${bal.totalCredit}`
+      await logJournalError(db, payload, 'NOT_BALANCED', message, config.kode_konfigurasi, {
+        totalDebit: bal.totalDebit,
+        totalCredit: bal.totalCredit,
+        lines,
+      })
+      return { success: false, errorCode: 'NOT_BALANCED', message }
+    }
+
+    // [5] Persist + auto-post (reuses the PSAK-validated repository insert).
+    const entryNumber = generateEntryNumber(payload.transactionDate)
+    const entry = {
+      entry_number: entryNumber,
+      transaction_date: payload.transactionDate,
+      posting_date: payload.transactionDate,
+      source_type: payload.sourceType,
+      source_id: payload.sourceId,
+      description: payload.description ?? `Auto-journal ${payload.triggerCode}`,
+      reference_number: payload.referenceNumber ?? null,
+      currency: payload.currency ?? 'IDR',
+      // Insert as draft, then post — the DB's validate_journal_balance_on_post
+      // trigger checks balance against the lines, and a draft can be rolled back
+      // if line insertion fails (posted entries are immutable).
+      status: 'draft',
+      kategori_jurnal: 'REGULAR',
+      fiscal_period_id: await resolveFiscalPeriod(db, payload.tenantId, payload.transactionDate),
+      prepared_by: payload.createdBy,
+      posted_by: payload.createdBy,
+      created_by: payload.createdBy,
+      tenant_id: payload.tenantId,
+    }
+
+    const lineInserts = lines.map((l) => ({
+      coa_id: l.coa_id,
+      debit_amount: l.posisi === 'debit' ? l.amount : 0,
+      credit_amount: l.posisi === 'credit' ? l.amount : 0,
+      line_description: l.description ?? null,
+      tenant_id: payload.tenantId,
+      created_by: payload.createdBy,
+    }))
+
+    let created: any
+    try {
+      created = await createJournalEntry(entry as any, lineInserts as any)
+    } catch (err) {
+      const message = (err as Error).message
+      await logJournalError(db, payload, 'PERSIST_FAILED', message, config.kode_konfigurasi, { entry, lines })
+      return { success: false, errorCode: 'PERSIST_FAILED', message }
+    }
+
+    // [6] Post the draft (balance re-validated by DB trigger against the lines).
+    try {
+      await postJournalEntry(created.id, payload.createdBy)
+    } catch (err) {
+      const message = (err as Error).message
+      await logJournalError(db, payload, 'PERSIST_FAILED', `Post failed: ${message}`, config.kode_konfigurasi, { entryId: created.id })
+      return { success: false, errorCode: 'PERSIST_FAILED', message, journalEntryId: created.id }
+    }
+
+    // [7] Best-effort write-back of journal_entry_id to the source document.
+    await linkSourceDocument(db, payload.sourceType, payload.sourceId, created.id)
+
+    return { success: true, journalEntryId: created.id, entryNumber }
+  } catch (err) {
+    // Last-resort guard: never throw to the caller (non-blocking).
+    const message = (err as Error).message
+    await logJournalError(db, payload, 'PERSIST_FAILED', message)
+    return { success: false, errorCode: 'PERSIST_FAILED', message }
+  }
+}
+
+export interface ReversalResult {
+  reversed: number
+  entryIds: string[]
+  errors: string[]
+}
+
+/**
+ * Reverse all active (posted, non-reversal) journals for a source document.
+ * Used when a source is cancelled/voided. Idempotent: an entry already reversed
+ * is skipped. Each reversal swaps Dr/Cr, is dated today (the cancellation date),
+ * and is posted. Never throws.
+ */
+export async function reverseJournalsForSource(
+  sourceType: string,
+  sourceId: string,
+  reason: string,
+  userId: string,
+): Promise<ReversalResult> {
+  const db: any = await createAdminClient()
+  const out: ReversalResult = { reversed: 0, entryIds: [], errors: [] }
+
+  const { data: entries } = await db
+    .from('journal_entries')
+    .select('id, entry_number, currency, tenant_id, description')
+    .eq('source_type', sourceType)
+    .eq('source_id', sourceId)
+    .eq('status', 'posted')
+    .eq('is_reversal', false)
+    .is('deleted_at', null)
+
+  for (const e of entries || []) {
+    // Idempotency: skip if a reversal already exists for this entry.
+    const { data: already } = await db
+      .from('journal_entries')
+      .select('id')
+      .eq('reversal_of_id', e.id)
+      .limit(1)
+      .maybeSingle()
+    if (already) continue
+
+    const { data: lines } = await db
+      .from('journal_lines')
+      .select('coa_id, debit_amount, credit_amount, line_description')
+      .eq('journal_entry_id', e.id)
+      .is('deleted_at', null)
+    if (!lines || lines.length === 0) continue
+
+    const today = new Date().toISOString().slice(0, 10)
+    const revLines = lines.map((l: any) => ({
+      coa_id: l.coa_id,
+      debit_amount: Number(l.credit_amount || 0), // swap
+      credit_amount: Number(l.debit_amount || 0), // swap
+      line_description: `Reversal: ${l.line_description || ''}`,
+      tenant_id: e.tenant_id,
+      created_by: userId,
+    }))
+    const revEntry = {
+      entry_number: generateEntryNumber(today),
+      transaction_date: today,
+      posting_date: today,
+      source_type: sourceType,
+      source_id: sourceId,
+      description: `REVERSAL: ${e.description || e.entry_number} — ${reason}`,
+      reference_number: e.entry_number,
+      currency: e.currency || 'IDR',
+      status: 'draft',
+      kategori_jurnal: 'ADJUSTMENT',
+      is_reversal: true,
+      reversal_of_id: e.id,
+      reversal_reason: reason,
+      prepared_by: userId,
+      created_by: userId,
+      tenant_id: e.tenant_id,
+    }
+    try {
+      const created = await createJournalEntry(revEntry as any, revLines as any)
+      await postJournalEntry(created.id, userId)
+      out.reversed++
+      out.entryIds.push(created.id)
+    } catch (err) {
+      const message = (err as Error).message
+      out.errors.push(message)
+      await logJournalError(
+        db,
+        { triggerCode: 'REVERSAL', sourceType, sourceId, tenantId: e.tenant_id, createdBy: userId } as any,
+        'PERSIST_FAILED',
+        `Reversal failed for ${e.entry_number}: ${message}`,
+      )
+    }
+  }
+  return out
+}
+
+function generateEntryNumber(transactionDate: string): string {
+  const date = new Date(transactionDate || new Date())
+  const valid = isNaN(date.getTime()) ? new Date() : date
+  const year = valid.getFullYear()
+  const month = String(valid.getMonth() + 1).padStart(2, '0')
+  const ts = Date.now().toString().slice(-6)
+  return `JE-${year}${month}-${ts}`
+}
+
+async function resolveFiscalPeriod(
+  db: any,
+  tenantId: string,
+  date: string,
+): Promise<string | null> {
+  try {
+    const { data } = await db
+      .from('fiscal_periods')
+      .select('id, status')
+      .eq('tenant_id', tenantId)
+      .lte('start_date', date)
+      .gte('end_date', date)
+      .is('deleted_at', null)
+      .neq('status', 'closed')
+      .order('start_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    return data?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+async function linkSourceDocument(
+  db: any,
+  sourceType: string,
+  sourceId: string,
+  journalEntryId: string,
+): Promise<void> {
+  const link = SOURCE_LINK[sourceType]
+  if (!link) return
+  try {
+    await db.from(link.table).update({ journal_entry_id: journalEntryId }).eq(link.idColumn, sourceId)
+  } catch {
+    // Non-fatal: idempotency still holds via journal_entries.source_id.
+  }
+}
+
+async function logJournalError(
+  db: any,
+  payload: JournalAutomationPayload,
+  errorCode: JournalErrorCode,
+  message: string,
+  kodeKonfigurasi?: string,
+  extra?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await db.from('jurnal_error_log').insert({
+      tenant_id: payload.tenantId,
+      kode_konfigurasi: kodeKonfigurasi ?? payload.triggerCode,
+      source_type: payload.sourceType,
+      source_id: payload.sourceId,
+      error_code: errorCode,
+      pesan_error: message,
+      payload_json: { payload, ...extra },
+    })
+  } catch {
+    // Swallow — logging must never break the caller.
+  }
+}

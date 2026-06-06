@@ -112,6 +112,8 @@ export interface CreateInvoiceRequest {
   bank_id?: string
   deadline_bayar?: string
   status_bayar: StatusBayar
+  /** Revenue account to credit on issuance (UC#1). Falls back to default if omitted. */
+  revenue_coa_id?: string
 }
 
 export interface UpdatePaymentRequest {
