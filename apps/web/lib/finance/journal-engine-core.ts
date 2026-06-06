@@ -7,6 +7,9 @@
 // ── Source-nominal vocabularies (must match the DB CHECK constraints) ──
 export const SCALAR_NOMINAL_SOURCES = [
   'grand_total', 'subtotal', 'pajak', 'total_piutang', 'bayar_sekarang', 'nominal_bayar',
+  // Tax-withholding tokens (Fase A). See docs/TAX-WITHHOLDING-PLAN.md.
+  // pph_amount = PPh withheld; kas_neto = net cash = gross − pph.
+  'pph_amount', 'kas_neto',
 ] as const
 export const SINGLE_DYNAMIC_SOURCES = [
   'invoice_revenue_coa', 'ar_bank_coa', 'ap_bank_coa', 'pmb_expense_coa', 'pmb_bank_coa',
