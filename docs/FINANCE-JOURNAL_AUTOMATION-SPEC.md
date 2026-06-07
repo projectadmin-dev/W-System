@@ -615,6 +615,11 @@ Finance user in the deployed UI.
 
 ### 9.1 Architecture decisions (ADR-style)
 
+> Module-specific rationale below. **Domain-wide** decisions that this module
+> inherits (reuse the ledger, PSAK immutability, config-as-data, data-driven
+> tax, non-blocking, idempotency, deploy-ordering, …) live in the cross-module
+> log: `FINANCE-ARCHITECTURE_DECISION_RECORD.md` (ADR-001…011).
+
 | Decision | Rationale |
 |---|---|
 | **Reuse** `journal_entries`/`journal_lines` (not new `jurnal` tables) | PSAK double-entry core already existed with balance + immutability triggers. |
