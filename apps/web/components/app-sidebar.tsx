@@ -230,7 +230,6 @@ const data = {
         { title: "Chart of Accounts", url: "/finance/coa" },
         { title: "Journal Entries", url: "/finance/journal" },
         { title: "Konfigurasi Jurnal", url: "/finance/journal-config" },
-        { title: "Petty Cash", url: "/finance/petty-cash" },
         { title: "Fiscal Periods", url: "/finance/periods" },
 
         // ── Transactions ──────────────────────────────────
@@ -263,7 +262,6 @@ const data = {
         { title: "AR Monitoring", url: "/finance/ar-monitoring" },
         { title: "AR Aging (Piutang)", url: "/finance/ar-aging" },
         { title: "AP Aging (Hutang)", url: "/finance/ap-aging" },
-        { title: "Budget vs Actual", url: "/finance/budget-vs-actual" },
 
         // ── Master Data ─────────────────────────────────
         {
@@ -281,12 +279,8 @@ const data = {
           isCategoryHeader: true,
         },
         { title: "Laporan Keuangan", url: "/finance/laporan-keuangan" },
-        { title: "Trial Balance", url: "/finance/reports/trial-balance" },
-        { title: "Income Statement", url: "/finance/reports/profit-loss" },
-        { title: "Balance Sheet", url: "/finance/reports/balance-sheet" },
         { title: "Cash Flow Statement", url: "/finance/reports/cash-flow-statement" },
         { title: "Laporan PPh 23", url: "/finance/pph" },
-        { title: "All Reports", url: "/finance/reports" },
         { title: "BI Dashboard", url: "/dashboard/bi" },
 
         // ── Quality Assurance ────────────────────────────
