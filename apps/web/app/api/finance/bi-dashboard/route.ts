@@ -41,6 +41,23 @@ function longLabel(key: string): string {
 const isCashCode = (code: string | null | undefined) =>
   !!code && (code.startsWith('1-10001') || code.startsWith('1-10002'))
 
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** last calendar day of a window (last month, end-of-month), capped at today */
+function asOfDate(months: string[], today: string): string {
+  if (!months.length) return today
+  const [y, m] = months[months.length - 1]!.split('-').map(Number)
+  const eomDay = new Date(y!, m!, 0).getDate() // m is 1-based -> day 0 of next = last day of m
+  const eom = `${y}-${pad2(m!)}-${pad2(eomDay)}`
+  return eom < today ? eom : today
+}
+
+/** business-line category derived from a revenue account name ("Project Based - X" -> "Project Based") */
+function businessLine(name: string): string {
+  const i = name.indexOf(' - ')
+  return i > 0 ? name.slice(0, i).trim() : name
+}
+
 type Preset = 'month' | 'quarter' | 'ytd' | 'custom'
 type Bench = 'previous' | 'last_year' | 'custom' | 'off'
 
@@ -223,81 +240,155 @@ export async function GET(request: NextRequest) {
       amount: revAccounts.reduce((s, acc) => s + (revByAcc.get(acc)!.get(m) || 0), 0),
     }))
 
-    /* ── heatmap: revenue stream × month ── */
+    /* ── heatmap: revenue by business-line category × month (with stream drill-down) ──
+       NOTE: commercial_projects.project_type is not used here because its linkage
+       columns (project_id / invoice_id) are unpopulated and journal_lines.project_id
+       is empty, so GL revenue cannot yet be attributed to a project type. We instead
+       derive a category from the revenue account naming convention. */
     const heatMonths = current.map((m) => shortLabel(m, anchorYear))
-    const heatRows = streamTotals.slice(0, 12).map((r) => {
-      const values: Record<string, number> = {}
-      current.forEach((m) => { values[shortLabel(m, anchorYear)] = revByAcc.get(r.stream)?.get(m) || 0 })
-      return { category: r.stream, values }
-    })
+    const catMap = new Map<string, {
+      values: Record<string, number>
+      streams: Map<string, Record<string, number>>
+      total: number
+    }>()
+    for (const acc of revAccounts) {
+      const accMonthly = revByAcc.get(acc)!
+      const accTotal = current.reduce((s, m) => s + (accMonthly.get(m) || 0), 0)
+      if (accTotal <= 0) continue
+      const cat = businessLine(acc)
+      if (!catMap.has(cat)) catMap.set(cat, { values: {}, streams: new Map(), total: 0 })
+      const entry = catMap.get(cat)!
+      const streamVals: Record<string, number> = {}
+      for (const m of current) {
+        const lbl = shortLabel(m, anchorYear)
+        const v = accMonthly.get(m) || 0
+        entry.values[lbl] = (entry.values[lbl] || 0) + v
+        streamVals[lbl] = v
+      }
+      entry.total += accTotal
+      entry.streams.set(acc, streamVals)
+    }
+    const heatRows = Array.from(catMap.entries())
+      .filter(([, e]) => e.total > 0)
+      .sort((a, b) => b[1].total - a[1].total)
+      .map(([category, e]) => ({
+        category,
+        values: e.values,
+        streams: Array.from(e.streams.entries()).map(([stream, values]) => ({ stream, values })),
+      }))
 
-    /* ── AR aging (snapshot as of today) ── */
+    /* ── AR / AP aging reconstructed AS-OF a date (follows the selected period) ──
+       Outstanding at date D = invoice face − payments recorded up to D, for invoices
+       issued on/before D. Age is measured from D, so historical periods show the
+       aging picture as it stood at that period's close. */
+    const asOfCur = asOfDate(current, todayStr)
+    const asOfBen = bench ? asOfDate(bench, todayStr) : null
+    const daysDiff = (a: string, b: string) =>
+      Math.floor((new Date(a).getTime() - new Date(b).getTime()) / 86400000)
+    const paidUpTo = (pays: { date: string; amt: number }[] | undefined, asOf: string) =>
+      (pays || []).reduce((s, p) => (p.date <= asOf ? s + p.amt : s), 0)
+
+    /* AR source + payments */
     const { data: arRows, error: arErr } = await supabase
       .from('ar_invoices')
-      .select('client_name, project_name, no_invoice, tgl_invoice, deadline_bayar, sisa_piutang, is_archived')
+      .select('id, client_name, project_name, no_invoice, tgl_invoice, deadline_bayar, total_piutang, is_archived')
       .is('deleted_at', null)
-      .gt('sisa_piutang', 0)
     if (arErr) throw arErr
-    const arBuckets = { total: 0, current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_180: 0, over180: 0 }
-    const arList = (arRows || [])
-      .filter((r) => !r.is_archived)
-      .map((r) => {
-        const due = r.deadline_bayar ? new Date(r.deadline_bayar) : new Date(todayStr)
-        const age = Math.floor((new Date(todayStr).getTime() - due.getTime()) / 86400000)
-        const nominal = Number(r.sisa_piutang || 0)
-        arBuckets.total += nominal
-        if (age <= 0) arBuckets.current += nominal
-        else if (age <= 30) arBuckets.d1_30 += nominal
-        else if (age <= 60) arBuckets.d31_60 += nominal
-        else if (age <= 90) arBuckets.d61_90 += nominal
-        else if (age <= 180) arBuckets.d91_180 += nominal
-        else arBuckets.over180 += nominal
-        return {
+    const { data: arPays, error: arpErr } = await supabase
+      .from('ar_payment_history')
+      .select('invoice_id, bayar_sekarang, created_at')
+    if (arpErr) throw arpErr
+    const arPayByInv = new Map<string, { date: string; amt: number }[]>()
+    for (const p of arPays || []) {
+      const arr = arPayByInv.get(p.invoice_id) || []
+      arr.push({ date: (p.created_at || '').slice(0, 10), amt: Number(p.bayar_sekarang || 0) })
+      arPayByInv.set(p.invoice_id, arr)
+    }
+
+    const computeAR = (asOf: string) => {
+      const b = { total: 0, current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_180: 0, over180: 0 }
+      const rows: any[] = []
+      for (const r of arRows || []) {
+        if (r.is_archived) continue
+        if (r.tgl_invoice && r.tgl_invoice > asOf) continue
+        const outstanding = Number(r.total_piutang || 0) - paidUpTo(arPayByInv.get(r.id), asOf)
+        if (outstanding <= 0.5) continue
+        const age = r.deadline_bayar ? daysDiff(asOf, r.deadline_bayar) : 0
+        b.total += outstanding
+        if (age <= 0) b.current += outstanding
+        else if (age <= 30) b.d1_30 += outstanding
+        else if (age <= 60) b.d31_60 += outstanding
+        else if (age <= 90) b.d61_90 += outstanding
+        else if (age <= 180) b.d91_180 += outstanding
+        else b.over180 += outstanding
+        rows.push({
           company: r.client_name || 'Unknown',
           project: r.project_name || r.no_invoice || '—',
           invoice_date: r.tgl_invoice,
           age,
-          nominal,
-        }
-      })
-      .sort((a, b) => b.nominal - a.nominal)
+          nominal: outstanding,
+        })
+      }
+      rows.sort((a, b2) => b2.nominal - a.nominal)
+      return { buckets: b, rows }
+    }
 
-    /* ── AP aging (snapshot as of today) ── */
+    /* AP source + payments */
     const { data: apRows, error: apErr } = await supabase
       .from('ap_invoices')
-      .select('pihak_ketiga, no_invoice, ap_number, tgl_terima, tgl_jatuh_tempo, amount_due, status')
+      .select('id, pihak_ketiga, no_invoice, ap_number, tgl_terima, tgl_jatuh_tempo, grand_total, status')
       .is('deleted_at', null)
-      .gt('amount_due', 0)
     if (apErr) throw apErr
-    const apBuckets = { total: 0, current: 0, d1_30: 0, d31_60: 0, d61_90: 0, over90: 0 }
-    const apList = (apRows || [])
-      .filter((r) => !['DRAFT', 'REJECTED', 'CANCELLED'].includes((r.status || '').toUpperCase()))
-      .map((r) => {
-        const due = r.tgl_jatuh_tempo ? new Date(r.tgl_jatuh_tempo) : new Date(todayStr)
-        const age = Math.floor((new Date(todayStr).getTime() - due.getTime()) / 86400000)
-        const outstanding = Number(r.amount_due || 0)
-        apBuckets.total += outstanding
-        if (age <= 0) apBuckets.current += outstanding
-        else if (age <= 30) apBuckets.d1_30 += outstanding
-        else if (age <= 60) apBuckets.d31_60 += outstanding
-        else if (age <= 90) apBuckets.d61_90 += outstanding
-        else apBuckets.over90 += outstanding
-        return {
+    const { data: apPays, error: appErr } = await supabase
+      .from('ap_payment_history')
+      .select('ap_invoice_id, bayar_sekarang, created_at')
+    if (appErr) throw appErr
+    const apPayByInv = new Map<string, { date: string; amt: number }[]>()
+    for (const p of apPays || []) {
+      const arr = apPayByInv.get(p.ap_invoice_id) || []
+      arr.push({ date: (p.created_at || '').slice(0, 10), amt: Number(p.bayar_sekarang || 0) })
+      apPayByInv.set(p.ap_invoice_id, arr)
+    }
+
+    const computeAP = (asOf: string) => {
+      const b = { total: 0, current: 0, d1_30: 0, d31_60: 0, d61_90: 0, over90: 0 }
+      const rows: any[] = []
+      for (const r of apRows || []) {
+        if (['DRAFT', 'REJECTED', 'CANCELLED'].includes((r.status || '').toUpperCase())) continue
+        if (r.tgl_terima && r.tgl_terima > asOf) continue
+        const outstanding = Number(r.grand_total || 0) - paidUpTo(apPayByInv.get(r.id), asOf)
+        if (outstanding <= 0.5) continue
+        const age = r.tgl_jatuh_tempo ? daysDiff(asOf, r.tgl_jatuh_tempo) : 0
+        b.total += outstanding
+        if (age <= 0) b.current += outstanding
+        else if (age <= 30) b.d1_30 += outstanding
+        else if (age <= 60) b.d31_60 += outstanding
+        else if (age <= 90) b.d61_90 += outstanding
+        else b.over90 += outstanding
+        rows.push({
           vendor: r.pihak_ketiga || 'Unknown',
           bill: r.no_invoice || r.ap_number || '—',
           bill_date: r.tgl_terima,
           due_date: r.tgl_jatuh_tempo,
           age,
           outstanding,
-        }
-      })
-      .sort((a, b) => b.outstanding - a.outstanding)
+        })
+      }
+      rows.sort((a, b2) => b2.outstanding - a.outstanding)
+      return { buckets: b, rows }
+    }
+
+    const arCur = computeAR(asOfCur)
+    const apCur = computeAP(asOfCur)
+    const arBen = asOfBen ? computeAR(asOfBen) : null
+    const apBen = asOfBen ? computeAP(asOfBen) : null
 
     /* ── response ── */
     return NextResponse.json({
       data: {
         meta: {
-          asOf: todayStr,
+          asOf: asOfCur,
+          benchAsOf: asOfBen,
           current: { months: current, from: longLabel(current[0]!), to: longLabel(current[current.length - 1]!) },
           benchmark: bench ? { months: bench, from: longLabel(bench[0]!), to: longLabel(bench[bench.length - 1]!) } : null,
         },
@@ -307,8 +398,8 @@ export async function GET(request: NextRequest) {
         outflowCategories,
         sales: { total: totalRevenue, months: salesMonths },
         heatmap: { months: heatMonths, rows: heatRows },
-        arAging: { buckets: arBuckets, rows: arList },
-        apAging: { buckets: apBuckets, rows: apList },
+        arAging: { buckets: arCur.buckets, rows: arCur.rows, asOf: asOfCur, bench: arBen?.buckets ?? null, benchAsOf: asOfBen },
+        apAging: { buckets: apCur.buckets, rows: apCur.rows, asOf: asOfCur, bench: apBen?.buckets ?? null, benchAsOf: asOfBen },
       },
     })
   } catch (err: any) {

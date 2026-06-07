@@ -14,10 +14,11 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { COLORS, fmt, fmtFull, fmtM, deltaPct, type PeriodPreset, type BenchmarkMode, type DateRange } from "./_lib/format"
+import { COLORS, fmt, fmtFull, fmtM, fmtPct, deltaPct, type PeriodPreset, type BenchmarkMode, type DateRange } from "./_lib/format"
 import {
-  fetchBIData, type BIData, type ARRow, type APRow, type InflowStream, type OutflowCategory,
+  fetchBIData, type BIData, type ARRow, type APRow, type InflowStream, type OutflowCategory, type HeatStream,
 } from "./_lib/api"
+import { exportDashboardXlsx } from "./_lib/export"
 import { KPICard, AgingBucketCard, ChartCard, Heatmap, DrillDrawer } from "./_components/ui-bits"
 import { PeriodBar } from "./_components/period-bar"
 import { CashflowChart } from "./_components/cashflow-chart"
@@ -78,7 +79,15 @@ export default function BIDashboardPage() {
     return () => ctrl.abort()
   }, [preset, customRange, benchmark, benchCustom, reloadKey])
 
-  const handleExport = React.useCallback(() => toast.success("Report exported! (mock)"), [])
+  const handleExport = React.useCallback(() => {
+    if (!data) return
+    try {
+      exportDashboardXlsx(data, preset)
+      toast.success("Excel report exported")
+    } catch (e: any) {
+      toast.error(`Export failed: ${e?.message ?? "unknown error"}`)
+    }
+  }, [data, preset])
 
   const kpis = data?.kpis
   const hasBench = !!kpis?.bench
@@ -91,12 +100,21 @@ export default function BIDashboardPage() {
   const arRows = data?.arAging.rows ?? []
   const apRows = data?.apAging.rows ?? []
 
-  // monthly revenue per stream (for inflow drill-down), from heatmap rows
+  // monthly revenue per stream (for inflow drill-down) + streams per category (for heatmap drill)
   const streamMonthly = React.useMemo(() => {
     const map = new Map<string, Record<string, number>>()
-    data?.heatmap.rows.forEach((r) => map.set(r.category, r.values))
+    data?.heatmap.rows.forEach((r) => r.streams.forEach((s) => map.set(s.stream, s.values)))
     return map
   }, [data])
+  const catStreams = React.useMemo(() => {
+    const map = new Map<string, HeatStream[]>()
+    data?.heatmap.rows.forEach((r) => map.set(r.category, r.streams))
+    return map
+  }, [data])
+
+  // aging totals vs benchmark
+  const arTotalDelta = data?.arAging.bench ? deltaPct(data.arAging.buckets.total, data.arAging.bench.total) : null
+  const apTotalDelta = data?.apAging.bench ? deltaPct(data.apAging.buckets.total, data.apAging.bench.total) : null
 
   /* ── error state ── */
   if (error) {
@@ -138,7 +156,7 @@ export default function BIDashboardPage() {
               benchmark={benchmark} onBenchmark={setBenchmark}
               benchCustom={benchCustom} onBenchCustom={setBenchCustom}
             />
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5 text-xs">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={!data || loading} className="gap-1.5 text-xs">
               <DownloadIcon className="h-3.5 w-3.5" /> Export
             </Button>
           </div>
@@ -193,7 +211,14 @@ export default function BIDashboardPage() {
               <h2 className="text-sm font-semibold">A/R Aging</h2>
               <span className="text-xs text-muted-foreground">Piutang usaha per umur — as of {data?.meta.asOf ?? "—"}</span>
             </div>
-            {arB && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">{fmtFull(arB.total)}</Badge>}
+            <div className="flex items-center gap-2">
+              {arTotalDelta != null && (
+                <Badge variant="outline" className={`text-[10px] ${arTotalDelta <= 0 ? "text-emerald-600 border-emerald-500/30" : "text-red-600 border-red-500/30"}`}>
+                  {fmtPct(arTotalDelta)} vs {data?.arAging.benchAsOf}
+                </Badge>
+              )}
+              {arB && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">{fmtFull(arB.total)}</Badge>}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
             <AgingBucketCard label="Total Piutang" value={fmt(arB?.total ?? 0)} tone="total"
@@ -221,7 +246,14 @@ export default function BIDashboardPage() {
               <h2 className="text-sm font-semibold">A/P Aging</h2>
               <span className="text-xs text-muted-foreground">Hutang usaha per umur — as of {data?.meta.asOf ?? "—"}</span>
             </div>
-            {apB && <Badge className="bg-red-500/10 text-red-600 border-0 text-[10px]">{fmtFull(apB.total)}</Badge>}
+            <div className="flex items-center gap-2">
+              {apTotalDelta != null && (
+                <Badge variant="outline" className={`text-[10px] ${apTotalDelta <= 0 ? "text-emerald-600 border-emerald-500/30" : "text-red-600 border-red-500/30"}`}>
+                  {fmtPct(apTotalDelta)} vs {data?.apAging.benchAsOf}
+                </Badge>
+              )}
+              {apB && <Badge className="bg-red-500/10 text-red-600 border-0 text-[10px]">{fmtFull(apB.total)}</Badge>}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <AgingBucketCard label="Total Hutang" value={fmt(apB?.total ?? 0)} tone="total"
@@ -395,7 +427,7 @@ export default function BIDashboardPage() {
 
         {/* SECTION 8 — SALES HEATMAP */}
         <ChartCard
-          title="Sales Heatmap" subtitle="Monthly revenue by stream — warna = intensitas nominal"
+          title="Sales Heatmap" subtitle="Monthly revenue by business line — warna = intensitas nominal (klik sel untuk rincian stream)"
           badge={data ? <Badge className="bg-emerald-500/15 text-emerald-500 border-0 text-[10px]">{data.meta.current.from.split(" ")[0]}–{data.meta.current.to.split(" ")[0]}</Badge> : undefined}
         >
           {loading ? <ChartSkeleton /> : (data?.heatmap.rows.length ? (
@@ -431,7 +463,7 @@ export default function BIDashboardPage() {
         title={<><EyeIcon className="h-4 w-4 text-primary" /> {drillTitle(drill)}</>}
         description={drillDesc(drill)}
       >
-        {renderDrill(drill, streamMonthly)}
+        {renderDrill(drill, streamMonthly, catStreams)}
       </DrillDrawer>
     </div>
   )
@@ -472,7 +504,11 @@ function drillDesc(d: Drill): string | undefined {
     case "apBucket": return `${d.rows.length} bill`
   }
 }
-function renderDrill(d: Drill, streamMonthly: Map<string, Record<string, number>>): React.ReactNode {
+function renderDrill(
+  d: Drill,
+  streamMonthly: Map<string, Record<string, number>>,
+  catStreams: Map<string, HeatStream[]>,
+): React.ReactNode {
   if (!d) return null
 
   if (d.kind === "ar") return (
@@ -522,13 +558,32 @@ function renderDrill(d: Drill, streamMonthly: Map<string, Record<string, number>
       <KV k="Trend" v={d.row.trend === "up" ? "Increasing ▲" : d.row.trend === "down" ? "Decreasing ▼" : "Stable —"} />
     </div>
   )
-  if (d.kind === "heat") return (
-    <div className="space-y-2.5">
-      <KV k="Revenue" v={<span className="font-semibold text-emerald-500">{fmtFull(d.amount)}</span>} />
-      <KV k="Stream" v={d.category} />
-      <KV k="Bulan" v={d.month} />
-    </div>
-  )
+  if (d.kind === "heat") {
+    const streams = (catStreams.get(d.category) ?? [])
+      .map((s) => ({ stream: s.stream, amount: s.values[d.month] || 0 }))
+      .filter((s) => s.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+    return (
+      <div className="space-y-2.5">
+        <KV k="Revenue" v={<span className="font-semibold text-emerald-500">{fmtFull(d.amount)}</span>} />
+        <KV k="Kategori" v={d.category} />
+        <KV k="Bulan" v={d.month} />
+        {streams.length > 0 && (
+          <>
+            <p className="pt-2 text-[11px] text-muted-foreground">Rincian stream:</p>
+            <div className="space-y-1.5">
+              {streams.map((s) => (
+                <div key={s.stream} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{s.stream}</span>
+                  <span className="font-medium tabular-nums">{fmtFull(s.amount)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
   if (d.kind === "arBucket") {
     const total = d.rows.reduce((s, r) => s + r.nominal, 0)
     return (

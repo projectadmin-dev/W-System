@@ -46,9 +46,20 @@ export interface KPIs {
   bench: { inflow: number; outflow: number; net: number; endingBalance: number } | null
 }
 
+export interface HeatStream {
+  stream: string
+  values: Record<string, number>
+}
+export interface HeatRow {
+  category: string
+  values: Record<string, number>
+  streams: HeatStream[]
+}
+
 export interface BIData {
   meta: {
     asOf: string
+    benchAsOf: string | null
     current: { months: string[]; from: string; to: string }
     benchmark: { months: string[]; from: string; to: string } | null
   }
@@ -57,9 +68,9 @@ export interface BIData {
   inflowStreams: InflowStream[]
   outflowCategories: OutflowCategory[]
   sales: { total: number; months: { key: string; short: string; amount: number }[] }
-  heatmap: { months: string[]; rows: { category: string; values: Record<string, number> }[] }
-  arAging: { buckets: ARBuckets; rows: ARRow[] }
-  apAging: { buckets: APBuckets; rows: APRow[] }
+  heatmap: { months: string[]; rows: HeatRow[] }
+  arAging: { buckets: ARBuckets; rows: ARRow[]; asOf: string; bench: ARBuckets | null; benchAsOf: string | null }
+  apAging: { buckets: APBuckets; rows: APRow[]; asOf: string; bench: APBuckets | null; benchAsOf: string | null }
 }
 
 export interface BIFilters {
