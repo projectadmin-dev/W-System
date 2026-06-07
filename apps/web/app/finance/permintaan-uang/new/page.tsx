@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
@@ -23,7 +24,10 @@ function EmployeePicker({
   const [search, setSearch] = useState('')
   const [results, setResults] = useState<EmployeeOption[]>([])
   const [open, setOpen] = useState(false)
+  const [ddRect, setDdRect] = useState<{top:number;left:number;width:number}|null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const inputWrapRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (search.length < 2) { setResults([]); return }
@@ -37,35 +41,58 @@ function EmployeePicker({
   }, [search])
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const h = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (ref.current && !ref.current.contains(t) && dropdownRef.current && !dropdownRef.current.contains(t)) {
+        setOpen(false)
+      }
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
+  useEffect(() => {
+    if (!open || !inputWrapRef.current) return
+    const updateRect = () => {
+      const r = inputWrapRef.current!.getBoundingClientRect()
+      setDdRect({ top: r.bottom + 4, left: r.left, width: r.width })
+    }
+    updateRect()
+    window.addEventListener('scroll', updateRect, true)
+    window.addEventListener('resize', updateRect)
+    return () => {
+      window.removeEventListener('scroll', updateRect, true)
+      window.removeEventListener('resize', updateRect)
+    }
+  }, [open])
+
   return (
     <div ref={ref} className="space-y-2">
       <label className="text-sm font-medium">{label} <span className="text-red-500">*</span></label>
-      <div className="relative">
+      <div ref={inputWrapRef}>
         <Input placeholder="Ketik NIK atau nama karyawan..."
           value={value ? `${value.nik ? value.nik + ' — ' : ''}${value.full_name}` : search}
           onChange={e => { setSearch(e.target.value); if (value) onSelect({ ...value, full_name: '' }) }}
           onFocus={() => search.length >= 2 && setOpen(true)} />
-        {open && results.length > 0 && (
-          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-52 overflow-y-auto">
-            {results.map(emp => (
-              <button key={emp.id} type="button"
-                className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
-                onMouseDown={() => { onSelect(emp); setSearch(''); setOpen(false) }}>
-                <p className="font-semibold">{emp.full_name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {emp.nik && <span className="mr-2">{emp.nik}</span>}
-                  {emp.department}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
+      {open && results.length > 0 && ddRect && createPortal(
+        <div ref={dropdownRef}
+          style={{ position: 'fixed', top: ddRect.top, left: ddRect.left, width: ddRect.width, zIndex: 9999 }}
+          className="rounded-md border bg-popover shadow-md max-h-72 overflow-y-auto">
+          {results.map(emp => (
+            <button key={emp.id} type="button"
+              className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
+              onMouseDown={() => { onSelect(emp); setSearch(''); setOpen(false) }}>
+              <p className="font-semibold">{emp.full_name}</p>
+              <p className="text-xs text-muted-foreground">
+                {emp.nik && <span className="mr-2">{emp.nik}</span>}
+                {emp.department}
+              </p>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
       {value && value.full_name && (
         <div className="grid grid-cols-3 gap-2">
           {[['Departemen', value.department ?? '—'], ['Jabatan', value.position_name ?? '—'], ['Golongan', value.grade ?? '—']].map(([lbl, val]) => (
