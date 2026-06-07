@@ -5,7 +5,7 @@ import {
   ComposedChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Brush,
 } from "recharts"
-import { COLORS, fmt } from "../_lib/data"
+import { COLORS, fmt } from "../_lib/format"
 
 export interface CashflowRow {
   label: string

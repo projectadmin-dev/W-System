@@ -10,7 +10,7 @@ import {
 } from "@workspace/ui/components/drawer"
 import { Skeleton } from "@workspace/ui/components/skeleton"
 import { TrendingUpIcon, TrendingDownIcon } from "lucide-react"
-import { fmt, fmtPct } from "../_lib/data"
+import { fmt, fmtPct } from "../_lib/format"
 
 /* ─────────────────────────── Sparkline ─────────────────────────── */
 export function Sparkline({

@@ -6,7 +6,7 @@ import {
 } from "@workspace/ui/components/select"
 import { Badge } from "@workspace/ui/components/badge"
 import { CalendarRangeIcon, GitCompareArrowsIcon } from "lucide-react"
-import type { PeriodPreset, BenchmarkMode, DateRange } from "../_lib/data"
+import type { PeriodPreset, BenchmarkMode, DateRange } from "../_lib/format"
 
 const PRESETS: { id: PeriodPreset; label: string }[] = [
   { id: "month", label: "Month" },
