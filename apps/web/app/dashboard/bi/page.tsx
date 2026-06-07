@@ -1,227 +1,142 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import * as React from "react"
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, Legend,
+  ResponsiveContainer, Cell,
 } from "recharts"
-import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@workspace/ui/components/card"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from "@workspace/ui/components/dialog"
-import {
-  TrendingUpIcon, TrendingDownIcon, ArrowDownLeftIcon,
-  ArrowUpRightIcon, WalletIcon, Building2Icon, UsersIcon,
-  DownloadIcon, FilterIcon, EyeIcon, BanknoteIcon, ArrowUpDownIcon,
+  ArrowDownLeftIcon, ArrowUpRightIcon,
+  WalletIcon, DownloadIcon, BanknoteIcon, ArrowUpDownIcon, EyeIcon,
+  ReceiptTextIcon, FileWarningIcon, SparklesIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
-/* ─── COLORS ─── */
-const COLORS = {
-  emerald: ["#10b981", "#34d399", "#059669", "#6ee7b7", "#0d9488"],
-  red:     ["#ef4444", "#f87171", "#dc2626", "#fca5a5", "#b91c1c"],
-  blue:    ["#3b82f6", "#60a5fa", "#2563eb", "#93c5fd", "#1d4ed8"],
-  amber:   ["#f59e0b", "#fbbf24", "#d97706", "#fcd34d", "#b45309"],
-  purple:  ["#a855f7", "#c084fc", "#9333ea", "#d8b4fe", "#7e22ce"],
-}
+import {
+  COLORS, fmt, fmtFull, fmtM, deltaPct,
+  MONTHS, resolveCurrentWindow, resolveBenchmarkWindow, aggregate,
+  scaledInflow, scaledOutflow, buildHeatmap, heatmapCellBreakdown,
+  AR_AGING, AP_AGING, arBuckets, apBuckets, arBucketLabel, apBucketLabel,
+  type PeriodPreset, type BenchmarkMode, type DateRange,
+  type ARRow, type APRow, type InflowStream, type OutflowCategory,
+} from "./_lib/data"
+import {
+  KPICard, AgingBucketCard, ChartCard, Heatmap, DrillDrawer,
+} from "./_components/ui-bits"
+import { PeriodBar } from "./_components/period-bar"
+import { CashflowChart, type CashflowRow } from "./_components/cashflow-chart"
 
-const PIE_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4", "#f97316", "#8b5cf6", "#ec4899", "#14b8a6"]
-
-/* ═══════════════════════════════════════════════════════════
-   REAL DATA FROM PDF (Jan 1 - Apr 30, 2026)
-   ═══════════════════════════════════════════════════════════ */
-
-/* Cashflow chart data extracted from PDF */
-const CASHFLOW_DATA = [
-  { month: "Jan 1",  balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Jan 16", balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Jan 31", balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Feb 15", balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Mar 2",  balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Mar 17", balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Apr 1",  balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Apr 16", balance: 0,    inflow: 0,    outflow: 0 },
-  { month: "Apr 30", balance: 101_532_075.82, inflow: 4_371_375_976, outflow: 4_684_813_454.9 },
-]
-
-/* Cash Inflow by Revenue Stream (from PDF) */
-const CASH_INFLOW = [
-  { stream: "Project Based - Project Revenue",         amount: 2_966_470_705,    percentage: 67.9 },
-  { stream: "Project Based - Procurement Revenue",    amount:   402_615_278,    percentage: 9.2 },
-  { stream: "MTN/R - WMS Revenue",                     amount:   344_360_000,    percentage: 7.9 },
-  { stream: "MTN/R - Manage Service",                  amount:   264_556_784,    percentage: 6.1 },
-  { stream: "MTN/R - Project Revenue",                amount:   107_213_963.5,  percentage: 2.5 },
-  { stream: "Project Based - Website Revenue",         amount:    75_949_500,    percentage: 1.7 },
-  { stream: "Project Based - MaaS Revenue",            amount:    60_000_000,    percentage: 1.4 },
-  { stream: "Project Based - Lain Lain",               amount:    58_500_000,    percentage: 1.3 },
-  { stream: "Project Based - WMS Revenue",             amount:    46_512_000,    percentage: 1.1 },
-  { stream: "Pendapatan Non Operasional - Lain-Lain", amount:    33_872_074,    percentage: 0.8 },
-  { stream: "MTN/R - Website Revenue",                amount:     9_819_816.5,  percentage: 0.2 },
-  { stream: "Project Based - Domain Revenue",          amount:       750_000,    percentage: 0.02 },
-  { stream: "Surat Perintah Perjalanan Dinas",        amount:       497_000,    percentage: 0.01 },
-  { stream: "Interest Income - Bank",                   amount:       258_855,     percentage: 0.006 },
-]
-
-/* Cash Outflow by Category (top 15 from PDF, full list has 56 items) */
-const CASH_OUTFLOW = [
-  { category: "Gaji Pokok (Payroll/Salary)",                amount: 1_466_527_378, trend: "up" as const },
-  { category: "Fee/Bonus - Project Member",                 amount:   680_265_896, trend: "up" as const },
-  { category: "3rd Party Expenses - Lain Lain",             amount:   445_046_666, trend: "up" as const },
-  { category: "Tunjangan Hari Raya (THR)",                   amount:   331_039_914, trend: "up" as const },
-  { category: "Other COGS - Procurement",                     amount:   208_245_500, trend: "up" as const },
-  { category: "Partner - PT. Jaya Integrasi Nusantara (JIN)",amount:   207_129_700, trend: "up" as const },
-  { category: "Beban Pajak - PPN",                           amount:   176_531_622, trend: "up" as const },
-  { category: "Partner - Artisun",                            amount:   145_871_560, trend: "up" as const },
-  { category: "Partner - Plabs",                              amount:   134_110_000, trend: "up" as const },
-  { category: "Surat Perintah Perjalanan Dinas",             amount:   125_342_682, trend: "up" as const },
-  { category: "Server/Hosting - Google Cloud Platform",       amount:   124_897_210, trend: "up" as const },
-  { category: "Other COGS - Google Workspace / GSuite",      amount:    73_328_578, trend: "down" as const },
-  { category: "Fee/Bonus - Marketing Fee External",           amount:    67_702_500, trend: "down" as const },
-  { category: "Fee/Bonus - Marketing Internal",               amount:    60_643_250, trend: "down" as const },
-  { category: "Biaya Entertainment",                          amount:    58_552_415, trend: "same" as const },
-]
-
-/* A/R Aging Report (from PDF) */
-const AR_AGING = [
-  { company: "PT. Untung Bersama Sejahtera", project: "Scada Kalung UBS GOLD",        invoice_date: "Apr 13, 2026", age: 17, nominal: 818_374_500 },
-  { company: "BSM",                          project: "BSM Enterprise System",          invoice_date: "Apr 20, 2026", age: 10, nominal: 67_751_220.47 },
-  { company: "Annathaya",                    project: "Spa Management System Annathaya", invoice_date: "Mar 30, 2026", age: 31, nominal: 60_000_000 },
-  { company: "Annathaya",                    project: "Spa Management System Annathaya", invoice_date: "Apr 30, 2026", age: 0,  nominal: 60_000_000 },
-  { company: "PT. Untung Bersama Sejahtera", project: "Chimney Monitoring UBS",        invoice_date: "Feb 3, 2026",  age: 86, nominal: 51_893_712 },
-  { company: "PT. Bening Guru Semesta",     project: "CSMS Manpower March Bening",    invoice_date: "Apr 22, 2026", age: 8,  nominal: 44_962_500 },
-  { company: "Warren Brown",                 project: "Maintenance Website Warren Brown", invoice_date: "Apr 1, 2026", age: 29, nominal: 44_321_000 },
-  { company: "DInez Montana",                project: "Development ERP Prologue Wounderla…", invoice_date: "Mar 30, 2026", age: 31, nominal: 30_100_000 },
-  { company: "DInez Montana",                project: "Development ERP Prologue Wounderla…", invoice_date: "Apr 27, 2026", age: 3,  nominal: 30_100_000 },
-  { company: "PT. Bening Guru Semesta",     project: "Additional CSMS Development Bening", invoice_date: "Apr 27, 2026", age: 3, nominal: 29_702_500 },
-  { company: "PT. Untung Bersama Sejahtera", project: "POC Phase O2 System UBS",       invoice_date: "Oct 16, 2025", age: 196, nominal: 28_230_000 },
-  { company: "Royal Medika Pharmalab",        project: "Additional Procurement & Installation…", invoice_date: "Apr 17, 2026", age: 13, nominal: 27_707_800 },
-  { company: "PT. Habitat Untuk Jakarta",    project: "Manpower Maintenance Habitat",   invoice_date: "Dec 1, 2025",  age: 150, nominal: 27_250_000 },
-  { company: "PT Habitat Untuk Jakarta",      project: "Manpower Maintenance Habitat",   invoice_date: "Jan 1, 2026",  age: 119, nominal: 27_250_000 },
-]
-
-/* Sales Heatmap - monthly revenue by project category (from PDF) */
-const SALES_HEATMAP = [
-  { category: "Development",    jan: 800_000_000, feb: 1_200_000_000, mar: 950_000_000, apr: 1_100_000_000 },
-  { category: "Procurement",    jan: 400_000_000, feb:   450_000_000, mar: 380_000_000, apr:  420_000_000 },
-  { category: "Manpower",        jan: 350_000_000, feb:   380_000_000, mar: 420_000_000, apr:  390_000_000 },
-  { category: "MaaS",           jan: 200_000_000, feb:   220_000_000, mar: 260_000_000, apr:  280_000_000 },
-  { category: "Maintenance",     jan: 150_000_000, feb:   160_000_000, mar: 175_000_000, apr:  185_000_000 },
-  { category: "Consultation",   jan: 100_000_000, feb:   120_000_000, mar: 110_000_000, apr:  130_000_000 },
-]
-
-/* Cashflow monthly aggregated (simplified) */
-const CASHFLOW_MONTHLY = [
-  { month: "January",   ending_balance: -200_000_000, inflow: 950_000_000, outflow: 1_150_000_000 },
-  { month: "February", ending_balance: -350_000_000, inflow: 1_050_000_000, outflow: 1_200_000_000 },
-  { month: "March",    ending_balance: 50_000_000, inflow: 1_150_000_000, outflow: 850_000_000 },
-  { month: "April",    ending_balance: 101_532_075, inflow: 1_221_375_976, outflow: 1_484_813_454 },
-]
-
-/* ─── HELPERS ─── */
-const fmt = (n: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    notation: "compact",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  }).format(n)
-
-const fmtFull = (n: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(n)
-
-const fmtM = (n: number) => `Rp ${(n / 1_000_000).toFixed(0)} M`
+/* ─── drill-down state ─── */
+type Drill =
+  | { kind: "ar"; row: ARRow }
+  | { kind: "ap"; row: APRow }
+  | { kind: "inflow"; row: InflowStream }
+  | { kind: "outflow"; row: OutflowCategory }
+  | { kind: "heat"; category: string; month: string; amount: number }
+  | { kind: "arBucket"; label: string; rows: ARRow[] }
+  | { kind: "apBucket"; label: string; rows: APRow[] }
+  | null
 
 const statusBadge = (days: number) => {
   if (days <= 30) return <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-[10px]">Current</Badge>
-  if (days <= 45) return <Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">Warning</Badge>
+  if (days <= 60) return <Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">Warning</Badge>
   return <Badge className="bg-red-500/15 text-red-600 border-0 text-[10px]">Overdue</Badge>
 }
 
-const agingColor = (days: number) => {
-  if (days <= 30) return COLORS.emerald[1]
-  if (days <= 45) return COLORS.amber[1]
-  return COLORS.red[1]
-}
+const KV = ({ k, v }: { k: string; v: React.ReactNode }) => (
+  <div className="flex justify-between rounded-lg bg-muted/50 px-3 py-2.5 text-sm">
+    <span className="text-muted-foreground">{k}</span>
+    <span className="font-medium">{v}</span>
+  </div>
+)
 
-const trendIcon = (t: "up" | "down" | "same") => {
-  if (t === "up") return <TrendingUpIcon className="h-3.5 w-3.5 text-red-500" />
-  if (t === "down") return <TrendingDownIcon className="h-3.5 w-3.5 text-emerald-500" />
-  return <span className="h-3.5 w-3.5 inline-block rounded-full bg-muted" />
-}
-
-/* ─── CUSTOM TOOLTIP ─── */
-function CustomTooltip({ active, payload, label, prefix = "" }: any) {
-  if (!active || !payload?.[0]) return null
-  return (
-    <div className="rounded-lg border bg-card p-3 shadow-lg text-sm">
-      <p className="font-semibold mb-1">{label}</p>
-      {payload.map((p: any) => (
-        <div key={p.name} className="flex items-center gap-2 py-0.5">
-          <span className="h-2.5 w-2.5 rounded-full inline-block" style={{ background: p.color }} />
-          <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-medium">{prefix}{fmt(p.value)}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/* ─── PAGE ─── */
 export default function BIDashboardPage() {
-  const [timeRange, setTimeRange] = useState<"month" | "quarter" | "ytd">("quarter")
-  const [drillItem, setDrillItem] = useState<any>(null)
-  const [selectedInflowItem, setSelectedInflowItem] = useState<any>(null)
-  const [selectedOutflowItem, setSelectedOutflowItem] = useState<any>(null)
+  /* ── filters ── */
+  const [preset, setPreset] = React.useState<PeriodPreset>("ytd")
+  const [customRange, setCustomRange] = React.useState<DateRange>({ from: "2026-01", to: "2026-04" })
+  const [benchmark, setBenchmark] = React.useState<BenchmarkMode>("previous")
+  const [benchCustom, setBenchCustom] = React.useState<DateRange>({ from: "2025-09", to: "2025-12" })
+  const [loading, setLoading] = React.useState(false)
+  const [drill, setDrill] = React.useState<Drill>(null)
 
-  const handleExport = useCallback(() => {
-    toast.success("Report exported! (Mock)")
-  }, [])
+  // brief skeleton flash on filter change for a responsive feel
+  React.useEffect(() => {
+    setLoading(true)
+    const t = setTimeout(() => setLoading(false), 320)
+    return () => clearTimeout(t)
+  }, [preset, benchmark, customRange, benchCustom])
 
-  /* KPI totals from real data */
-  const totalInflow = CASH_INFLOW.reduce((s, r) => s + r.amount, 0)
-  const totalOutflow = CASH_OUTFLOW.reduce((s, r) => s + r.amount, 0)
-  const netCashFlow = 4_371_375_976 - 4_684_813_454.9
-  const totalAR = AR_AGING.reduce((s, r) => s + r.nominal, 0)
+  const handleExport = React.useCallback(() => toast.success("Report exported! (mock)"), [])
+
+  /* ── resolve periods ── */
+  const toRange = (r: DateRange): DateRange => ({ from: `${r.from}-01`, to: `${r.to}-28` })
+  const current = React.useMemo(
+    () => resolveCurrentWindow(preset, toRange(customRange)),
+    [preset, customRange],
+  )
+  const benchWindow = React.useMemo(
+    () => resolveBenchmarkWindow(benchmark, current, toRange(benchCustom)),
+    [benchmark, current, benchCustom],
+  )
+
+  const agg = React.useMemo(() => aggregate(current), [current])
+  const benchAgg = React.useMemo(() => (benchWindow ? aggregate(benchWindow) : null), [benchWindow])
+  const hasBench = !!benchAgg
+
+  /* ── trailing sparkline series (last ≤6 months up to window end) ── */
+  const trailing = React.useMemo(() => {
+    const lastKey = current[current.length - 1]!.key
+    const idx = MONTHS.findIndex((m) => m.key === lastKey)
+    return MONTHS.slice(Math.max(0, idx - 5), idx + 1)
+  }, [current])
+
+  /* ── derived datasets ── */
+  const inflowData = React.useMemo(() => scaledInflow(agg.inflow), [agg.inflow])
+  const outflowData = React.useMemo(() => scaledOutflow(agg.outflow), [agg.outflow])
+  const heatmap = React.useMemo(() => buildHeatmap(current), [current])
+  const arB = React.useMemo(() => arBuckets(), [])
+  const apB = React.useMemo(() => apBuckets(), [])
+
+  const cashflowData: CashflowRow[] = React.useMemo(
+    () =>
+      current.map((m, i) => ({
+        label: m.year === 2026 ? m.short : `${m.short} '${String(m.year).slice(2)}`,
+        inflow: m.inflow,
+        outflow: m.outflow,
+        balance: m.balance,
+        benchBalance: benchWindow?.[i]?.balance,
+      })),
+    [current, benchWindow],
+  )
+
+  const dlt = (cur: number, base?: number | null) =>
+    hasBench && base != null ? deltaPct(cur, base) : null
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-20 border-b bg-card/80 backdrop-blur-md px-6 py-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="sticky top-0 z-20 border-b bg-card/70 backdrop-blur-xl px-4 py-3 lg:px-6">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-2.5">
+            <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 p-2.5 ring-1 ring-primary/10">
               <WalletIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Executive Financial Dashboard</h1>
-              <p className="text-xs text-muted-foreground">PT. Wira Inovasi Teknologi Indonesia — Jan 1, 2026 to Apr 30, 2026</p>
+              <h1 className="text-xl font-bold tracking-tight">Executive Financial Dashboard</h1>
+              <p className="text-xs text-muted-foreground">
+                PT. Wira Inovasi Teknologi Indonesia — {current[0]!.long} → {agg.asOf}
+              </p>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
-            {/* Time Range Toggle */}
-            <div className="flex rounded-lg border bg-muted p-1 text-xs">
-              {(["month", "quarter", "ytd"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setTimeRange(r)}
-                  className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
-                    timeRange === r ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {r === "month" ? "Month" : r === "quarter" ? "Quarter" : "YTD"}
-                </button>
-              ))}
-            </div>
+            <PeriodBar
+              preset={preset} onPreset={setPreset}
+              customRange={customRange} onCustomRange={setCustomRange}
+              benchmark={benchmark} onBenchmark={setBenchmark}
+              benchCustom={benchCustom} onBenchCustom={setBenchCustom}
+            />
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5 text-xs">
               <DownloadIcon className="h-3.5 w-3.5" /> Export
             </Button>
@@ -230,236 +145,217 @@ export default function BIDashboardPage() {
       </header>
 
       {/* ── CONTENT ── */}
-      <main className="mx-auto max-w-[1600px] p-4 lg:p-6 space-y-6">
+      <main className="mx-auto max-w-[1600px] space-y-6 p-4 lg:p-6">
 
-        {/* ── SECTION 1: CASH & BANKS KPI CARDS ── */}
+        {/* SECTION 1 — CASH & BANKS KPIs */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <KPICard
-            label="Ending Balance"
-            value={fmt(101_532_075.82)}
-            sub="Cash & Banks"
-            icon={<BanknoteIcon className="h-4 w-4" />}
-            trend="-313.4M"
-            trendUp={false}
+            loading={loading}
+            label="Ending Balance" value={fmt(agg.endingBalance)} sub="Cash & Banks"
+            icon={<BanknoteIcon className="h-4 w-4" />} accent="blue"
+            deltaPct={dlt(agg.endingBalance, benchAgg?.endingBalance)}
+            spark={trailing.map((m) => m.balance)} sparkColor={COLORS.blue[0]}
           />
           <KPICard
-            label="Cash Inflow"
-            value={fmt(4_371_375_976)}
-            sub="Total Credit"
-            icon={<ArrowDownLeftIcon className="h-4 w-4" />}
-            trend="+12.3%"
-            trendUp={true}
+            loading={loading}
+            label="Cash Inflow" value={fmt(agg.inflow)} sub="Total Credit"
+            icon={<ArrowDownLeftIcon className="h-4 w-4" />} accent="emerald"
+            deltaPct={dlt(agg.inflow, benchAgg?.inflow)}
+            spark={trailing.map((m) => m.inflow)} sparkColor={COLORS.emerald[0]}
           />
           <KPICard
-            label="Cash Outflow"
-            value={fmt(4_684_813_454.9)}
-            sub="Total Debit"
-            icon={<ArrowUpRightIcon className="h-4 w-4" />}
-            trend="+8.7%"
-            trendUp={false}
+            loading={loading}
+            label="Cash Outflow" value={fmt(agg.outflow)} sub="Total Debit"
+            icon={<ArrowUpRightIcon className="h-4 w-4" />} accent="red"
+            deltaPct={dlt(agg.outflow, benchAgg?.outflow)}
+            spark={trailing.map((m) => m.outflow)} sparkColor={COLORS.red[0]}
           />
           <KPICard
-            label="Net Cash Flow"
-            value={fmt(netCashFlow)}
-            sub="Inflow - Outflow"
-            icon={<ArrowUpDownIcon className="h-4 w-4" />}
-            trend="-6.7%"
-            trendUp={false}
+            loading={loading}
+            label="Net Cash Flow" value={fmt(agg.net)} sub="Inflow − Outflow"
+            icon={<ArrowUpDownIcon className="h-4 w-4" />} accent={agg.net >= 0 ? "emerald" : "amber"}
+            deltaPct={dlt(agg.net, benchAgg?.net)}
+            spark={trailing.map((m) => m.inflow - m.outflow)} sparkColor={COLORS.amber[0]}
           />
         </div>
 
-        {/* ── SECTION 2: CASHFLOW STATEMENT ── */}
-        <div className="grid grid-cols-1 gap-6">
-          <ChartCard
-            title="Cashflow Statement"
-            subtitle="Monthly ending balance, inflow, and outflow (in IDR)"
-            height={300}
-            badge={<Badge className="bg-emerald-500/15 text-emerald-500 border-0 text-[10px]">● Inflow</Badge>}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={CASHFLOW_MONTHLY} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="inflowGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.emerald[0]} stopOpacity={0.25} />
-                    <stop offset="95%" stopColor={COLORS.emerald[0]} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="outflowGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.red[0]} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={COLORS.red[0]} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="month" fontSize={11} stroke="#94a3b8" />
-                <YAxis tickFormatter={(v) => fmt(v)} fontSize={10} stroke="#94a3b8" />
-                <RechartsTooltip content={<CustomTooltip prefix="Rp " />} />
-                <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
-                <Area type="monotone" dataKey="inflow" stroke={COLORS.emerald[0]} fill="url(#inflowGrad)" name="Inflow" strokeWidth={2} />
-                <Area type="monotone" dataKey="outflow" stroke={COLORS.red[0]} fill="url(#outflowGrad)" name="Outflow" strokeWidth={2} />
-                <Area type="monotone" dataKey="ending_balance" stroke={COLORS.blue[0]} fillOpacity={0} name="Ending Balance" strokeWidth={2} dot={{ r: 4 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+        {/* SECTION 2 — CASHFLOW STATEMENT */}
+        <ChartCard
+          title="Cashflow Statement"
+          subtitle="Monthly ending balance, inflow & outflow (in IDR)"
+          height={360}
+          badge={hasBench ? <Badge variant="outline" className="text-[10px]">vs benchmark</Badge> : undefined}
+        >
+          <CashflowChart data={cashflowData} hasBenchmark={hasBench} />
+        </ChartCard>
 
-        {/* ── SECTION 3: SALES ACHIEVEMENT + CASH INFLOW/OUTFLOW ── */}
+        {/* SECTION 3 — A/R AGING KPI CARDS */}
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ReceiptTextIcon className="h-4 w-4 text-emerald-600" />
+              <h2 className="text-sm font-semibold">A/R Aging</h2>
+              <span className="text-xs text-muted-foreground">Piutang usaha per umur — as of {agg.asOf}</span>
+            </div>
+            <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">{fmtFull(arB.total)}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+            <AgingBucketCard label="Total Piutang" value={fmt(arB.total)} tone="total"
+              onClick={() => setDrill({ kind: "arBucket", label: "Semua piutang", rows: AR_AGING })} />
+            <AgingBucketCard label="Current" value={fmt(arB.current)} tone="current" share={arB.current / arB.total}
+              onClick={() => setDrill({ kind: "arBucket", label: "Current", rows: AR_AGING.filter((r) => r.age <= 0) })} />
+            <AgingBucketCard label="1–30 hari" value={fmt(arB.d1_30)} tone="low" share={arB.d1_30 / arB.total}
+              onClick={() => setDrill({ kind: "arBucket", label: "1–30 hari", rows: AR_AGING.filter((r) => r.age > 0 && r.age <= 30) })} />
+            <AgingBucketCard label="31–60 hari" value={fmt(arB.d31_60)} tone="mid" share={arB.d31_60 / arB.total}
+              onClick={() => setDrill({ kind: "arBucket", label: "31–60 hari", rows: AR_AGING.filter((r) => r.age > 30 && r.age <= 60) })} />
+            <AgingBucketCard label="61–90 hari" value={fmt(arB.d61_90)} tone="high" share={arB.d61_90 / arB.total}
+              onClick={() => setDrill({ kind: "arBucket", label: "61–90 hari", rows: AR_AGING.filter((r) => r.age > 60 && r.age <= 90) })} />
+            <AgingBucketCard label="91–180 hari" value={fmt(arB.d91_180)} tone="high" share={arB.d91_180 / arB.total}
+              onClick={() => setDrill({ kind: "arBucket", label: "91–180 hari", rows: AR_AGING.filter((r) => r.age > 90 && r.age <= 180) })} />
+            <AgingBucketCard label=">180 hari" value={fmt(arB.over180)} tone="high" share={arB.over180 / arB.total}
+              onClick={() => setDrill({ kind: "arBucket", label: ">180 hari", rows: AR_AGING.filter((r) => r.age > 180) })} />
+          </div>
+        </section>
+
+        {/* SECTION 4 — A/P AGING KPI CARDS */}
+        <section>
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileWarningIcon className="h-4 w-4 text-red-500" />
+              <h2 className="text-sm font-semibold">A/P Aging</h2>
+              <span className="text-xs text-muted-foreground">Hutang usaha per umur — as of {agg.asOf}</span>
+            </div>
+            <Badge className="bg-red-500/10 text-red-600 border-0 text-[10px]">{fmtFull(apB.total)}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <AgingBucketCard label="Total Hutang" value={fmt(apB.total)} tone="total"
+              onClick={() => setDrill({ kind: "apBucket", label: "Semua hutang", rows: AP_AGING })} />
+            <AgingBucketCard label="Current" value={fmt(apB.current)} tone="current" share={apB.current / apB.total}
+              onClick={() => setDrill({ kind: "apBucket", label: "Current", rows: AP_AGING.filter((r) => r.age <= 0) })} />
+            <AgingBucketCard label="1–30 hari" value={fmt(apB.d1_30)} tone="low" share={apB.d1_30 / apB.total}
+              onClick={() => setDrill({ kind: "apBucket", label: "1–30 hari", rows: AP_AGING.filter((r) => r.age > 0 && r.age <= 30) })} />
+            <AgingBucketCard label="31–60 hari" value={fmt(apB.d31_60)} tone="mid" share={apB.d31_60 / apB.total}
+              onClick={() => setDrill({ kind: "apBucket", label: "31–60 hari", rows: AP_AGING.filter((r) => r.age > 30 && r.age <= 60) })} />
+            <AgingBucketCard label="61–90 hari" value={fmt(apB.d61_90)} tone="high" share={apB.d61_90 / apB.total}
+              onClick={() => setDrill({ kind: "apBucket", label: "61–90 hari", rows: AP_AGING.filter((r) => r.age > 60 && r.age <= 90) })} />
+            <AgingBucketCard label=">90 hari" value={fmt(apB.over90)} tone="high" share={apB.over90 / apB.total}
+              onClick={() => setDrill({ kind: "apBucket", label: ">90 hari", rows: AP_AGING.filter((r) => r.age > 90) })} />
+          </div>
+        </section>
+
+        {/* SECTION 5 — SALES ACHIEVEMENT + CASH INFLOW */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          
-          {/* Sales Achievement KPI */}
-          <ChartCard
-            title="Sales Achievement"
-            subtitle="Total inflow by period"
-            height={220}
-            className="flex flex-col"
-          >
-            <div className="flex flex-col items-center justify-center h-full">
-              <p className="text-4xl font-bold text-emerald-400">{fmt(4_371_375_976)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Total Cash Inflow (Jan-Apr 2026)</p>
-              <div className="flex gap-4 mt-4">
-                <div className="text-center">
-                  <p className="text-lg font-semibold">{fmt(950_000_000)}</p>
-                  <p className="text-[10px] text-muted-foreground">January</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold">{fmt(1_050_000_000)}</p>
-                  <p className="text-[10px] text-muted-foreground">February</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold">{fmt(1_150_000_000)}</p>
-                  <p className="text-[10px] text-muted-foreground">March</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-semibold">{fmt(1_221_375_976)}</p>
-                  <p className="text-[10px] text-muted-foreground">April</p>
-                </div>
+          <ChartCard title="Sales Achievement" subtitle="Total inflow by period" height={260} className="flex flex-col">
+            <div className="flex h-full flex-col items-center justify-center text-center">
+              <p className="text-4xl font-bold text-emerald-500">{fmt(agg.inflow)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Total Cash Inflow — {current[0]!.long} → {agg.asOf}</p>
+              {hasBench && benchAgg && (
+                <Badge variant="outline" className={`mt-2 text-[10px] ${agg.inflow >= benchAgg.inflow ? "text-emerald-600 border-emerald-500/30" : "text-red-600 border-red-500/30"}`}>
+                  {agg.inflow >= benchAgg.inflow ? "▲" : "▼"} vs benchmark {fmt(benchAgg.inflow)}
+                </Badge>
+              )}
+              <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2">
+                {current.slice(-6).map((m) => (
+                  <div key={m.key} className="text-center">
+                    <p className="text-sm font-semibold tabular-nums">{fmt(m.inflow)}</p>
+                    <p className="text-[10px] text-muted-foreground">{m.short} {m.year !== 2026 ? `'${String(m.year).slice(2)}` : ""}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </ChartCard>
 
-          {/* Cash Inflow Breakdown */}
           <ChartCard
-            title="Cash Inflow"
-            subtitle="Top revenue streams by amount"
-            height={320}
-            className="lg:col-span-2"
-            right={<Badge variant="outline" className="text-[10px]">{CASH_INFLOW.length} streams</Badge>}
+            title="Cash Inflow" subtitle="Top revenue streams by amount" height={320} className="lg:col-span-2"
+            right={<Badge variant="outline" className="text-[10px]">{inflowData.length} streams</Badge>}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={CASH_INFLOW.slice(0, 8)}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
-                <XAxis type="number" tickFormatter={fmtM} fontSize={10} stroke="#94a3b8" />
-                <YAxis
-                  type="category"
-                  dataKey="stream"
-                  width={95}
-                  tick={{ fontSize: 9 }}
-                  tickFormatter={(v: string) => v.length > 22 ? v.slice(0, 20) + "…" : v}
-                  stroke="#94a3b8"
-                />
+              <BarChart data={inflowData.slice(0, 8)} layout="vertical" margin={{ top: 5, right: 28, left: 100, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
+                <XAxis type="number" tickFormatter={fmtM} fontSize={10} tickLine={false} axisLine={false} className="fill-muted-foreground" />
+                <YAxis type="category" dataKey="stream" width={95} tick={{ fontSize: 9 }} tickLine={false} axisLine={false}
+                  tickFormatter={(v: string) => (v.length > 22 ? v.slice(0, 20) + "…" : v)} className="fill-muted-foreground" />
                 <RechartsTooltip
+                  cursor={{ fill: "currentColor", opacity: 0.05 }}
                   content={({ active, payload }) => {
                     if (!active || !payload?.[0]) return null
-                    const d = payload[0].payload as typeof CASH_INFLOW[0]
+                    const d = payload[0].payload as InflowStream
                     return (
-                      <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1 max-w-xs">
-                        <p className="font-bold text-sm">{d.stream}</p>
-                        <p>Amount: <span className="font-medium text-emerald-400">{fmt(d.amount)}</span></p>
-                        <p>Share: <span className="font-medium">{d.percentage}%</span></p>
+                      <div className="max-w-xs space-y-1 rounded-lg border bg-card/95 backdrop-blur p-3 text-xs shadow-lg">
+                        <p className="text-sm font-bold">{d.stream}</p>
+                        <p>Amount: <span className="font-medium text-emerald-500">{fmt(d.amount)}</span></p>
+                        <p>Share: <span className="font-medium">{d.percentage.toFixed(2)}%</span></p>
+                        <p className="text-[10px] text-muted-foreground">klik untuk detail</p>
                       </div>
                     )
                   }}
                 />
-                <Bar dataKey="amount" radius={[0, 4, 4, 0]} fillOpacity={0.8} fill={COLORS.emerald[0]} />
+                <Bar dataKey="amount" radius={[0, 4, 4, 0]} fill={COLORS.emerald[0]} fillOpacity={0.85}
+                  className="cursor-pointer" onClick={(d: any) => setDrill({ kind: "inflow", row: d.payload ?? d })} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
         </div>
 
-        {/* ── SECTION 4: CASH OUTFLOW + AR AGING SIDE BY SIDE ── */}
+        {/* SECTION 6 — CASH OUTFLOW + A/R AGING REPORT */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-
-          {/* Cash Outflow */}
           <ChartCard
-            title="Cash Outflow"
-            subtitle="Top 15 expense categories (of 56 total)"
-            height={420}
+            title="Cash Outflow" subtitle="Top 15 expense categories (of 56 total)" height={440}
             right={<Badge variant="outline" className="text-[10px]">Top 15</Badge>}
           >
-            <div className="flex flex-col h-full">
-              <div className="flex-1">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={CASH_OUTFLOW}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 120, bottom: 40 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
-                    <XAxis type="number" tickFormatter={fmtM} fontSize={10} stroke="#94a3b8" />
-                    <YAxis
-                      type="category"
-                      dataKey="category"
-                      width={115}
-                      tick={{ fontSize: 9 }}
-                      tickFormatter={(v: string) => v.length > 26 ? v.slice(0, 24) + "…" : v}
-                      stroke="#94a3b8"
-                    />
-                    <RechartsTooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.[0]) return null
-                        const d = payload[0].payload as typeof CASH_OUTFLOW[0]
-                        return (
-                          <div className="rounded-lg border bg-card p-3 shadow-lg text-xs space-y-1 max-w-xs">
-                            <p className="font-bold text-sm">{d.category}</p>
-                            <p>Amount: <span className="font-medium text-red-400">{fmt(d.amount)}</span></p>
-                            <p className="flex items-center gap-1">
-                              Trend: {trendIcon(d.trend)}
-                              <span className="text-muted-foreground">
-                                {d.trend === "up" ? "Increasing" : d.trend === "down" ? "Decreasing" : "Stable"}
-                              </span>
-                            </p>
-                          </div>
-                        )
-                      }}
-                    />
-                    <Bar dataKey="amount" radius={[0, 4, 4, 0]} fillOpacity={0.8} fill={COLORS.red[0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={outflowData} layout="vertical" margin={{ top: 5, right: 28, left: 120, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
+                <XAxis type="number" tickFormatter={fmtM} fontSize={10} tickLine={false} axisLine={false} className="fill-muted-foreground" />
+                <YAxis type="category" dataKey="category" width={115} tick={{ fontSize: 9 }} tickLine={false} axisLine={false}
+                  tickFormatter={(v: string) => (v.length > 26 ? v.slice(0, 24) + "…" : v)} className="fill-muted-foreground" />
+                <RechartsTooltip
+                  cursor={{ fill: "currentColor", opacity: 0.05 }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.[0]) return null
+                    const d = payload[0].payload as OutflowCategory
+                    return (
+                      <div className="max-w-xs space-y-1 rounded-lg border bg-card/95 backdrop-blur p-3 text-xs shadow-lg">
+                        <p className="text-sm font-bold">{d.category}</p>
+                        <p>Amount: <span className="font-medium text-red-500">{fmt(d.amount)}</span></p>
+                        <p className="text-[10px] text-muted-foreground">klik untuk detail</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="amount" radius={[0, 4, 4, 0]} className="cursor-pointer"
+                  onClick={(d: any) => setDrill({ kind: "outflow", row: d.payload ?? d })}>
+                  {outflowData.map((_, i) => (
+                    <Cell key={i} fill={COLORS.red[0]} fillOpacity={0.85} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </ChartCard>
 
-          {/* A/R Aging Report */}
           <ChartCard
-            title="A/R Aging Report"
-            subtitle="Outstanding invoices by client & age"
-            height={420}
-            badge={<Badge className="bg-red-500/15 text-red-500 border-0 text-[10px]">{fmtFull(totalAR)} total</Badge>}
+            title="A/R Aging Report" subtitle="Outstanding invoices by client & age" height={440}
+            badge={<Badge className="bg-red-500/15 text-red-500 border-0 text-[10px]">{fmtFull(arB.total)} total</Badge>}
           >
-            <div className="overflow-auto" style={{ height: "100%" }}>
+            <div className="h-full overflow-auto">
               <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-card border-b">
-                  <tr className="text-muted-foreground">
-                    <th className="text-left py-2 px-2 font-medium">Company</th>
-                    <th className="text-left py-2 px-2 font-medium">Age</th>
-                    <th className="text-right py-2 px-2 font-medium">Nominal</th>
+                <thead className="sticky top-0 bg-card">
+                  <tr className="border-b text-muted-foreground">
+                    <th className="px-2 py-2 text-left font-medium">Company</th>
+                    <th className="px-2 py-2 text-left font-medium">Age</th>
+                    <th className="px-2 py-2 text-right font-medium">Nominal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {AR_AGING.map((row, i) => (
-                    <tr key={i} className="border-b border-muted/30 hover:bg-muted/30 cursor-pointer transition" onClick={() => setDrillItem({ type: "AR", ...row })}>
-                      <td className="py-2 px-2">
-                        <p className="font-medium truncate max-w-[120px]">{row.company}</p>
-                        <p className="text-muted-foreground truncate max-w-[120px]">{row.project}</p>
+                    <tr key={i} className="cursor-pointer border-b border-muted/30 transition hover:bg-muted/40"
+                      onClick={() => setDrill({ kind: "ar", row })}>
+                      <td className="px-2 py-2">
+                        <p className="max-w-[140px] truncate font-medium">{row.company}</p>
+                        <p className="max-w-[140px] truncate text-muted-foreground">{row.project}</p>
                       </td>
-                      <td className="py-2 px-2">
-                        {statusBadge(row.age)}
-                      </td>
-                      <td className="py-2 px-2 text-right font-medium text-red-400">
-                        {fmtFull(row.nominal)}
-                      </td>
+                      <td className="px-2 py-2">{statusBadge(row.age)}</td>
+                      <td className="px-2 py-2 text-right font-medium text-red-500">{fmtFull(row.nominal)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -468,141 +364,228 @@ export default function BIDashboardPage() {
           </ChartCard>
         </div>
 
-        {/* ── SECTION 5: SALES HEATMAP ── */}
-        <div className="grid grid-cols-1 gap-6">
-          <ChartCard
-            title="Sales Heatmap"
-            subtitle="Monthly revenue by project category (in IDR)"
-            height={280}
-            badge={<Badge className="bg-emerald-500/15 text-emerald-500 border-0 text-[10px]">Jan-Apr 2026</Badge>}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={SALES_HEATMAP} margin={{ top: 10, right: 20, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="category" fontSize={11} stroke="#94a3b8" />
-                <YAxis tickFormatter={(v) => fmt(v)} fontSize={10} stroke="#94a3b8" />
-                <RechartsTooltip content={<CustomTooltip prefix="Rp " />} />
-                <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="jan" stackId="a" fill={COLORS.amber[2]} name="January" />
-                <Bar dataKey="feb" stackId="a" fill={COLORS.emerald[2]} name="February" />
-                <Bar dataKey="mar" stackId="a" fill={COLORS.blue[2]} name="March" />
-                <Bar dataKey="apr" stackId="a" fill={COLORS.purple[2]} name="April" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+        {/* SECTION 7 — A/P AGING REPORT (mirror of A/R, vendor PoV) */}
+        <ChartCard
+          title="A/P Aging Report" subtitle="Outstanding vendor bills by vendor & age" height={340}
+          badge={<Badge className="bg-amber-500/15 text-amber-600 border-0 text-[10px]">{fmtFull(apB.total)} total</Badge>}
+        >
+          <div className="h-full overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-card">
+                <tr className="border-b text-muted-foreground">
+                  <th className="px-2 py-2 text-left font-medium">Vendor</th>
+                  <th className="px-2 py-2 text-left font-medium">Bill</th>
+                  <th className="px-2 py-2 text-left font-medium">Due Date</th>
+                  <th className="px-2 py-2 text-left font-medium">Age</th>
+                  <th className="px-2 py-2 text-right font-medium">Outstanding</th>
+                </tr>
+              </thead>
+              <tbody>
+                {AP_AGING.map((row, i) => (
+                  <tr key={i} className="cursor-pointer border-b border-muted/30 transition hover:bg-muted/40"
+                    onClick={() => setDrill({ kind: "ap", row })}>
+                    <td className="px-2 py-2 font-medium">{row.vendor}</td>
+                    <td className="px-2 py-2 text-muted-foreground">{row.bill}</td>
+                    <td className="px-2 py-2 text-muted-foreground">{row.due_date}</td>
+                    <td className="px-2 py-2">{statusBadge(row.age)}</td>
+                    <td className="px-2 py-2 text-right font-medium text-amber-600">{fmtFull(row.outstanding)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-muted/40 font-semibold">
+                  <td className="px-2 py-2" colSpan={4}>GRAND TOTAL</td>
+                  <td className="px-2 py-2 text-right">{fmtFull(apB.total)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </ChartCard>
 
-        {/* ── FOOTER INSIGHT ── */}
-        <div className="rounded-xl border bg-card p-4 mb-8">
-          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
-            <EyeIcon className="h-4 w-4 text-primary" /> AI-Generated Insight (Based on Jan-Apr 2026 Data)
+        {/* SECTION 8 — SALES HEATMAP (matrix) */}
+        <ChartCard
+          title="Sales Heatmap" subtitle="Monthly revenue by project category — warna = intensitas nominal"
+          badge={<Badge className="bg-emerald-500/15 text-emerald-500 border-0 text-[10px]">{current[0]!.short}–{agg.asOf.split(" ")[0]}</Badge>}
+        >
+          <Heatmap
+            months={heatmap.months}
+            rows={heatmap.rows}
+            onCell={(category, month, amount) => setDrill({ kind: "heat", category, month, amount })}
+          />
+        </ChartCard>
+
+        {/* AI INSIGHT */}
+        <div className="mb-8 rounded-xl border bg-gradient-to-br from-card to-muted/30 p-4">
+          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+            <SparklesIcon className="h-4 w-4 text-primary" /> AI-Generated Insight
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted-foreground">
+          <div className="grid grid-cols-1 gap-4 text-xs text-muted-foreground md:grid-cols-2">
             <div>
-              <p className="font-medium text-foreground mb-1">⚠️ AR Aging Alert</p>
-              <p>2 invoices are overdue (&gt;90 days): PT. Untung Bersama Sejahtera (196 days, Rp 28.2M) and PT. Habitat Untuk Jakarta (150 days, Rp 27.2M). Total overdue exposure: Rp 55.4M. Recommend immediate collection follow-up.</p>
+              <p className="mb-1 font-medium text-foreground">⚠️ A/R Aging Alert</p>
+              <p>Eksposur jatuh tempo &gt;90 hari sebesar {fmt(arB.d91_180 + arB.over180)} ({fmtFull(arB.over180)} di antaranya &gt;180 hari). Disarankan follow-up penagihan segera.</p>
             </div>
             <div>
-              <p className="font-medium text-foreground mb-1">📊 Cash Flow Outlook</p>
-              <p>Net cash flow is negative at Rp 313.4M (outflow exceeds inflow by 7.2%). While April shows a turnaround (positive balance of Rp 101.5M), close monitoring of 3rd party expenses (Rp 445M) and partner payments is recommended.</p>
+              <p className="mb-1 font-medium text-foreground">📊 Cash Flow Outlook</p>
+              <p>Net cash flow periode ini {agg.net >= 0 ? "positif" : "negatif"} sebesar {fmt(Math.abs(agg.net))}{hasBench && benchAgg ? ` (${agg.net >= benchAgg.net ? "membaik" : "menurun"} vs benchmark)` : ""}. Ending balance {fmt(agg.endingBalance)}.</p>
             </div>
           </div>
         </div>
-
       </main>
 
-      {/* ── DRILL-DOWN MODAL ── */}
-      {drillItem && (
-        <Dialog open={!!drillItem} onOpenChange={() => setDrillItem(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <EyeIcon className="h-5 w-5 text-primary" />
-                A/R Detail
-              </DialogTitle>
-              <DialogDescription>
-                {drillItem.company} — {drillItem.project}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                <span className="text-muted-foreground">Nominal:</span>
-                <span className="font-semibold text-red-400">{fmtFull(drillItem.nominal)}</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                <span className="text-muted-foreground">Invoice Date:</span>
-                <span className="font-medium">{drillItem.invoice_date}</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                <span className="text-muted-foreground">Age:</span>
-                <span className="font-medium">{drillItem.age} days</span>
-              </div>
-              <div className="flex justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                <span className="text-muted-foreground">Status:</span>
-                {statusBadge(drillItem.age)}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* ── DRILL-DOWN DRAWER ── */}
+      <DrillDrawer
+        open={!!drill}
+        onOpenChange={(v) => !v && setDrill(null)}
+        title={<><EyeIcon className="h-4 w-4 text-primary" /> {drillTitle(drill)}</>}
+        description={drillDesc(drill)}
+      >
+        {renderDrill(drill)}
+      </DrillDrawer>
     </div>
   )
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SUB-COMPONENTS
-   ═══════════════════════════════════════════════════════════ */
-
-function KPICard({
-  label, value, sub, icon, trend, trendUp,
-}: {
-  label: string; value: string; sub: string
-  icon: React.ReactNode; trend: string; trendUp: boolean
-}) {
-  return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardDescription className="text-xs">{label}</CardDescription>
-          <div className={`rounded-md p-1.5 ${trendUp ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}>
-            {icon}
-          </div>
-        </div>
-        <CardTitle className="text-2xl font-bold tabular-nums">{value}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0 text-xs flex items-center gap-2">
-        <Badge variant="outline" className={`${trendUp ? "text-emerald-600 border-emerald-500/30" : "text-red-600 border-red-500/30"} text-[10px]`}>
-          {trendUp ? <TrendingUpIcon className="h-3 w-3 mr-0.5" /> : <TrendingDownIcon className="h-3 w-3 mr-0.5" />}
-          {trend}
-        </Badge>
-        <span className="text-muted-foreground">{sub}</span>
-      </CardContent>
-    </Card>
-  )
+/* ═══════════════ DRILL-DOWN CONTENT ═══════════════ */
+function drillTitle(d: Drill): string {
+  if (!d) return ""
+  switch (d.kind) {
+    case "ar": return "A/R Invoice Detail"
+    case "ap": return "A/P Bill Detail"
+    case "inflow": return "Revenue Stream Detail"
+    case "outflow": return "Expense Category Detail"
+    case "heat": return "Sales Detail"
+    case "arBucket": return `A/R — ${d.label}`
+    case "apBucket": return `A/P — ${d.label}`
+  }
 }
+function drillDesc(d: Drill): string | undefined {
+  if (!d) return undefined
+  switch (d.kind) {
+    case "ar": return `${d.row.company} — ${d.row.project}`
+    case "ap": return `${d.row.vendor} — ${d.row.bill}`
+    case "inflow": return d.row.stream
+    case "outflow": return d.row.category
+    case "heat": return `${d.category} · ${d.month}`
+    case "arBucket": return `${d.rows.length} invoice`
+    case "apBucket": return `${d.rows.length} bill`
+  }
+}
+function renderDrill(d: Drill): React.ReactNode {
+  if (!d) return null
 
-function ChartCard({
-  title, subtitle, children, height, className, badge, right,
-}: {
-  title: string; subtitle: string; children: React.ReactNode; height: number; className?: string; badge?: React.ReactNode; right?: React.ReactNode
-}) {
-  return (
-    <Card className={`shadow-sm ${className || ""}`}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-            <CardDescription className="text-[11px]">{subtitle}</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            {badge}
-            {right}
-          </div>
+  if (d.kind === "ar") {
+    return (
+      <div className="space-y-2.5">
+        <KV k="Nominal" v={<span className="font-semibold text-red-500">{fmtFull(d.row.nominal)}</span>} />
+        <KV k="Invoice Date" v={d.row.invoice_date} />
+        <KV k="Umur" v={`${d.row.age} hari`} />
+        <KV k="Bucket" v={arBucketLabel(d.row.age)} />
+        <KV k="Status" v={statusBadge(d.row.age)} />
+      </div>
+    )
+  }
+  if (d.kind === "ap") {
+    return (
+      <div className="space-y-2.5">
+        <KV k="Outstanding" v={<span className="font-semibold text-amber-600">{fmtFull(d.row.outstanding)}</span>} />
+        <KV k="Bill Date" v={d.row.bill_date} />
+        <KV k="Due Date" v={d.row.due_date} />
+        <KV k="Umur" v={`${d.row.age} hari`} />
+        <KV k="Bucket" v={apBucketLabel(d.row.age)} />
+        <KV k="Status" v={statusBadge(d.row.age)} />
+      </div>
+    )
+  }
+  if (d.kind === "inflow") {
+    return (
+      <div className="space-y-2.5">
+        <KV k="Amount" v={<span className="font-semibold text-emerald-500">{fmtFull(d.row.amount)}</span>} />
+        <KV k="Share of total" v={`${d.row.percentage.toFixed(2)}%`} />
+        <p className="pt-2 text-[11px] text-muted-foreground">Estimasi kontribusi bulanan (mock split):</p>
+        <div className="space-y-1.5">
+          {[0.22, 0.26, 0.24, 0.28].map((p, i) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{["Jan", "Feb", "Mar", "Apr"][i]}</span>
+              <span className="font-medium tabular-nums">{fmt(d.row.amount * p)}</span>
+            </div>
+          ))}
         </div>
-      </CardHeader>
-      <CardContent className="pt-0" style={{ height }}>
-        {children}
-      </CardContent>
-    </Card>
-  )
+      </div>
+    )
+  }
+  if (d.kind === "outflow") {
+    return (
+      <div className="space-y-2.5">
+        <KV k="Amount" v={<span className="font-semibold text-red-500">{fmtFull(d.row.amount)}</span>} />
+        <KV k="Trend" v={d.row.trend === "up" ? "Increasing ▲" : d.row.trend === "down" ? "Decreasing ▼" : "Stable —"} />
+        <p className="pt-2 text-[11px] text-muted-foreground">Estimasi kontribusi bulanan (mock split):</p>
+        <div className="space-y-1.5">
+          {[0.24, 0.25, 0.26, 0.25].map((p, i) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{["Jan", "Feb", "Mar", "Apr"][i]}</span>
+              <span className="font-medium tabular-nums">{fmt(d.row.amount * p)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  if (d.kind === "heat") {
+    const parts = heatmapCellBreakdown(d.category, d.amount)
+    return (
+      <div className="space-y-2.5">
+        <KV k="Revenue" v={<span className="font-semibold text-emerald-500">{fmtFull(d.amount)}</span>} />
+        <p className="pt-2 text-[11px] text-muted-foreground">Breakdown sub-kategori:</p>
+        <div className="space-y-1.5">
+          {parts.map((p) => (
+            <div key={p.label} className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{p.label}</span>
+              <span className="font-medium tabular-nums">{fmtFull(p.amount)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+  if (d.kind === "arBucket") {
+    const total = d.rows.reduce((s, r) => s + r.nominal, 0)
+    return (
+      <div className="space-y-2">
+        <KV k="Total bucket" v={<span className="font-semibold text-red-500">{fmtFull(total)}</span>} />
+        <div className="divide-y">
+          {d.rows.map((r, i) => (
+            <div key={i} className="flex items-start justify-between gap-2 py-2 text-xs">
+              <div>
+                <p className="font-medium">{r.company}</p>
+                <p className="text-muted-foreground">{r.project}</p>
+                <p className="text-[10px] text-muted-foreground">{r.invoice_date} · {r.age} hari</p>
+              </div>
+              <span className="font-medium text-red-500 tabular-nums">{fmtFull(r.nominal)}</span>
+            </div>
+          ))}
+          {d.rows.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">Tidak ada data.</p>}
+        </div>
+      </div>
+    )
+  }
+  if (d.kind === "apBucket") {
+    const total = d.rows.reduce((s, r) => s + r.outstanding, 0)
+    return (
+      <div className="space-y-2">
+        <KV k="Total bucket" v={<span className="font-semibold text-amber-600">{fmtFull(total)}</span>} />
+        <div className="divide-y">
+          {d.rows.map((r, i) => (
+            <div key={i} className="flex items-start justify-between gap-2 py-2 text-xs">
+              <div>
+                <p className="font-medium">{r.vendor}</p>
+                <p className="text-muted-foreground">{r.bill} · due {r.due_date}</p>
+                <p className="text-[10px] text-muted-foreground">{r.age} hari</p>
+              </div>
+              <span className="font-medium text-amber-600 tabular-nums">{fmtFull(r.outstanding)}</span>
+            </div>
+          ))}
+          {d.rows.length === 0 && <p className="py-4 text-center text-xs text-muted-foreground">Tidak ada data.</p>}
+        </div>
+      </div>
+    )
+  }
+  return null
 }
