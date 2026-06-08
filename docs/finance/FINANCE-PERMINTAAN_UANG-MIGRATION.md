@@ -156,3 +156,42 @@ INSERT INTO public.pembayaran (id, tenant_id, doc_number, status, permintaan_uan
 COMMIT;
 
 ```
+
+
+---
+
+## Appendix B — Forward Schema (new repo): `company_id` & `branch_id`
+
+All 5 table(s) of this module gain two **nullable** scoping columns in the new repository, to isolate data per **company** (PT / legal entity) and **branch** (kantor cabang):
+
+| Column | Type | Nullable | Now | Final (new repo) |
+|---|---|---|---|---|
+| `company_id` | uuid | yes | no FK/index/RLS | FK → `companies`/`entities(id)` + index + RLS |
+| `branch_id` | uuid | yes | no FK/index/RLS | FK → `branches(id)` + index + RLS |
+
+`tenant_id` is **kept unchanged**; these are new independent columns. They are nullable so the Appendix A dataseed loads without modification (existing rows simply have NULL company/branch). FK wiring, backfill, and RLS are deferred to the new-repo final migration (see `PRD_Task_Management.md`, Phase 5). Combined SQL for all modules: `docs/finance/new-repo/0001_finance_add_company_branch.sql`.
+
+```sql
+-- Permintaan Uang & Pembayaran — add company_id + branch_id (nullable, no FK)
+ALTER TABLE public.permintaan_uang ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.permintaan_uang ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.permintaan_uang_items ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.permintaan_uang_items ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.pu_approval_steps ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.pu_approval_steps ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.pembayaran ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.pembayaran ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.pembayaran_biaya_lain ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.pembayaran_biaya_lain ADD COLUMN IF NOT EXISTS branch_id  uuid;
+
+COMMENT ON COLUMN public.permintaan_uang.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.permintaan_uang.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.permintaan_uang_items.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.permintaan_uang_items.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.pu_approval_steps.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.pu_approval_steps.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.pembayaran.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.pembayaran.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.pembayaran_biaya_lain.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.pembayaran_biaya_lain.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+```

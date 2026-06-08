@@ -163,3 +163,34 @@ INSERT INTO public.ar_payment_history (id, tenant_id, invoice_id, sudah_dibayar_
 COMMIT;
 
 ```
+
+
+---
+
+## Appendix B — Forward Schema (new repo): `company_id` & `branch_id`
+
+All 3 table(s) of this module gain two **nullable** scoping columns in the new repository, to isolate data per **company** (PT / legal entity) and **branch** (kantor cabang):
+
+| Column | Type | Nullable | Now | Final (new repo) |
+|---|---|---|---|---|
+| `company_id` | uuid | yes | no FK/index/RLS | FK → `companies`/`entities(id)` + index + RLS |
+| `branch_id` | uuid | yes | no FK/index/RLS | FK → `branches(id)` + index + RLS |
+
+`tenant_id` is **kept unchanged**; these are new independent columns. They are nullable so the Appendix A dataseed loads without modification (existing rows simply have NULL company/branch). FK wiring, backfill, and RLS are deferred to the new-repo final migration (see `PRD_Task_Management.md`, Phase 5). Combined SQL for all modules: `docs/finance/new-repo/0001_finance_add_company_branch.sql`.
+
+```sql
+-- Accounts Receivable (AR) — add company_id + branch_id (nullable, no FK)
+ALTER TABLE public.ar_bank_accounts ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.ar_bank_accounts ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.ar_invoices ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.ar_invoices ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.ar_payment_history ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.ar_payment_history ADD COLUMN IF NOT EXISTS branch_id  uuid;
+
+COMMENT ON COLUMN public.ar_bank_accounts.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.ar_bank_accounts.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.ar_invoices.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.ar_invoices.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.ar_payment_history.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.ar_payment_history.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+```

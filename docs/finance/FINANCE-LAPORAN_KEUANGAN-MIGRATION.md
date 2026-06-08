@@ -361,3 +361,42 @@ INSERT INTO public.journal_lines (id, tenant_id, journal_entry_id, line_number, 
 COMMIT;
 
 ```
+
+
+---
+
+## Appendix B — Forward Schema (new repo): `company_id` & `branch_id`
+
+All 5 table(s) of this module gain two **nullable** scoping columns in the new repository, to isolate data per **company** (PT / legal entity) and **branch** (kantor cabang):
+
+| Column | Type | Nullable | Now | Final (new repo) |
+|---|---|---|---|---|
+| `company_id` | uuid | yes | no FK/index/RLS | FK → `companies`/`entities(id)` + index + RLS |
+| `branch_id` | uuid | yes | no FK/index/RLS | FK → `branches(id)` + index + RLS |
+
+`tenant_id` is **kept unchanged**; these are new independent columns. They are nullable so the Appendix A dataseed loads without modification (existing rows simply have NULL company/branch). FK wiring, backfill, and RLS are deferred to the new-repo final migration (see `PRD_Task_Management.md`, Phase 5). Combined SQL for all modules: `docs/finance/new-repo/0001_finance_add_company_branch.sql`.
+
+```sql
+-- Laporan Keuangan (report sources) — add company_id + branch_id (nullable, no FK)
+ALTER TABLE public.fiscal_periods ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.fiscal_periods ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.journal_entries ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.journal_entries ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.journal_lines ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.journal_lines ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.trial_balance_snapshots ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.trial_balance_snapshots ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.fiscal_period_journal_locks ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.fiscal_period_journal_locks ADD COLUMN IF NOT EXISTS branch_id  uuid;
+
+COMMENT ON COLUMN public.fiscal_periods.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.fiscal_periods.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.journal_entries.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.journal_entries.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.journal_lines.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.journal_lines.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.trial_balance_snapshots.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.trial_balance_snapshots.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.fiscal_period_journal_locks.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.fiscal_period_journal_locks.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+```

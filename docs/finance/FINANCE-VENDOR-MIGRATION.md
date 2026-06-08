@@ -121,3 +121,26 @@ WHERE a.tenant_id = v.tenant_id AND a.pihak_ketiga = v.vendor_name AND a.vendor_
 3. **(Optional) harden the schema** — add CHECK constraints to match the UI enums, make `UNIQUE(vendor_code)` per-tenant, and replace count-based code generation with a sequence.
 
 Until steps 1–2 are done, the Vendor Master remains a standalone screen with no transactional effect.
+
+
+---
+
+## Appendix B — Forward Schema (new repo): `company_id` & `branch_id`
+
+All 1 table(s) of this module gain two **nullable** scoping columns in the new repository, to isolate data per **company** (PT / legal entity) and **branch** (kantor cabang):
+
+| Column | Type | Nullable | Now | Final (new repo) |
+|---|---|---|---|---|
+| `company_id` | uuid | yes | no FK/index/RLS | FK → `companies`/`entities(id)` + index + RLS |
+| `branch_id` | uuid | yes | no FK/index/RLS | FK → `branches(id)` + index + RLS |
+
+`tenant_id` is **kept unchanged**; these are new independent columns. They are nullable so the Appendix A dataseed loads without modification (existing rows simply have NULL company/branch). FK wiring, backfill, and RLS are deferred to the new-repo final migration (see `PRD_Task_Management.md`, Phase 5). Combined SQL for all modules: `docs/finance/new-repo/0001_finance_add_company_branch.sql`.
+
+```sql
+-- Vendor Master — add company_id + branch_id (nullable, no FK)
+ALTER TABLE public.fin_vendors ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.fin_vendors ADD COLUMN IF NOT EXISTS branch_id  uuid;
+
+COMMENT ON COLUMN public.fin_vendors.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.fin_vendors.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+```

@@ -682,3 +682,38 @@ WHERE c.tenant_id = '00000000-0000-0000-0000-000000000001'
 COMMIT;
 
 ```
+
+
+---
+
+## Appendix B — Forward Schema (new repo): `company_id` & `branch_id`
+
+All 4 table(s) of this module gain two **nullable** scoping columns in the new repository, to isolate data per **company** (PT / legal entity) and **branch** (kantor cabang):
+
+| Column | Type | Nullable | Now | Final (new repo) |
+|---|---|---|---|---|
+| `company_id` | uuid | yes | no FK/index/RLS | FK → `companies`/`entities(id)` + index + RLS |
+| `branch_id` | uuid | yes | no FK/index/RLS | FK → `branches(id)` + index + RLS |
+
+`tenant_id` is **kept unchanged**; these are new independent columns. They are nullable so the Appendix A dataseed loads without modification (existing rows simply have NULL company/branch). FK wiring, backfill, and RLS are deferred to the new-repo final migration (see `PRD_Task_Management.md`, Phase 5). Combined SQL for all modules: `docs/finance/new-repo/0001_finance_add_company_branch.sql`.
+
+```sql
+-- Chart of Account — add company_id + branch_id (nullable, no FK)
+ALTER TABLE public.coa ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.coa ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.coa_audit_log ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.coa_audit_log ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.coa_pending_approval ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.coa_pending_approval ADD COLUMN IF NOT EXISTS branch_id  uuid;
+ALTER TABLE public.coa_sub_gl_value ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE public.coa_sub_gl_value ADD COLUMN IF NOT EXISTS branch_id  uuid;
+
+COMMENT ON COLUMN public.coa.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa_audit_log.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa_audit_log.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa_pending_approval.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa_pending_approval.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa_sub_gl_value.company_id IS 'Legal entity (PT) scope for data isolation between companies. Nullable; NO foreign key yet — final FK -> companies/entities(id) + index + RLS handled in the new-repo migration.';
+COMMENT ON COLUMN public.coa_sub_gl_value.branch_id  IS 'Branch (kantor cabang) scope for data isolation between branches. Nullable; NO foreign key yet — final FK -> branches(id) + index + RLS handled in the new-repo migration.';
+```
